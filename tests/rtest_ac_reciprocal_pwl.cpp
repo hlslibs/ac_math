@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 1.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  1 16:35:45 PST 2018                        *
+ *  Release Date    : Fri Mar  2 14:27:58 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 1.0.0                                               *
  *                                                                        *
@@ -223,7 +223,12 @@ int test_driver_fixed(
           ac_fixed<input_fixed.width, int(input_fixed.sign), input_fixed.sign, input_fixed.q_mode, input_fixed.o_mode> norm_input_fixed;
           ac_normalize(input_fixed, norm_input_fixed);
           if (old_real_output < actual_value_fixed) {
+            cout << endl;
             cout << "  Real, fixed point output not monotonic at :" << endl;
+            cout << "  x = " << input_fixed << endl;
+            cout << "  y = " << output_fixed << endl;
+            cout << "  old_real_output = " << old_real_output << endl;
+            cout << "  normalized x    = " << norm_input_fixed << endl;
             assert(false);
           }
         }

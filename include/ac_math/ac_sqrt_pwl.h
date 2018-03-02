@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 1.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  1 16:35:45 PST 2018                        *
+ *  Release Date    : Fri Mar  2 14:27:58 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 1.0.0                                               *
  *                                                                        *
@@ -268,20 +268,16 @@ namespace ac_math
     ac_fixed <input_width,input_int, false, q_mode> mantissa = input.m;
     ac_int <input_exp, true> e = input.e;
 
-    // creating enough space in the output of square root of mantissa, for W<I and I<0 cases
-    static const int output_width1 = 2*input_width;
-    static const int output_int1 = (input_int > 0) ? input_int : 1;
-
     // declaring variable to store square root of mentissa
-    ac_fixed <output_width1,output_int1,false, q_mode_out>	m2;
+    ac_fixed <output_width, output_int, false, q_mode_out> m2;
 
     // call to ac_fixed implementation to get square root of mantissa
     ac_sqrt_pwl<q_mode_temp>(mantissa, m2);
 
     // Multiplication by root 2 for odd exponent
-    ac_fixed <output_width1, output_int1,false, q_mode_out>	m3 = m2 * root2;
+    ac_fixed <output_width, output_int, false, q_mode_out>	m3 = m2 * root2;
 
-    ac_fixed<output_width1, output_int1, false, q_mode_out> temp;
+    ac_fixed <output_width, output_int, false, q_mode_out> temp;
     // assign temp variable based on even or odd exponent
     temp = (input.e % 2 == 0) ? m2:m3;
 
