@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 1.0                                                 *
  *                                                                        *
- *  Release Date    : Fri Mar  2 14:27:58 PST 2018                        *
+ *  Release Date    : Fri Mar  2 16:26:42 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 1.0.0                                               *
  *                                                                        *
@@ -53,29 +53,26 @@
 //    void CCS_BLOCK(project)(
 //      const input_type &input,
 //      T_out &output,
-//     )
-//     {
-//        ac_sincos(input, sinoutput, cosoutput);
-//     }
+//    )
+//    {
+//      ac_sincos(input, sinoutput, cosoutput);
+//    }
 //    #ifndef __SYNTHESIS__
 //    CCS_MAIN(int argc, char *argv[])
 //    {
-//        input_type input = 0.26;
-//        T_out output;
-//        CCS_DESIGN(project) (input, sinoutput_test, cosoutput_test);
-//        CCS_RETURN (0);
+//      input_type input = 0.26;
+//      T_out output;
+//      CCS_DESIGN(project) (input, sinoutput_test, cosoutput_test);
+//      CCS_RETURN (0);
 //    }
 //    #endif
-//
-//    For a more detailed example, please refer to the "ac_sincos_tb.cpp" and
-//    "ac_sincos_tb.h" files
 //
 // Notes:
 //    In this file, the input is scaled in the range of 0-PI/4. Then with the help of
 //    trigonometric identities and the lookup table the sin and cos values of the input
 //    can be found out.
 // Example:
-//    Let's say the input is 0.26. The range variable (which represents the first 3 bits of the fractional
+//    If the input is 0.26. The octant variable (which represents the first 3 bits of the fractional
 //    side of the posinput from the MSB side) determines the octant in which 0.26 lies.
 //    In this case it would be the third octant. The (fractional - 3) bits from the LSB side of
 //    the posinput helps in determining the index to the lookup table.
@@ -85,6 +82,7 @@
 #define _INCLUDED_AC_SINCOS_H_
 
 // Include headers for data types supported by these implementations
+#include <ac_fixed.h>
 #include <ac_complex.h>
 
 #if !defined(__SYNTHESIS__)
@@ -131,14 +129,11 @@ namespace ac_math
     typedef ac_complex<ac_fixed <T_out::width, T_out::i_width, false, AC_RND> > luttype;
     // Datatype for posinput which is used to handle negative inputs
     typedef ac_fixed<T_in::width-T_in::i_width, 0, false> posinputtype;
-    // As there are 512 entries in the lookup table, 9 bits are required to lookup into the table
-    typedef ac_int<9, false> lutindextype;
-    // The lookup table has entries corresponding to input of 0 - PI/4. So this represents the first octant. So to represent the
-    // octants from 0 - 2PI, 8 octants are required and hence 3 bits to store them.
-    typedef ac_int<3, false> rangetype;
+
+    typedef ac_int<9, false> lutindextype; // 9 bits required for indexing into 512 entry table
+    typedef ac_int<3, false> octanttype; // 3 bits required for octant value range of 0 thru 7
     outputcomplex_type outputtemp;
     lutindextype lut_index = 0;
-    // rangetype range;
     posinputtype posinput = input;
 
     static const luttype sincos[512]= {
@@ -655,36 +650,60 @@ namespace ac_math
       {0.7092728264388601377988, 0.7049340803759104323589}, //index = 510, scaled angle = 0.12451171875
       {0.7081906370331897404569, 0.7060212614493454053033}
     }; // index = 511, scaled angle = 0.124755859375
+
     typedef ac_int<AC_MAX(T_in::width-T_in::i_width-3, 1), false> lutindextype1;
     // Extracting (number of fractional -3) bits to determine the lookup table index
     lutindextype1 lut_index1 = posinput.template slc<AC_MAX(T_in::width-T_in::i_width-3, 1)>(0);  // Extracting the lookup table index
 
     if (T_in::width-T_in::i_width>=4 && T_in::width-T_in::i_width<=12) {
       lut_index.set_slc(12- (T_in::width - T_in::i_width), lut_index1);                // stride
-    }
-    // Lookup table index for input whose width is greater than 12 bits
-    else if (T_in::width-T_in::i_width>12) {
+    } else if (T_in::width-T_in::i_width>12) {
+      // Lookup table index for input whose width is greater than 12 bits
       lut_index = lut_index1/(1<<(AC_MAX(T_in::width-12, 0)));
-      if ((lut_index1 % (1<<(AC_MAX(T_in::width-12,0)))) > (1<<(AC_MAX(T_in::width-13,0))))
-      { lut_index = lut_index + 1; }
-    }
-    if (T_in::width-T_in::i_width>=3) {
-      // Getting the range 0-7 by extracting the first 3 bits after the decimal point where range 0 corresponds to [0-PI/4), range 1 corresponds to [PI/4-2PI/4), range2 corresponds to [2PI/4-3PI/4) and so on
-      rangetype range = posinput.template slc<3>(T_in::width-T_in::i_width-3);
-      lut_index = (range[0] == 1)?(lutindextype)(512-lut_index):(lutindextype)(lut_index);
-      outputtemp.i() = ((range==0) | (range==3))?(T_out)sincos[lut_index].i():((range==2) | (range==1))?(T_out)sincos[lut_index].r():
-                       ((range==7) | (range==4))?(T_out)-sincos[lut_index].i():(T_out)-sincos[lut_index].r();
-      outputtemp.r() = ((range==6) | (range==1))?(T_out)sincos[lut_index].i():((range==3) | (range==4))?(T_out)-sincos[lut_index].r():
-                       ((range==2) | (range==5))?(T_out)-sincos[lut_index].i():(T_out)sincos[lut_index].r();
-      // Below two are the cases when the output corresponds to + or - (0 or 1) for which there is no entry in the lookup table
-      output.i() = ((posinput==0.125 | posinput==0.375))?0.7071067811865475244008:((posinput==0.625 | posinput==0.875))?-0.7071067811865475244008:outputtemp.i();
-      output.r() = ((posinput==0.125 | posinput==0.875))?0.7071067811865475244008:((posinput==0.375 | posinput==0.625))?-0.7071067811865475244008:outputtemp.r();
+      if ((lut_index1 % (1<<(AC_MAX(T_in::width-12,0)))) > (1<<(AC_MAX(T_in::width-13,0)))) { 
+        lut_index = lut_index + 1; 
+      }
     }
 
-    if (T_in::width-T_in::i_width<=2) {
-      output.i() = (posinput==0)?(T_out)0:(posinput==0.25)?(T_out)1:(posinput==0.5)?(T_out)0:(posinput==0.75)?(T_out)-1:outputtemp.i();
-      output.r() = (posinput==0)?(T_out)1:(posinput==0.25)?(T_out)0:(posinput==0.5)?(T_out)-1:(posinput==0.75)?(T_out)0:outputtemp.r();
+    if (T_in::width-T_in::i_width>=3) {
+      // Getting the octant 0-7 by extracting the first 3 bits after the decimal point where 
+      //   octant 0 corresponds to [0-PI/4), 
+      //   octant 1 corresponds to [PI/4-2PI/4), 
+      //   octant 2 corresponds to [2PI/4-3PI/4) and so on
+      octanttype octant = posinput.template slc<3>(T_in::width-T_in::i_width-3);
+      lut_index = (octant[0] == 1)?(lutindextype)(512-lut_index):(lutindextype)(lut_index);
+      // imaginary part is sine
+      outputtemp.i() = ((octant==0) | (octant==3)) ? (T_out) sincos[lut_index].i():
+                       ((octant==2) | (octant==1)) ? (T_out) sincos[lut_index].r():
+                       ((octant==7) | (octant==4)) ? (T_out)-sincos[lut_index].i():
+                                                     (T_out)-sincos[lut_index].r();
+      // real part is cosine
+      outputtemp.r() = ((octant==6) | (octant==1)) ? (T_out) sincos[lut_index].i():
+                       ((octant==3) | (octant==4)) ? (T_out)-sincos[lut_index].r():
+                       ((octant==2) | (octant==5)) ? (T_out)-sincos[lut_index].i():
+                                                     (T_out) sincos[lut_index].r();
+      // Below two are the cases when the output corresponds to + or - (0 or 1) for which there is no entry in the lookup table
+      output.i() = ((posinput==0.125 | posinput==0.375)) ?  0.7071067811865475244008:
+                   ((posinput==0.625 | posinput==0.875)) ? -0.7071067811865475244008:
+                                                            outputtemp.i();
+      output.r() = ((posinput==0.125 | posinput==0.875)) ?  0.7071067811865475244008:
+                   ((posinput==0.375 | posinput==0.625)) ? -0.7071067811865475244008:
+                                                            outputtemp.r();
     }
+
+    if (T_in::width-T_in::i_width <= 2) {
+      output.i() = (posinput==0   ) ? (T_out) 0:
+                   (posinput==0.25) ? (T_out) 1:
+                   (posinput==0.5 ) ? (T_out) 0:
+                   (posinput==0.75) ? (T_out)-1:
+                                      outputtemp.i();
+      output.r() = (posinput==0   ) ? (T_out) 1:
+                   (posinput==0.25) ? (T_out) 0:
+                   (posinput==0.5 ) ? (T_out)-1:
+                   (posinput==0.75) ? (T_out) 0:
+                                      outputtemp.r();
+    }
+
 #if !defined(__SYNTHESIS__) && defined(SINCOS_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "============AC_FIXED SINCOS============" << endl;
