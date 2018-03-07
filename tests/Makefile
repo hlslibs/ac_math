@@ -9,7 +9,7 @@ ifeq "$(GCC_EXEC)" ""
 GCC_EXEC = g++
 endif
 
-DIE        = || $(RM) $@
+DIE        = || exit 1 ;
 RM        := rm -f
 ECHO      := echo
 

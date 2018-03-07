@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 1.0                                                 *
  *                                                                        *
- *  Release Date    : Fri Mar  2 16:26:42 PST 2018                        *
+ *  Release Date    : Wed Mar  7 13:09:26 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 1.0.0                                               *
  *                                                                        *
@@ -86,7 +86,7 @@
 #include <ac_complex.h>
 
 //=========================================================================
-// Function: abs (for ac_int)
+// Function: ac_abs (for ac_int)
 //
 // Description:
 //    Calculation of absolute value of real inputs, passed as ac_int
@@ -122,7 +122,7 @@ namespace ac_math
   }
 
 //=========================================================================
-// Function: abs (for ac_fixed)
+// Function: ac_abs (for ac_fixed)
 //
 // Description:
 //    Calculation of absolute value of real inputs, passed as ac_fixed
@@ -189,7 +189,7 @@ namespace ac_math
   }
 
 //=========================================================================
-// Function: abs (for ac_float)
+// Function: ac_abs (for ac_float)
 //
 // Description:
 //    Calculation of absolute value of real inputs, passed as ac_fixed

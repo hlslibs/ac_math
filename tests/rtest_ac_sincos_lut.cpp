@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 1.0                                                 *
  *                                                                        *
- *  Release Date    : Fri Mar  2 16:26:42 PST 2018                        *
+ *  Release Date    : Wed Mar  7 13:09:26 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 1.0.0                                               *
  *                                                                        *
@@ -32,28 +32,28 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_sincos() function using a variety of bit-widths.
+// ac_sincos_lut() function using a variety of bit-widths.
 
 // To compile standalone and run:
 //   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_sincos_lut.cpp -o design
 //   ./design
 
 // Include the AC Math function that is exercised with this testbench
-#include <ac_math/ac_sincos.h>
+#include <ac_math/ac_sincos_lut.h>
 using namespace ac_math;
 
 //==============================================================================
 // Test Design
-//   This simple function allows executing the ac_sincos() function.
+//   This simple function allows executing the ac_sincos_lut() function.
 //   Template parameters are used to configure the bit-widths of the types.
 
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-void test_ac_sincos(
+void test_ac_sincos_lut(
   const                ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>    &in,
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >   &out
 )
 {
-  ac_sincos(in, out);
+  ac_sincos_lut(in, out);
 }
 
 //==============================================================================
@@ -88,6 +88,8 @@ int test_driver(
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>                input_angle;
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >  output;
 
+  typedef ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> T_out;
+
   double lower_limit, upper_limit, step;
 
   // set ranges and step size for the testbench
@@ -110,12 +112,12 @@ int test_driver(
   for (double i = lower_limit; i < upper_limit; i += step) {
     // Set values for input.
     input_angle = i;
-    test_ac_sincos(input_angle, output);
+    test_ac_sincos_lut(input_angle, output);
 
-    double expected_sine_value   = sin(input_angle.to_double()*2*M_PI);
-    double actual_sine_value     = output.i().to_double();
-    double expected_cosine_value = cos(input_angle.to_double()*2*M_PI);
-    double actual_cosine_value   = output.r().to_double();
+    double expected_sine_value   = ((T_out)sin(input_angle.to_double()*2*M_PI)).to_double();
+    double actual_sine_value       = output.i().to_double();
+    double expected_cosine_value = ((T_out)cos(input_angle.to_double()*2*M_PI)).to_double();
+    double actual_cosine_value     = output.r().to_double();
     double this_error_sine, this_error_cosine;
 
     //When the C++ math library is supposed to return 0 for the cases when sine and cosine
@@ -140,7 +142,7 @@ int test_driver(
     if (this_error_sine > max_error_sine) {max_error_sine = this_error_sine;}
 
     if (this_error_cosine > max_error_cosine) {max_error_cosine = this_error_cosine;}
-
+ 
   }
 
   if (passed) { printf("PASSED , max err (%f sin) (%f cos)\n", max_error_sine, max_error_cosine); }
@@ -158,7 +160,7 @@ int main(int argc, char *argv[])
   double max_error_sine = 0, max_error_cosine = 0;
   double allowed_error = 0.1;
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_sincos() - Allowed error " << allowed_error << endl;
+  cout << "Testing function: ac_sincos_lut() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, int Sfi>
   test_driver< 12,  1, false, 24, 2, true>(max_error_sine, max_error_cosine, allowed_error);
@@ -171,6 +173,8 @@ int main(int argc, char *argv[])
   test_driver< 11,  1,  true, 34, 2, true>(max_error_sine, max_error_cosine, allowed_error);
   test_driver<  8, -3, false, 25, 2, true>(max_error_sine, max_error_cosine, allowed_error);
   test_driver<  9, -3, false, 26, 2, true>(max_error_sine, max_error_cosine, allowed_error);
+  test_driver< 14,  2, false, 24, 2, true>(max_error_sine, max_error_cosine, allowed_error);
+  test_driver< 12,  2, false, 24, 2, true>(max_error_sine, max_error_cosine, allowed_error);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;
@@ -182,11 +186,11 @@ int main(int argc, char *argv[])
 
   // Notify the user that the test was a failure.
   if (test_fail) {
-    cout << "  ac_sincos - FAILED - Error tolerance(s) exceeded" << endl;
+    cout << "  ac_sincos_lut - FAILED - Error tolerance(s) exceeded" << endl;
     cout << "=============================================================================" << endl;
     return -1;
   } else {
-    cout << "  ac_sincos - PASSED" << endl;
+    cout << "  ac_sincos_lut - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }
   return 0;
