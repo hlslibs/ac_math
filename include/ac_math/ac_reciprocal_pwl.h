@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -41,7 +41,6 @@
 //    A sample testbench and its implementation look like
 //    this:
 //
-//    #include <ac_fixed.h>
 //    #include <ac_math/ac_reciprocal_pwl.h>
 //    using namespace ac_math;
 //
@@ -62,7 +61,7 @@
 //
 //    CCS_MAIN(int arg, char **argc)
 //    {
-//      input_type input = 1.2;
+//      input_type input = 1.25;
 //      output_type output;
 //      CCS_DESIGN(project)(input, output);
 //      CCS_RETURN (0);
@@ -74,7 +73,8 @@
 //    specific to each type of data. Attempting to call the function
 //    with a type that is not implemented will result in a compile error.
 //
-//    This file uses the normalization function from ac_normalize.h.
+//    This library uses the ac_normalize() and ac_shift_right() function
+//    from the other ac_math header files.
 //
 // Revision History:
 //    Niramay Sanghvi : Aug 10 2017 : Added default parameters for better configurability.
@@ -99,17 +99,17 @@
 #error Please use C++11 or a later standard for compilation.
 #endif
 
-// Include headers for data types supported by these implementations
 #include <ac_int.h>
-#include <ac_float.h>
+// Include headers for data types supported by these implementations
 #include <ac_fixed.h>
+#include <ac_float.h>
 #include <ac_complex.h>
 
 // Include headers for required functions
 #include <ac_math/ac_normalize.h>
 #include <ac_math/ac_shift.h>
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
 #include <iostream>
 using namespace std;
 #endif
@@ -135,9 +135,7 @@ using namespace std;
 //
 // Notes:
 //    The PWL implementation utilizes 7 elements, which has a small impact
-//    on accuracy. For better accuracy, please use the LUT_Generator.cpp
-//    file to get new values for PWL LUTs which utilize more than 7
-//    elements.
+//    on accuracy.
 //
 //-------------------------------------------------------------------------
 
@@ -151,34 +149,34 @@ namespace ac_math
     ac_fixed<outW, outI, outS, outQ, outO> &output
   )
   {
-    // Use a macro to activate or de-activate the AC_ASSERT
+    // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero input
     // is encountered.
     // If AC_ASSERT is not activated: the output will saturate when a zero input is encountered.
     // The functionality behind this is taken care of by other sections of the code.
-#ifdef AC_RECIPROCAL_PWL_ASSERT
+#ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!input, "Reciprocal of zero not supported.");
 #endif
 
     ac_fixed<outW, outI, outS, outQ, outO> output_temp;
 
     // Initialization for PWL LUT
-    static const unsigned n_segments_lut = 6;
-    static const ac_fixed<9, 0, true> m_lut[n_segments_lut] = {-.28515625, -.212890625, -.166015625, -.130859375, -.109375, -.08984375};
-    static const ac_fixed<10, 1, false> c_lut[n_segments_lut] = {1.994140625, 1.708984375, 1.49609375, 1.330078125, 1.19921875, 1.08984375};
+    static const unsigned n_segments_lut = 8;
+    static const ac_fixed<10, 0, true> m_lut[n_segments_lut] = {-.22265625, -.1767578125, -.14453125, -.12109375, -.1025390625, -.087890625, -.0751953125, -.06640625};
+    static const ac_fixed<11, 1, false> c_lut[n_segments_lut] = {1.9970703125, 1.7744140625, 1.59765625, 1.453125, 1.33203125, 1.2294921875, 1.1416015625, 1.06640625};
     // Domain of PWL
     static const ac_fixed<1, 0, false> x_min_lut = 0.5;
     static const ac_fixed<1, 1, false> x_max_lut = 1;
     // Scaling constant used later to scale the normalized input from 0 to n_segments_lut
-    static const ac_fixed<4, 4, false> sc_constant_lut = n_segments_lut/(x_max_lut - x_min_lut);
+    static const ac_fixed<5, 5, false> sc_constant_lut = n_segments_lut/(x_max_lut - x_min_lut);
 
     // The absolute value of the input is taken and passed to the normalization function. Initialize variables for the same.
     ac_fixed<W, I, false> input_abs_value;
     ac_fixed<W, 0, false> normalized_fixed;
 
-    // If input is signed, take absolute value and assign to temporary variable.
+    // If input is signed, take absolute value and assign to intermediate variable.
     if (S) {input_abs_value = ((input >= 0) ? (ac_fixed <W, I, false>)input : (ac_fixed <W, I, false>)(-input));}
-    // If input is unsigned, assign value of input to temp. variable.
+    // If input is unsigned, assign value of input to intermediate variable.
     else {input_abs_value = input;}
 
     // Normalize the absolute value. expret stores the value of the returned base 2 exponential.
@@ -187,16 +185,16 @@ namespace ac_math
     // Compute reciprocal using pwl.
 
     // Scale the normalized input from 0 to n_segments_lut
-    ac_fixed<12, 3, true> x_in_sc = (normalized_fixed - x_min_lut)*sc_constant_lut;
+    ac_fixed<14, 4, true> x_in_sc = (normalized_fixed - x_min_lut)*sc_constant_lut;
     // Take out the fractional bits of the scaled input
-    ac_fixed<12 - 3, 0, false> x_in_sc_frac;
-    x_in_sc_frac.set_slc(0, x_in_sc.template slc<12 - 3>(0));
-    ac_int<3, false> index;
+    ac_fixed<14 - 4, 0, false> x_in_sc_frac;
+    x_in_sc_frac.set_slc(0, x_in_sc.template slc<14 - 4>(0));
+    ac_int<4, false> index;
     // The integer part of the input is the index of the LUT table
     index = x_in_sc.to_int();
     // The output of the PWL approximation should have the same signedness as the output of the function.
     // Define the type in such a way that the signedness is the same without affecting precision.
-    typedef ac_fixed<20 + int(outS), 2 + int(outS), outS, pwl_Q> output_pwl_type;
+    typedef ac_fixed<22 + int(outS), 2 + int(outS), outS, pwl_Q> output_pwl_type;
     output_pwl_type output_pwl = m_lut[index]*x_in_sc_frac + c_lut[index];
 
     if (input != 0) { // If input is non-zero, De-normalize output by shifting right by expret_temp
@@ -211,16 +209,16 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "input                     = " << input << endl;
-    cout << "input_abs_value           = " << input_abs_value << endl;
-    cout << "normalized input          = " << normalized_fixed << endl;
-    cout << "expret_temp               = " << expret_temp << endl;
-    cout << "x_in_sc                   = " << x_in_sc << endl;
-    cout << "x_in_sc_frac              = " << x_in_sc_frac << endl;
-    cout << "output_temp               = " << output_temp << endl;
-    cout << "output up-scaled by exp   = " << output << endl;
+    cout << "input                   = " << input << endl;
+    cout << "input_abs_value         = " << input_abs_value << endl;
+    cout << "normalized input        = " << normalized_fixed << endl;
+    cout << "expret_temp             = " << expret_temp << endl;
+    cout << "x_in_sc                 = " << x_in_sc << endl;
+    cout << "x_in_sc_frac            = " << x_in_sc_frac << endl;
+    cout << "output_temp             = " << output_temp << endl;
+    cout << "output up-scaled by exp = " << output << endl;
 #endif
   }
 
@@ -241,7 +239,6 @@ namespace ac_math
 //    A sample testbench and its implementation look like
 //    this:
 //
-//    #include <ac_float.h>
 //    #include <ac_math/ac_reciprocal_pwl.h>
 //    using namespace ac_math;
 //
@@ -301,7 +298,7 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "input             = " << input << endl;
     cout << "input.mantissa()  = " << input.mantissa() << endl;
@@ -339,8 +336,6 @@ namespace ac_math
 //    A sample testbench and its implementation look like
 //    this:
 //
-//    #include <ac_fixed.h>
-//    #include <ac_complex.h>
 //    #include <ac_math/ac_reciprocal_pwl.h>
 //    using namespace ac_math;
 //
@@ -387,21 +382,19 @@ namespace ac_math
     ac_fixed<outW, outI, false, outQ, outO> recip_mag_sqr;
     ac_reciprocal_pwl<pwl_Q>(input.mag_sqr(), recip_mag_sqr);
 
-    if (input.mag_sqr() != 0) {
+    if (input.r() != 0 || input.i() != 0) {
       // Use the formula "1/(a+bi) = (a-bi)/(a^2+b^2)" to assign values to the output.
       output_temp.r() =  input.r() * recip_mag_sqr;
       output_temp.i() = -input.i() * recip_mag_sqr;
     } else {
-      // If zero input is passed, then recip_mag_sqr is already set to the max
-      // possible value by the ac_fixed implementation. Assign its value to both the
-      // real and imaginary parts of the output.
-      output_temp.r() = recip_mag_sqr;
-      output_temp.i() = recip_mag_sqr;
+      // If zero input is passed, then assign the maximum possible value for output's real and imaginary part
+      output_temp.r().template set_val<AC_VAL_MAX>();
+      output_temp.i().template set_val<AC_VAL_MAX>();
     }
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "input.mag_sqr() = " << input.mag_sqr() << endl;
     cout << "recip_mag_sqr   = " << recip_mag_sqr << endl;
@@ -435,8 +428,6 @@ namespace ac_math
 //    A sample testbench and its implementation look like
 //    this:
 //
-//    #include <ac_float.h>
-//    #include <ac_complex.h>
 //    #include <ac_math/ac_reciprocal_pwl.h>
 //    using namespace ac_math;
 //
@@ -503,15 +494,15 @@ namespace ac_math
       output_temp.r() =  input.r() * recip_mag_sqr;
       output_temp.i() = -input.i() * recip_mag_sqr;
     } else {
-      // If zero input is passed, then recip_mag_sqr is already set to the max
-      // possible value by the ac_float implementation.
-      output_temp.r() = recip_mag_sqr;
-      output_temp.i() = recip_mag_sqr;
+      // If zero input is passed, then assign the maximum possible value for output's real part,
+      // and a zero value for imaginary.
+      output_temp.r().template set_val<AC_VAL_MAX>();
+      output_temp.i().template set_val<AC_VAL_MAX>();
     }
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "input         = " << input << endl;
     cout << "input_mag_sqr = " << input_mag_sqr << endl;
@@ -528,8 +519,8 @@ namespace ac_math
     const T_in &input
   )
   {
-    // Create a temporary variable for output and use the pass-by-reference version
-    // to evaluate it. This temporary variable is returned as the output.
+    // Create an intermediate variable for output and use the pass-by-reference version
+    // to evaluate it. This intermediate variable is returned as the output.
     T_out output;
     ac_reciprocal_pwl<pwl_Q>(input, output);
     return output;

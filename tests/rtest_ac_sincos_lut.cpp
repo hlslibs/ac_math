@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -53,7 +53,8 @@ void test_ac_sincos_lut(
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >   &out
 )
 {
-  ac_sincos_lut(in, out);
+  typedef ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > T_out;
+  out = ac_sincos_lut<T_out>(in);
 }
 
 //==============================================================================
@@ -97,16 +98,21 @@ int test_driver(
   upper_limit   = input_angle.template set_val<AC_VAL_MAX>().to_double();
   step          = input_angle.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  printf("TEST: ac_sincos_lut() INPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s> OUTPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s>  RESULT: ",
-         Wfi,Ifi,(Sfi?"true":"false"),"AC_TRN","AC_WRAP",outWfi,outIfi,(outSfi?"true":"false"),"AC_TRN","AC_WRAP");
+  cout << "TEST: ac_sincos_lut() INPUT: ";
+  cout.width(38);
+  cout << left << input_angle.type_name();
+  cout << "        OUTPUTS: ";
+  cout.width(38);
+  cout << left << output.type_name();
+  cout << "RESULT: ";
 
   // Dump the test details
   if (details) {
-    cout << endl;
-    cout << "  Ranges for input types:" << endl;
-    cout << "    lower_limit    = " << lower_limit << endl;
-    cout << "    upper_limit    = " << upper_limit << endl;
-    cout << "    step           = " << step << endl;
+    cout << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit    = " << lower_limit << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit    = " << upper_limit << endl; // LCOV_EXCL_LINE
+    cout << "    step           = " << step << endl; // LCOV_EXCL_LINE
   }
 
   for (double i = lower_limit; i < upper_limit; i += step) {
@@ -123,30 +129,24 @@ int test_driver(
     //When the C++ math library is supposed to return 0 for the cases when sine and cosine
     //values are 0, the C++ math library returns a small non-zero value. Hence for these cases
     //the values are rounded off to zero.
-    if (fmod(abs(input_angle.to_double()),0.25) == 0 && fmod(abs(input_angle.to_double()),0.5) != 0)
+    if (fmod(fabs(input_angle.to_double()),0.25) == 0 && fmod(fabs(input_angle.to_double()),0.5) != 0)
     { expected_cosine_value = 0.0; }
 
-    if (fmod(abs(input_angle.to_double()),0.5) == 0)
+    if (fmod(fabs(input_angle.to_double()),0.5) == 0)
     { expected_sine_value = 0.0; }
 
-    if (expected_sine_value != 0)
-    { this_error_sine   = abs( ( expected_sine_value - actual_sine_value) / expected_sine_value ) * 100.0; }
-    else
-    { this_error_sine   = abs(expected_sine_value - actual_sine_value) * 100.0; }
+    this_error_sine   = fabs(expected_sine_value - actual_sine_value) * 100.0;
 
-    if (expected_cosine_value != 0)
-    { this_error_cosine = abs( ( expected_cosine_value - actual_cosine_value) / expected_cosine_value ) * 100.0; }
-    else
-    { this_error_cosine = abs(expected_cosine_value - actual_cosine_value) * 100.0; }
+    this_error_cosine = fabs(expected_cosine_value - actual_cosine_value) * 100.0;
 
     if (this_error_sine > max_error_sine) {max_error_sine = this_error_sine;}
 
     if (this_error_cosine > max_error_cosine) {max_error_cosine = this_error_cosine;}
- 
+
   }
 
   if (passed) { printf("PASSED , max err (%f sin) (%f cos)\n", max_error_sine, max_error_cosine); }
-  else        { printf("FAILED , max err (%f sin) (%f cos)\n", max_error_sine, max_error_cosine); }
+  else        { printf("FAILED , max err (%f sin) (%f cos)\n", max_error_sine, max_error_cosine); } // LCOV_EXCL_LINE
 
   if (max_error_sine>cummulative_max_error_sine) { cummulative_max_error_sine = max_error_sine; }
   if (max_error_cosine>cummulative_max_error_cosine) { cummulative_max_error_cosine = max_error_cosine; }
@@ -158,7 +158,7 @@ int test_driver(
 int main(int argc, char *argv[])
 {
   double max_error_sine = 0, max_error_cosine = 0;
-  double allowed_error = 0.1;
+  double allowed_error = 0.2;
   cout << "=============================================================================" << endl;
   cout << "Testing function: ac_sincos_lut() - Allowed error " << allowed_error << endl;
 
@@ -175,6 +175,11 @@ int main(int argc, char *argv[])
   test_driver<  9, -3, false, 26, 2, true>(max_error_sine, max_error_cosine, allowed_error);
   test_driver< 14,  2, false, 24, 2, true>(max_error_sine, max_error_cosine, allowed_error);
   test_driver< 12,  2, false, 24, 2, true>(max_error_sine, max_error_cosine, allowed_error);
+  test_driver< 18,  2,  true, 27, 2, true>(max_error_sine, max_error_cosine, allowed_error);
+  test_driver< 20, -5, false, 25, 2, true>(max_error_sine, max_error_cosine, allowed_error);
+  test_driver< 21,  4, false, 28, 2, true>(max_error_sine, max_error_cosine, allowed_error);
+  test_driver< 17,  2,  true, 29, 2, true>(max_error_sine, max_error_cosine, allowed_error);
+  test_driver< 16,  2, false, 31, 2, true>(max_error_sine, max_error_cosine, allowed_error);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;
@@ -186,9 +191,9 @@ int main(int argc, char *argv[])
 
   // Notify the user that the test was a failure.
   if (test_fail) {
-    cout << "  ac_sincos_lut - FAILED - Error tolerance(s) exceeded" << endl;
-    cout << "=============================================================================" << endl;
-    return -1;
+    cout << "  ac_sincos_lut - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
+    cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
+    return -1; // LCOV_EXCL_LINE
   } else {
     cout << "  ac_sincos_lut - PASSED" << endl;
     cout << "=============================================================================" << endl;

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -44,7 +44,7 @@
 #include <ac_math/ac_normalize.h>
 using namespace ac_math;
 
-//==============================================================================
+// ==============================================================================
 // Test Design
 //   This simple function allows executing the ac_normalize() function
 //   using multiple data types at the same time (in this case, ac_fixed and
@@ -65,7 +65,7 @@ void test_ac_normalize(
   expret_complex = ac_normalize(in2, out2);
 }
 
-//==============================================================================
+// ==============================================================================
 // Function: test_driver_fixed()
 // Description: A templatized function that can be configured for certain bit-
 //   widths of AC datatypes. It uses the type information to iterate through a
@@ -78,10 +78,7 @@ int test_driver_fixed(
   bool details = false
 )
 {
-  bool passed;
-  bool check_monotonic = true;
-
-  //Declare types for testing real and complex inputs/outputs
+  // Declare types for testing real and complex inputs/outputs
   ac_fixed<Wfi,      Ifi, Sfi, AC_TRN, AC_WRAP>   input_fixed;
   ac_fixed<Wfi, int(Sfi), Sfi, AC_TRN, AC_WRAP>   output_fixed;
   ac_complex<ac_fixed<Wfi,      Ifi, Sfi, AC_TRN, AC_WRAP> > cmplx_input_fixed;
@@ -94,21 +91,29 @@ int test_driver_fixed(
   upper_limit   = input_fixed.template set_val<AC_VAL_MAX>().to_double();
   step          = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  printf("TEST: ac_normalize() INPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s> OUTPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s>  RESULT: ",
-         Wfi,Ifi,(Sfi?"true":"false"),"AC_TRN","AC_WRAP",Wfi,int(Sfi),(Sfi?"true":"false"),"AC_TRN","AC_WRAP");
+  cout << "TEST: ac_normalize() AC_FIXED INPUT: ";
+  cout.width(38);
+  cout << left << input_fixed.type_name();
+  cout << "AC_FIXED OUTPUT: ";
+  cout.width(38);
+  cout << left << output_fixed.type_name();
+  cout << "RESULT: ";
 
   // Dump the test details
   if (details) {
-    cout << endl;
-    cout << "  Ranges for input types:" << endl;
-    cout << "    lower_limit = " << lower_limit << endl;
-    cout << "    upper_limit = " << upper_limit << endl;
-    cout << "    step        = " << step << endl;
+    cout << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit = " << lower_limit << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit = " << upper_limit << endl; // LCOV_EXCL_LINE
+    cout << "    step        = " << step << endl; // LCOV_EXCL_LINE
   }
 
-  bool unequal = false;
+  bool incorrect = false;
   int nocalls, expret_fixed, expret_complex;
 
+  // test fixed-point real and complex.
+
+  // Go through every value that can be represented by the real and complex inputs.
   for (double i = lower_limit; i <= upper_limit; i += step) {
     for (double j = lower_limit; j <= upper_limit; j += step) {
       input_fixed = i;
@@ -117,24 +122,30 @@ int test_driver_fixed(
       test_ac_normalize(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed, expret_fixed, expret_complex);
       nocalls++;
 
-      bool unequal_fixed = (output_fixed.to_double() * pow(2, (double)expret_fixed) != input_fixed);
-      unequal_fixed = unequal_fixed || ((output_fixed > -0.5) && (output_fixed < 0.5)) || ((output_fixed >= 1) && (output_fixed < -1));
-      if (output_fixed == 0 && input_fixed == 0) {unequal_fixed = false;}
+      // This flag is set to false if the real output is incorrect
+      bool incorrect_fixed = (output_fixed.to_double() * pow(2, (double)expret_fixed) != input_fixed);
+      // Make sure that the range of the normalized output is as expected.
+      incorrect_fixed = incorrect_fixed || ((output_fixed > -0.5) && (output_fixed < 0.5)) || ((output_fixed >= 1) && (output_fixed < -1));
+      // Inputs and outputs being zero is a special case, and the range-checking above will produce a false negative in such a case. This is taken care of below.
+      if (output_fixed == 0 && input_fixed == 0) {incorrect_fixed = false;}
 
-      bool unequal_complex = ((cmplx_output_fixed.r().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.r().to_double()) || (cmplx_output_fixed.i().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.i().to_double()));
-      unequal_complex = unequal_complex || ((cmplx_output_fixed.r() > -0.5) && (cmplx_output_fixed.r() < 0.5) && (cmplx_output_fixed.i() > -0.5) && (cmplx_output_fixed.i() < 0.5));
-      unequal_complex = unequal_complex || (cmplx_output_fixed.r() >= 1) || (cmplx_output_fixed.r() < -1) || (cmplx_output_fixed.i() >= 1) && (cmplx_output_fixed.i() < -1);
-      if (cmplx_output_fixed.r() == 0 && cmplx_output_fixed.i() == 0 && cmplx_input_fixed.r() == 0 && cmplx_input_fixed.i() == 0) {unequal_complex = false;}
+      // This flag is set to false if the complex output is incorrect
+      bool incorrect_complex = ((cmplx_output_fixed.r().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.r().to_double()) || (cmplx_output_fixed.i().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.i().to_double()));
+      // Make sure that the range of the normalized output is as expected.
+      incorrect_complex = incorrect_complex || ((cmplx_output_fixed.r() > -0.5) && (cmplx_output_fixed.r() < 0.5) && (cmplx_output_fixed.i() > -0.5) && (cmplx_output_fixed.i() < 0.5));
+      incorrect_complex = incorrect_complex || (cmplx_output_fixed.r() >= 1) || (cmplx_output_fixed.r() < -1) || (cmplx_output_fixed.i() >= 1) && (cmplx_output_fixed.i() < -1);
+      // Inputs and outputs being zero is a special case, and the range-checking above will produce a false negative in such a case. This is taken care of below.
+      if (cmplx_output_fixed.r() == 0 && cmplx_output_fixed.i() == 0 && cmplx_input_fixed.r() == 0 && cmplx_input_fixed.i() == 0) {incorrect_complex = false;}
 
-      if (unequal_fixed || unequal_complex) {unequal = true;}
-
+      // If even a single input produces an incorrect output, the incorrect flag is set to true
+      if (incorrect_fixed || incorrect_complex) {incorrect = true;}
     }
   }
 
-  if (unequal) {printf("FAILED\n");}
-  else        {printf("PASSED\n");}
+  if (incorrect) {printf("FAILED\n");}
+  else           {printf("PASSED\n");} // LCOV_EXCL_LINE
 
-  all_tests_pass = all_tests_pass && !unequal;
+  all_tests_pass = all_tests_pass && !incorrect;
   return 0;
 }
 
@@ -146,8 +157,9 @@ int main(int argc, char *argv[])
 
   bool all_tests_pass = true;
 
-  //If any of the tests fail, the all_tests_pass variable will be set to false
-  //template <int Wfi, int Ifi, int Sfi>
+  // If any of the tests fail, the all_tests_pass variable will be set to false
+
+  // template <int Wfi, int Ifi, int Sfi>
   test_driver_fixed<7,  0, false>(all_tests_pass);
   test_driver_fixed<7, -3, false>(all_tests_pass);
   test_driver_fixed<7,  4, false>(all_tests_pass);
@@ -158,12 +170,25 @@ int main(int argc, char *argv[])
   test_driver_fixed<7,  4,  true>(all_tests_pass);
   test_driver_fixed<7,  9,  true>(all_tests_pass);
   test_driver_fixed<7,  7,  true>(all_tests_pass);
+  test_driver_fixed<10,  0, false>(all_tests_pass);
+  test_driver_fixed<10, -3, false>(all_tests_pass);
+  test_driver_fixed<10,  4, false>(all_tests_pass);
+  test_driver_fixed<10, 14, false>(all_tests_pass);
+  test_driver_fixed<10, 10, false>(all_tests_pass);
+  test_driver_fixed<10,  0,  true>(all_tests_pass);
+  test_driver_fixed<10, -3,  true>(all_tests_pass);
+  test_driver_fixed<10,  4,  true>(all_tests_pass);
+  test_driver_fixed<10, 14,  true>(all_tests_pass);
+  test_driver_fixed<10, 10,  true>(all_tests_pass);
 
-  // Notify the user that the test was a failure.
+  cout << "=============================================================================" << endl;
+  cout << "  Testbench finished." << endl;
+
+  // Notify the user whether or not the test was a failure.
   if (!all_tests_pass) {
-    cout << "  ac_normalize - FAILED - Normalized output does not match input for all test values" << endl;
-    cout << "=============================================================================" << endl;
-    return -1;
+    cout << "  ac_normalize - FAILED - Normalized output does not match input for all test values" << endl; // LCOV_EXCL_LINE
+    cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
+    return -1; // LCOV_EXCL_LINE
   } else {
     cout << "  ac_normalize - PASSED" << endl;
     cout << "=============================================================================" << endl;

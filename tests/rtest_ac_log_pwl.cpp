@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -32,7 +32,7 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_reciprocal_pwl() function using a variety of data types and bit-
+// ac_log_pwl() function using a variety of data types and bit-
 // widths.
 
 // To compile standalone and run:
@@ -43,132 +43,172 @@
 #include <ac_math/ac_log_pwl.h>
 using namespace ac_math;
 
-//#include <string>
-//#include <stdlib.h>
-//#include <fstream>
+// ------------------------------------------------------------------------------
+// Helper function for absolute value calculation. This can avoid any naming conflicts
+// with other absolute value functions.
 
-//==============================================================================
+double abs_double(double x)
+{
+  return x >= 0 ? x : -x;
+}
+
+// ==============================================================================
+// Test Design
+//   This simple function allows executing the ac_log_pwl() function.
+//   Template parameters are used to configure the bit-widths of the
+//   ac_fixed inputs.
+
+template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
+void test_ac_log_pwl(
+  const ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP>  &in,
+  ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> &log_out
+)
+{
+  log_out = ac_log_pwl<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >(in);
+}
+
+// ==============================================================================
 
 #include <math.h>
+#include <string>
+#include <fstream>
 #include <iostream>
 using namespace std;
 
-//------------------------------------------------------------------------------
-// Helper functions for AC_FIXED
-// Function to convert test input data (double) into specific type
-template<int input_width, int input_int, bool input_S, ac_q_mode input_Q, ac_o_mode input_O>
-void double_to_type(
-  const double                                                   double_value,
-  ac_fixed<input_width, input_int, input_S, input_Q, input_O>   &type_value)
-{
-  type_value = double_value;
-}
+// ===============================================================================
+// Function: test_driver()
+// Description: A templatized function that can be configured for certain bit-
+//   widths of ac_fixed inputs. It uses the type information to iterate through a
+//   range of valid values on that type in order to compare the precision of the
+//   piecewise linear log model with the computed base 2 logarithm using a
+//   standard C double type. The maximum error for each type is accumulated
+//   in variables defined in the calling function.
 
-// Overloaded function to convert type specific test input data to double
-template<int input_width, int input_int, bool input_S, ac_q_mode input_Q, ac_o_mode input_O>
-double type_to_double(
-  ac_fixed<input_width, input_int, input_S, input_Q, input_O>   &type_value)
-{
-  return type_value.to_double();
-}
-
-//==============================================================================
-// Test Design
-//   This simple function allows executing the ac_log_pwl() function
-//   using multiple data types at the same time. Template parameters are
-//   used to configure the bit-widths of the types.
-
-template <int W_IN, int I_IN, bool S_IN, int W_OUT, int I_OUT, bool S_OUT>
-void test_ac_log_pwl(
-  const ac_fixed<W_IN, I_IN, S_IN>  &in,
-  ac_fixed<W_OUT,I_OUT,S_OUT> &loge_out
+template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
+int test_driver(
+  double &cumulative_max_error_log,
+  const double allowed_error,
+  const double threshold,
+  bool details = false
 )
 {
-  ac_log_pwl(in, loge_out);
-}
+  ac_fixed<Wfi + 2, Ifi + 1, false, AC_TRN, AC_WRAP> i; // make loop variable slightly larger
+  ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP> input;
+  ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP> last;
+  typedef ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> T_out;
+  T_out log_out;
 
-template <int W_IN, int I_IN, bool S_IN, int W_OUT, int I_OUT, bool S_OUT>
-void test_driver()
-{
-  ac_fixed<W_IN+2,I_IN+1,S_IN> i; // make loop variable slightly larger
-  ac_fixed<W_IN,I_IN,S_IN> input;
-  ac_fixed<W_IN,I_IN,S_IN> last;
-  ac_fixed<W_OUT,I_OUT,S_OUT> loge_out;
+  // set ranges and step size for testbench
+  ac_fixed<Wfi, Ifi, false> lower_limit = input.template set_val<AC_VAL_MIN>();
+  ac_fixed<Wfi, Ifi, false> upper_limit = input.template set_val<AC_VAL_MAX>();
+  ac_fixed<Wfi, Ifi, false> step        = input.template set_val<AC_VAL_QUANTUM>();
 
-  ac_fixed<W_IN,I_IN,S_IN> lower_limit = input.template set_val<AC_VAL_MIN>().to_double();
-  ac_fixed<W_IN,I_IN,S_IN> upper_limit = input.template set_val<AC_VAL_MAX>().to_double();
-  ac_fixed<W_IN,I_IN,S_IN> step        = input.template set_val<AC_VAL_QUANTUM>().to_double();
   if (step < 0.01) { step = 0.01; }
 
-  printf("TEST: ac_log_pwl() INPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s> OUTPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s>  RESULT: ",
-         W_IN,I_IN,(S_IN?"true":"false"),"AC_TRN","AC_WRAP",W_OUT,I_OUT,(S_OUT?"true":"false"),"AC_TRN","AC_WRAP");
-//#ifdef DEBUG
-//  cout << "    lower_limit  = " << lower_limit << endl;
-//  cout << "    upper_limit  = " << upper_limit << endl;
-//  cout << "    step         = " << step << endl;
-//#endif
+  cout << "TEST: ac_log_pwl() INPUT: ";
+  cout.width(38);
+  cout << left << input.type_name();
+  cout << "OUTPUT: ";
+  cout.width(38);
+  cout << left << log_out.type_name();
+  cout << "RESULT: ";
+
+  // Dump the test details
+  if (details) {
+    cout << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit          = " << lower_limit << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit          = " << upper_limit << endl; // LCOV_EXCL_LINE
+    cout << "    step                 = " << step << endl; // LCOV_EXCL_LINE
+  }
 
   bool passed = true;
-  double allowed_error = 0.00160;
-  double max_loge_error = 0.0;
+  double max_log_error = 0.0;
+
   for (i = lower_limit; i < upper_limit; i += step) {
+    // Set values for input.
     input = i;
-    if (type_to_double(input) == 0) { continue; }
 
     // call reference log() with fixed-pt value converted back to double
-    double expected_loge = log(type_to_double(input));
+    // an additional step of typecasting is required in order to perform
+    // quantization on the expected output.
+    double expected_log = ((T_out)log(input.to_double())).to_double();
+
+    // If input is zero, saturate the expected value according to the max. value representible by
+    // the fixed point output.
+    if(input == 0) {
+      T_out output_min;
+      output_min.template set_val<AC_VAL_MIN>();
+      expected_log = output_min.to_double();
+    }
 
     // call DUT with fixed-pt value
-    test_ac_log_pwl(input,loge_out);
+    test_ac_log_pwl(input,log_out);
 
-    double actual_loge = type_to_double(loge_out);
+    double actual_log = log_out.to_double();
+    double this_error_log;
 
-    double diff_loge = abs(expected_loge-actual_loge);
-    if (diff_loge > allowed_error) {
-      cout << "    diff_loge = " << diff_loge << endl;
-      passed = false;
-      assert(0);
+    // If expected value of either output falls below the threshold, calculate absolute error instead of relative
+    if (expected_log > threshold) {this_error_log = abs_double( (expected_log - actual_log) / expected_log ) * 100.0;}
+    else {this_error_log = abs_double(expected_log - actual_log) * 100.0;}
+
+#ifdef DEBUG
+    if (this_error_log > allowed_error) {
+      cout << endl;
+      cout << "  Error exceeds tolerance" << endl;
+      cout << "  input           = " << input << endl;
+      cout << "  expected_log   = " << expected_log << endl;
+      cout << "  actual_log     = " << actual_log << endl;
+      cout << "  this_error_log = " << this_error_log << endl;
+      cout << "  threshold       = " << threshold << endl;
+      assert(false);
     }
-    if (diff_loge > max_loge_error) { max_loge_error = diff_loge; }
+#endif
+
+    if (this_error_log > max_log_error) { max_log_error = this_error_log; }
   }
-  if (passed) { printf("PASSED , max err (%f)\n", max_loge_error); }
-  else        { printf("FAILED , max err (%f)\n", max_loge_error); }
+
+  if (max_log_error > cumulative_max_error_log) { cumulative_max_error_log = max_log_error; }
+
+  passed = (max_log_error < allowed_error);
+
+  if (passed) { printf("PASSED , max err (%f)\n", max_log_error); }
+  else        { printf("FAILED , max err (%f)\n", max_log_error); } // LCOV_EXCL_LINE
+
+  return 0;
 }
 
 int main(int argc, char *argv[])
 {
-  cout << "Testbench start" << endl;
-  //          W_IN   I_IN   S_IN   W_OUT  I_OUT  S_OUT         lower   upper    step
-  test_driver<  32,    12, false,     32,    16,  true >(); //
-  test_driver<  31,    12, false,     32,    16,  true >(); //
-  test_driver<  30,    12, false,     32,    16,  true >(); //
-  test_driver<  29,    12, false,     32,    16,  true >(); //
-  test_driver<  28,    12, false,     32,    16,  true >(); //
-  test_driver<  27,    12, false,     32,    16,  true >(); //
-  test_driver<  26,    12, false,     32,    16,  true >(); //
-  test_driver<  32,    -3, false,     32,    16,  true >(); //
-  test_driver<  32,    -2, false,     32,    16,  true >(); //
-  test_driver<  32,    -1, false,     32,    16,  true >(); //
-  test_driver<  32,     0, false,     32,    16,  true >(); //
-  test_driver<  32,     1, false,     32,    16,  true >(); //
-  test_driver<  32,     2, false,     32,    16,  true >(); //
-  test_driver<  32,     3, false,     32,    16,  true >(); //
-  test_driver<  14,    15, false,     32,    16,  true >(); //
-  test_driver<  14,    16, false,     32,    16,  true >(); //
-  test_driver<  14,    17, false,     32,    16,  true >(); //
-  test_driver<  14,    18, false,     32,    16,  true >(); //
-  test_driver<  14,    19, false,     32,    16,  true >(); //
-  test_driver<  14,    20, false,     32,    16,  true >(); //
+  double max_error_log = 0.0;
+  double allowed_error = 1;
+  double threshold = 0.1;
 
-#if 0
-  cout << "Testbench finished" << endl;
-  cout << "max_loge_error      = " << max_loge_error << endl;
-  if (max_loge_error > allowed_error) {
-    cout << "Error tolerance of " << allowed_error << " percent error exceeded - FAIL" << endl;
-    cout << "===================================================" << endl;
-    return (-1);
+  cout << "=============================================================================" << endl;
+  cout << "Testing function: ac_log_pwl() - Allowed error " << allowed_error << endl;
+
+  //template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
+  test_driver<20, 12, 64, 32, true>(max_error_log, allowed_error, threshold);
+  test_driver<20,  8, 64, 32, true>(max_error_log, allowed_error, threshold);
+  test_driver<20, 30, 64, 32, true>(max_error_log, allowed_error, threshold);
+  test_driver<20, 30, 64, 32, true>(max_error_log, allowed_error, threshold);
+  test_driver<20, 30, 64, 32, true>(max_error_log, allowed_error, threshold);
+  test_driver<20, -2, 64, 32, true>(max_error_log, allowed_error, threshold);
+  test_driver<20, -3, 64, 32, true>(max_error_log, allowed_error, threshold);
+
+  cout << "=============================================================================" << endl;
+  cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;
+  cout << "    max_error_log = " << max_error_log << endl;
+
+  // If error limits on any test value have been crossed, the test has failed
+  // Notify the user that the test was a failure if that is the case.
+  if (max_error_log > allowed_error) {
+    cout << "  ac_log_pwl - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
+    cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
+    return (-1); // LCOV_EXCL_LINE
   }
-#endif
-  cout << "===================================================" << endl;
+
+  cout << "  ac_log_pwl - PASSED" << endl;
+  cout << "=============================================================================" << endl;
   return (0);
 }

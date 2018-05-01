@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -33,34 +33,63 @@
 #ifndef _INCLUDED_AC_MATH_H_
 #define _INCLUDED_AC_MATH_H_
 
-#include <ac_math/ac_math_ns.h>
+#include <ac_math/ac_abs.h>
+// ac_abs()
+
+#include <ac_math/ac_arccos_cordic.h>
+// ac_arccos_cordic()
+
+#include <ac_math/ac_arcsin_cordic.h>
+// ac_arcsin_cordic()
+
+#include <ac_math/ac_atan2_cordic.h>
+// ac_atan2_cordic()
+
+#include <ac_math/ac_div.h>
+// ac_div()
+
+#include <ac_math/ac_hcordic.h>
+// ac_log_cordic()
+// ac_log2_cordic()
+// ac_exp_cordic()
+// ac_exp2_cordic()
+// ac_pow_cordic()
+
+#include <ac_math/ac_inverse_sqrt_pwl.h>
+// ac_inverse_sqrt_pwl()
+
+#include <ac_math/ac_log_pwl.h>
+// ac_log_pwl()
+// ac_log2_pwl()
 
 #include <ac_math/ac_normalize.h>
 // ac_normalize()
-
-#include <ac_math/ac_shift.h>
-// ac_shift_right()
-// ac_shift_left()
-
-#include <ac_math/ac_reciprocal_pwl.h>
-// ac_reciprocal_pwl()
-
-#include <ac_math/ac_log_pwl.h>
-// ac_log2_pwl()
-// ac_log_pwl()
 
 #include <ac_math/ac_pow_pwl.h>
 // ac_pow2_pwl()
 // ac_exp_pwl()
 
+#include <ac_math/ac_random.h>
+// ac_random()
+
+#include <ac_math/ac_reciprocal_pwl.h>
+// ac_reciprocal_pwl()
+
+#include <ac_math/ac_shift.h>
+// ac_shift_left()
+// ac_shift_right()
+
+#include <ac_math/ac_sincos_cordic.h>
+// ac_sincos_cordic()
+
+#include <ac_math/ac_sincos_lut.h>
+// ac_sincos_lut()
+
+#include <ac_math/ac_sqrt.h>
+// ac_sqrt()
+
 #include <ac_math/ac_sqrt_pwl.h>
 // ac_sqrt_pwl()
-
-#include <ac_math/ac_inverse_sqrt_pwl.h>
-// ac_inverse_sqrt_pwl()
-
-#include <ac_math/ac_sincos.h>
-// ac_sincos()
 
 #endif
 

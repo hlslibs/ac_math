@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -30,23 +30,21 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
-//*****************************************************************************************
+//********************************************************************************************
 // File: ac_pow_pwl.h
 //
 // Description:
 //    Provides piece-wise linear implementations of the
-//    base 2 and base e exponential functions for the AC (tm) Datatype:
-//    ac_fixed.
+//    base 2 and base e exponential functions for ac_fixed inputs.
 //
 // Usage:
 //    A sample testbench and its implementation look like this:
 //
-//    #include <ac_fixed.h>
 //    #include <ac_math/ac_pow_pwl.h>
 //    using namespace ac_math;
 //
 //    typedef ac_fixed<20, 11, true, AC_RND, AC_SAT> input_type;
-//    typedef ac_fixed<24, 14, true, AC_RND, AC_SAT> output_type;
+//    typedef ac_fixed<24, 14, false, AC_RND, AC_SAT> output_type;
 //
 //    #pragma hls_design top
 //    void project(
@@ -76,13 +74,12 @@
 // Revision History:
 //    Niramay Sanghvi : Aug 15 2017 : Default template parameters for configurability added
 //    Niramay Sanghvi : Aug 07 2017 : Used ac_shift_left function for RND and SAT support.
-//    Niramay Sanghvi : Jul 31 2017 : Added structs for type-checking.
 //    Niramay Sanghvi : Jul 12 2017 : Added header style format.
-//    Niramay Sanghvi : Jul 11 2017 : Added support for all possible values of W & I.
+//    Niramay Sanghvi : Jul 11 2017 : Added support for all possible values of integer widths.
 //    Niramay Sanghvi : Jul 05 2017 : Passed output by reference.
 //    Niramay Sanghvi : Jun 29 2017 : Renamed header files and functions.
 //
-//*****************************************************************************************
+//********************************************************************************************
 
 #ifndef _INCLUDED_AC_POW_PWL_H_
 #define _INCLUDED_AC_POW_PWL_H_
@@ -94,11 +91,8 @@
 #error Please use C++11 or a later standard for compilation.
 #endif
 
-// Include headers for data types supported by these implementations
 #include <ac_int.h>
-#include <ac_float.h>
 #include <ac_fixed.h>
-#include <ac_complex.h>
 
 // Include headers for required functions
 #include <ac_math/ac_shift.h>
@@ -107,22 +101,6 @@
 #include <iostream>
 using namespace std;
 #endif
-
-namespace pow_pwl
-{
-// This struct computes precision of input_inter variable ("pii") for base e exponent. It also makes sure
-// that there are a set minimum no. of fractional bits to represent the multiplication of x with log2(e)
-// (this is decided by the n_f_b variable).
-  template <int W, int I, bool S, ac_q_mode Q, ac_o_mode O, int n_f_b>
-  struct comp_pii_exp {
-    enum {
-      pit_i       = I + 1,
-      pit_w_inter = W + 1,
-      pit_w       = (W - I) > n_f_b ? pit_w_inter : pit_i + n_f_b
-    };
-    typedef ac_fixed<pit_w, pit_i, S, Q, O> pit_t;
-  };
-};
 
 //=========================================================================
 // Function: ac_pow2_pwl (for ac_fixed)
@@ -140,10 +118,7 @@ namespace pow_pwl
 //
 // Notes:
 //    The PWL implementation utilizes 3 elements, which has a small impact
-//    on accuracy. For better accuracy, please use the LUT_Generator.cpp
-//    file to get new values for PWL LUT values which utilize more than 3
-//    elements. The relevant arrays and variables with information for the
-//    new LUT will be copied to a text file in C++ syntax.
+//    on accuracy.
 //
 //-------------------------------------------------------------------------
 
@@ -191,10 +166,10 @@ namespace ac_math
     typedef ac_fixed<20, 2, false, pwl_Q> output_pwl_type;
     output_pwl_type output_pwl = m_lut[index] * x_in_sc_frac + c_lut[index];
 
-    // Shift left by the integer part of the input to multiply by (2^input_integer_part)
+    // Shift left by the integer part of the input to cancel out the previous normalization.
     ac_math::ac_shift_left(output_pwl, input.to_int(), output);
 
-#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "Actual input              = " << input << endl;
     cout << "normalized input          = " << input_frac_part << endl;
@@ -231,12 +206,11 @@ namespace ac_math
 // Usage:
 //    A sample testbench and its implementation look like this:
 //
-//    #include <ac_fixed.h>
 //    #include <ac_math/ac_pow_pwl.h>
 //    using namespace ac_math;
 //
 //    typedef ac_fixed<20, 11, true, AC_RND, AC_SAT> input_type;
-//    typedef ac_fixed<24, 14, true, AC_RND, AC_SAT> output_type;
+//    typedef ac_fixed<24, 14, false, AC_RND, AC_SAT> output_type;
 //
 //    #pragma hls_design top
 //    void project(
@@ -263,12 +237,25 @@ namespace ac_math
 //    This function relies on the ac_pow2_pwl function for its computation. It
 //    does this by multiplying the input with log2(e), then passing it to
 //    the ac_pow2_pwl function. In doing so, we also make sure that the
-//    multiplied value has enough precision to store the result of
-//    input*log2(e)
+//    product variable has enough precision to store the result of
+//    input*log2(e).
 //
 //-----------------------------------------------------------------------------
 
-//n_f_b = minimum no of fractional bits used in storing the result of multiplication by log2(e)
+  // This struct computes precision of input_inter variable ("pii") for base e exponent. It also makes sure
+  // that there are a set minimum no. of fractional bits to represent the multiplication of x with log2(e)
+  // (this is decided by the n_f_b variable).
+  template <int W, int I, bool S, ac_q_mode Q, ac_o_mode O, int n_f_b>
+  struct comp_pii_exp {
+    enum {
+      pit_i       = I + 1,
+      pit_w_inter = W + 1,
+      pit_w       = (W - I) > n_f_b ? pit_w_inter : pit_i + n_f_b
+    };
+    typedef ac_fixed<pit_w, pit_i, S, Q, O> pit_t;
+  };
+
+  //n_f_b = minimum no of fractional bits used in storing the result of multiplication by log2(e)
   template<int n_f_b = 9, ac_q_mode pwl_Q = AC_RND,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
@@ -279,13 +266,13 @@ namespace ac_math
   {
     static const ac_fixed<17, 3, true> log2e = 1.44269504089;
     // Find type of intermediate variable used to store output of x*log2(e)
-    typedef class pow_pwl::comp_pii_exp<W, I, S, Q, O, n_f_b>::pit_t input_inter_type;
+    typedef class comp_pii_exp<W, I, S, Q, O, n_f_b>::pit_t input_inter_type;
     input_inter_type input_inter;
     // e^x = 2^(x*log2(e))
     input_inter = input*log2e;
     ac_pow2_pwl<pwl_Q>(input_inter, output);
 
-#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "input_inter.width       = " << input_inter.width << endl;
     cout << "input_inter.i_width     = " << input_inter.i_width << endl;

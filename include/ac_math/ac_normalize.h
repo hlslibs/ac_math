@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -30,7 +30,7 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
-//*****************************************************************************************
+//************************************************************************************
 // File: ac_normalize.h
 //
 // Description: Provides normalization for the AC (tm) Datatypes: ac_fixed and
@@ -39,7 +39,6 @@
 // Usage:
 //    A sample testbench and its implementation look like this:
 //
-//    #include <ac_fixed.h>
 //    #include <ac_math/ac_normalize.h>
 //    using namespace ac_math;
 //
@@ -82,16 +81,13 @@
 //    Niramay Sanghvi : Aug 10 2017 : Added support for signed ac_complex<ac_fixed>.
 //    Niramay Sanghvi : Aug 07 2017 : Added support for unsigned ac_complex<ac_fixed>.
 //
-//*****************************************************************************************
+//************************************************************************************
 
 #ifndef _INCLUDED_AC_NORMALIZE_H_
 #define _INCLUDED_AC_NORMALIZE_H_
 
-// Uncomment or pass to compiler to enable debug messages
-//#define AC_NORMALIZE_DEBUG
-
-// Include headers for data types supported by these implementations
 #include <ac_int.h>
+// Include headers for data types supported by these implementations
 #include <ac_fixed.h>
 #include <ac_complex.h>
 
@@ -106,7 +102,7 @@ using namespace std;
 // Description:
 //    Normalization of real inputs, passed as ac_fixed variables.
 //
-//    Normalizes the ac_complex<ac_fixed> input such that the MSB coincides
+//    Normalizes the ac_fixed input such that the MSB coincides
 //    with the leading 1. Returns a base-2 exponential that reflects the
 //    relation of the normalized value with the original value. The
 //    normalized value is an ac_fixed variable that is passed by reference
@@ -148,7 +144,7 @@ namespace ac_math
     // that corresponds to leading_1.
     int expret = input != 0 ? I - int(S) - leading_1 : 0;
 
-#if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "input to normalize = " << input << endl;
     cout << "leading_1          = " << leading_1 << endl;
@@ -159,7 +155,7 @@ namespace ac_math
     return expret;
   }
 
-//===========================================================================
+//===============================================================================
 // Function: ac_normalize (for ac_complex<ac_fixed>)
 //
 // Description:
@@ -176,8 +172,6 @@ namespace ac_math
 // Usage:
 //    A sample testbench and its implementation look like this:
 //
-//    #include <ac_fixed.h>
-//    #include <ac_complex.h>
 //    #include <ac_math/ac_normalize.h>
 //    using namespace ac_math;
 //
@@ -216,7 +210,7 @@ namespace ac_math
 //    (a) [0.5, 1) for unsigned ac_fixed numbers.
 //    (b) [-1, -0.5] or [0.5, 1) for signed ac_fixed numbers.
 //
-//---------------------------------------------------------------------------
+//-------------------------------------------------------------------------------
 
   template<int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
   int ac_normalize(
@@ -253,7 +247,7 @@ namespace ac_math
     // that corresponds to leading_1.
     int expret = input != 0 ? I - int(S) - leading_1 : 0;
 
-#if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
     cout << "input to normalize = " << input << endl;
     cout << "leading_1          = " << leading_1 << endl;

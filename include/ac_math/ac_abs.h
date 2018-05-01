@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -34,6 +34,19 @@
 // File: ac_abs.h
 //
 // Description: Provides absolute value functions for AC datatypes
+//              + input: argument
+//              + output: absolute-value
+//
+//              * Integer Signed
+//                void abs(ac_int<XW,true> x, ac_int<YW,false> &y)
+//                void abs(ac_int<XW,true> x, ac_int<YW,true> &y)
+//
+//              * Fixed Point Signed
+//                void abs(ac_fixed<XW,XI,true,XQ,XO> x, ac_fixed<YW,YI,false,YQ,YO> &y)
+//                void abs(ac_fixed<XW,XI,true,XQ,XO> x, ac_fixed<YW,YI,true,YQ,YO> &y)
+//
+//              * Float
+//                void abs(ac_float<XW,XI,XE,XQ> x, ac_float<YW,YI,YE,YQ> &y)
 //
 // Usage:
 //    A sample testbench and its implementation look like
@@ -81,9 +94,9 @@
 #endif
 
 // Include headers for data types supported by these implementations
+#include <ac_int.h>
 #include <ac_fixed.h>
 #include <ac_float.h>
-#include <ac_complex.h>
 
 //=========================================================================
 // Function: ac_abs (for ac_int)

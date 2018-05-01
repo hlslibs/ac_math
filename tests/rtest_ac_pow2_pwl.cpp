@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -43,22 +43,22 @@
 #include <ac_math/ac_pow_pwl.h>
 using namespace ac_math;
 
-//==============================================================================
+// ==============================================================================
 // Test Design
 //   This simple function allows executing the ac_pow2_pwl() function.
 //   Template parameters are used to configure the bit-widths of the
 //   ac_fixed inputs.
 
-template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
 void test_ac_pow2_pwl(
   const ac_fixed<   Wfi,    Ifi,    Sfi, AC_TRN, AC_WRAP> &in,
-  ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> &out_pow2
+  ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> &out_pow2
 )
 {
-  ac_pow2_pwl(in, out_pow2);
+  out_pow2 = ac_pow2_pwl<ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> >(in);
 }
 
-//==============================================================================
+// ==============================================================================
 
 #include <math.h>
 #include <string>
@@ -66,16 +66,16 @@ void test_ac_pow2_pwl(
 #include <iostream>
 using namespace std;
 
-//==============================================================================
+// ==============================================================================
 // Function: test_driver()
 // Description: A templatized function that can be configured for certain bit-
-//   widths of AC datatypes. It uses the type information to iterate through a
+//   widths of ac_fixed inputs. It uses the type information to iterate through a
 //   range of valid values on that type in order to compare the precision of the
 //   piece-wise linear power model with the computed power using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
 
-template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
 int test_driver(
   double &cumulative_max_error_pow2,
   const double allowed_error,
@@ -88,9 +88,8 @@ int test_driver(
   double max_error_pow2 = 0.0; // reset for this run
 
   ac_fixed<   Wfi,    Ifi,    Sfi, AC_TRN, AC_WRAP> input;
-  ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> output_pow2;
-
-  typedef ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> T_out;
+  typedef ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> T_out;
+  T_out output_pow2;
 
   double lower_limit, upper_limit, step;
 
@@ -99,23 +98,28 @@ int test_driver(
   upper_limit = input.template set_val<AC_VAL_MAX>().to_double();
   step        = input.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  printf("TEST: ac_pow2_pwl() INPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s> OUTPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s>  RESULT: ",
-         Wfi,Ifi,(Sfi?"true":"false"),"AC_TRN","AC_WRAP",outWfi,outIfi,(outSfi?"true":"false"),"AC_TRN","AC_WRAP");
+  cout << "TEST: ac_pow2_pwl() INPUT: ";
+  cout.width(38);
+  cout << left << input.type_name();
+  cout << "OUTPUT: ";
+  cout.width(38);
+  cout << left << output_pow2.type_name();
+  cout << "RESULT: ";
 
   // Dump the test details
   if (details) {
-    cout << endl;
-    cout << "  Ranges for input types:" << endl;
-    cout << "    lower_limit          = " << lower_limit << endl;
-    cout << "    upper_limit          = " << upper_limit << endl;
-    cout << "    step                 = " << step << endl;
+    cout << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit          = " << lower_limit << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit          = " << upper_limit << endl; // LCOV_EXCL_LINE
+    cout << "    step                 = " << step << endl; // LCOV_EXCL_LINE
   }
 
   double old_output_pow2;
   bool compare_pow2 = false;
 
   for (double i = lower_limit; i < upper_limit; i += step) {
-    //Set values for input.
+    // Set values for input.
     input = i;
     test_ac_pow2_pwl(input, output_pow2);
 
@@ -124,37 +128,53 @@ int test_driver(
 
     double this_error_pow2;
 
-    //If expected value of either output falls below the threshold, calculate absolute error instead of relative
+    // If expected value of output falls below the threshold, calculate absolute error instead of relative
     if (expected_value_pow2 > threshold) {this_error_pow2 = abs( (expected_value_pow2 - actual_value_pow2) / expected_value_pow2 ) * 100.0;}
     else {this_error_pow2 = abs(expected_value_pow2 - actual_value_pow2) * 100.0;}
 
     if (check_monotonic) {
       // MONOTONIC: Make sure that function is monotonic. Compare old value (value of previous iteration) with current value. Since the exponential function we
-      //are testing is an increasing function, and our testbench value keeps incrementing or remains the same (in case of saturation), we expect the
-      //old value to be lesser than or equal to the current one.
+      // are testing is an increasing function, and our testbench value keeps incrementing or remains the same (in case of saturation), we expect the
+      // old value to be lesser than or equal to the current one.
 
-      //This comparison is only carried out once there is an old value to compare with, for the base 2 exponential.
+      // This comparison is only carried out once there is an old value to compare with, for the base 2 exponential.
       if (compare_pow2) {
-        //if by any chance the function output has dropped in value, print out at what point the problem has occured and throw a runtime assertion.
+        // if by any chance the function output has dropped in value, print out at what point the problem has occured and throw a runtime assertion.
         if (old_output_pow2 > actual_value_pow2) {
-          cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-          cout << "pow2 output not monotonic at :" << endl;
-          cout << "x = " << input << endl;
-          cout << "y = " << output_pow2 << endl;
-          cout << "old_output_pow2 = " << old_output_pow2 << endl;
-          //assert(false);   //Uncomment if you want the program to stop whenever monotonicity is violated.
+          cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl; // LCOV_EXCL_LINE
+          cout << "pow2 output not monotonic at :" << endl; // LCOV_EXCL_LINE
+          cout << "x = " << input << endl; // LCOV_EXCL_LINE
+          cout << "y = " << output_pow2 << endl; // LCOV_EXCL_LINE
+          cout << "old_output_pow2 = " << old_output_pow2 << endl; // LCOV_EXCL_LINE
+          assert(false); // LCOV_EXCL_LINE
         }
       }
-      //Update the old value
+      // Update the old value
       old_output_pow2 = actual_value_pow2;
-      //Once an old value has been stored, i.e. towards the end of the first iteration, this value is set to true.
+      // Once an old value has been stored, i.e. towards the end of the first iteration, this value is set to true.
       compare_pow2 = true;
     }
 
+#ifdef DEBUG
+    if (this_error_pow2 > allowed_error) {
+      cout << endl;
+      cout << "Error exceeds tolerance" << endl;
+      cout << "input               = " << input << endl;
+      cout << "expected_value_pow2 = " << expected_value_pow2 << endl;
+      cout << "actual_value_pow2   = " << actual_value_pow2 << endl;
+      cout << "this_error_pow2     = " << this_error_pow2 << endl;
+      cout << "threshold           = " << threshold << endl;
+      assert(false);
+    }
+#endif
+
     if (this_error_pow2 > max_error_pow2) {max_error_pow2 = this_error_pow2;}
   }
+
+  passed = (max_error_pow2 < allowed_error);
+
   if (passed) { printf("PASSED , max err (%f pow2)\n", max_error_pow2); }
-  else        { printf("FAILED , max err (%f pow2)\n", max_error_pow2); }
+  else        { printf("FAILED , max err (%f pow2)\n", max_error_pow2); } // LCOV_EXCL_LINE
 
   if (max_error_pow2>cumulative_max_error_pow2) { cumulative_max_error_pow2 = max_error_pow2; }
 
@@ -170,22 +190,22 @@ int main(int argc, char *argv[])
   cout << "=============================================================================" << endl;
   cout << "Testing function: ac_pow2_pwl() - Allowed error " << allowed_error << endl;
 
-  // template <int Wfi, int Ifi, int Sfi>
-  test_driver< 12,  3,  true, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  4,  2,  true, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  3,  5,  true, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  4, -2,  true, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  3,  5,  true, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  2,  5,  true, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver< 16,  5,  true, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver< 12,  4, false, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  4,  2, false, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  4, -2, false, 60, 30, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  3,  4, false, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  1,  5, false, 61, 33, false>(max_error_pow2, allowed_error, threshold);
-  test_driver<  2,  5, false, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver< 16,  4, false, 64, 32, false>(max_error_pow2, allowed_error, threshold);
-  test_driver< 16,  0, false, 64, 32, false>(max_error_pow2, allowed_error, threshold);
+  // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
+  test_driver< 12,  3,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  4,  2,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  3,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  4, -2,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  3,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  2,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 16,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 12,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  4,  2, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  4, -2, false, 60, 30>(max_error_pow2, allowed_error, threshold);
+  test_driver<  3,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  1,  5, false, 61, 33>(max_error_pow2, allowed_error, threshold);
+  test_driver<  2,  5, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 16,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 16,  0, false, 64, 32>(max_error_pow2, allowed_error, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;
@@ -196,9 +216,9 @@ int main(int argc, char *argv[])
 
   // Notify the user that the test was a failure.
   if (test_fail) {
-    cout << "  ac_pow2_pwl - FAILED - Error tolerance(s) exceeded" << endl;
-    cout << "=============================================================================" << endl;
-    return -1;
+    cout << "  ac_pow2_pwl - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
+    cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
+    return -1; // LCOV_EXCL_LINE
   } else {
     cout << "  ac_pow2_pwl - PASSED" << endl;
     cout << "=============================================================================" << endl;

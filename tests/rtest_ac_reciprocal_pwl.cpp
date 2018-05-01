@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 1.0                                                 *
+ *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Thu Mar  8 11:17:22 PST 2018                        *
+ *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 1.0.0                                               *
+ *  Release Build   : 2.0.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -44,39 +44,35 @@
 using namespace ac_math;
 
 // ==============================================================================
-// Test Design
-//   This simple function allows executing the ac_reciprocal_pwl() function
+// Test Designs
+//   These simple functions allow executing the ac_reciprocal_pwl() function
 //   using multiple data types at the same time. Template parameters are
 //   used to configure the bit-widths of the types.
 
+// Test Design for real and complex fixed point values.
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 void test_ac_reciprocal_pwl_fixed(
-  const            ac_fixed<   Wfi,    Ifi,    Sfi, AC_TRN, AC_WRAP>   &in1,
+  const ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>   &in1,
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>   &out1,
-  const ac_complex<ac_fixed<   Wfi,    Ifi,    Sfi, AC_TRN, AC_WRAP> > &in2,
-  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > &out2
+  const ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > &in2,
+  ac_complex<ac_fixed<outWfi, outIfi, true, AC_TRN, AC_WRAP> > &out2
 )
 {
-  ac_reciprocal_pwl(in1, out1);
-  ac_reciprocal_pwl(in2, out2);
+  out1 = ac_reciprocal_pwl<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >(in1);
+  out2 = ac_reciprocal_pwl<ac_complex<ac_fixed<outWfi, outIfi, true, AC_TRN, AC_WRAP> > >(in2);
 }
 
-// ==============================================================================
-// Test Design
-//   This simple function allows executing the ac_reciprocal_pwl() function
-//   using multiple data types at the same time. Template parameters are
-//   used to configure the bit-widths of the types.
-
+// Test Design for real and complex floating point values.
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 void test_ac_reciprocal_pwl_float(
-  const            ac_float<   Wfl,    Ifl,    Efl, AC_TRN>   &in3,
+  const ac_float<Wfl, Ifl, Efl, AC_TRN>   &in3,
   ac_float<outWfl, outIfl, outEfl, AC_TRN>   &out3,
-  const ac_complex<ac_float<   Wfl,    Ifl,    Efl, AC_TRN> > &in4,
+  const ac_complex<ac_float<Wfl, Ifl, Efl, AC_TRN> > &in4,
   ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > &out4
 )
 {
-  ac_reciprocal_pwl(in3, out3);
-  ac_reciprocal_pwl(in4, out4);
+  out3 = ac_reciprocal_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in3);
+  out4 = ac_reciprocal_pwl<ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > >(in4);
 }
 
 // ==============================================================================
@@ -100,9 +96,18 @@ double err_calc(
   const double threshold
 )
 {
-  // The typecasting is done in order to provide quantization on the expected output.
-  double expected_value = ((T_out)(1.0 / input.to_double())).to_double();
-  actual_value   = output.to_double();
+  double expected_value;
+
+  if(input.to_double() != 0) {
+    // The typecasting is done in order to provide quantization on the expected output.
+    expected_value = ((T_out)(1.0 / input.to_double())).to_double();
+  } else {
+    // If input is zero, saturate the expected output according to the type of the real/imaginary part.
+    T_out output_max;
+    expected_value = output_max.template set_val<AC_VAL_MAX>().to_double();
+  }
+
+  actual_value = output.to_double();
   double this_error;
 
   // If expected value is greater than a particular threshold, calculate relative error, else, calculate absolute error.
@@ -111,6 +116,18 @@ double err_calc(
   } else {
     this_error = abs(expected_value - actual_value) * 100.0;
   }
+
+#ifdef DEBUG
+  if (this_error > allowed_error) {
+    cout << endl;
+    cout << "  Error tolerance exceeded for following values: " << endl;
+    cout << "  input          = " << input << endl;
+    cout << "  output         = " << output << endl;
+    cout << "  expected_value = " << expected_value << endl;
+    cout << "  this_error     = " << this_error << endl;
+    assert(false);
+  }
+#endif
 
   return this_error;
 }
@@ -139,18 +156,38 @@ double cmplx_err_calc(
   // Calculate expected value of real and imaginary parts.
   exp_op.r() =  in_r / (in_r * in_r + in_i * in_i);
   exp_op.i() = -in_i / (in_r * in_r + in_i * in_i);
-  // Perform quantization on the expected output by converting it to the output of the expected
-  // value, and then converting the quantized output back to a double.
-  exp_op.r() = ((T_out)exp_op.r()).to_double();
-  exp_op.i() = ((T_out)exp_op.i()).to_double();
+
+  if(input.r() != 0 || input.i() != 0) {
+    // The typecasting is done in order to provide quantization on the expected output.
+    exp_op.r() = ((T_out)exp_op.r()).to_double();
+    exp_op.i() = ((T_out)exp_op.i()).to_double();
+  } else {
+    // If input is zero, saturate the expected output according to the type of the real/imaginary part.
+    T_out output_max;
+    exp_op.r() = output_max.template set_val<AC_VAL_MAX>().to_double();
+    exp_op.i() = output_max.template set_val<AC_VAL_MAX>().to_double();
+  }
 
   diff_op = exp_op - act_op;
-  double error;
+  double this_error;
 
-  if (sqrt(exp_op.mag_sqr()) > threshold) {error = sqrt((diff_op / exp_op).mag_sqr()) * 100;}
-  else {error = sqrt(diff_op.mag_sqr()) * 100;}
+  // If magnitude of expected value is greater than a particular threshold, calculate relative error, else, calculate absolute error.
+  if (sqrt(exp_op.mag_sqr()) > threshold) {this_error = sqrt((diff_op / exp_op).mag_sqr()) * 100;}
+  else {this_error = sqrt(diff_op.mag_sqr()) * 100;}
 
-  return error;
+#ifdef DEBUG
+  if (this_error > allowed_error) {
+    cout << endl;
+    cout << "  Error tolerance exceeded for following values: " << endl;
+    cout << "  input          = " << input << endl;
+    cout << "  output         = " << output << endl;
+    cout << "  exp_op         = " << exp_op << endl;
+    cout << "  this_error     = " << this_error << endl;
+    assert(false);
+  }
+#endif
+
+  return this_error;
 }
 
 // Function for monotonicity checking in ac_fixed inputs.
@@ -175,13 +212,13 @@ void monotonicity_check(
     ac_fixed<Wfi, int(Sfi), Sfi, AC_TRN, AC_WRAP> norm_input_fixed;
     ac_normalize(input_fixed, norm_input_fixed);
     if (old_real_output < actual_value_fixed) {
-      cout << endl;
-      cout << "  Real, fixed point output not monotonic at :" << endl;
-      cout << "  input_fixed = " << input_fixed << endl;
-      cout << "  output_fixed = " << output_fixed << endl;
-      cout << "  old_real_output = " << old_real_output << endl;
-      cout << "  normalized x    = " << norm_input_fixed << endl;
-      assert(false);
+      cout << endl; // LCOV_EXCL_LINE
+      cout << "  Real, fixed point output not monotonic at :" << endl; // LCOV_EXCL_LINE
+      cout << "  input_fixed = " << input_fixed << endl; // LCOV_EXCL_LINE
+      cout << "  output_fixed = " << output_fixed << endl; // LCOV_EXCL_LINE
+      cout << "  old_real_output = " << old_real_output << endl; // LCOV_EXCL_LINE
+      cout << "  normalized x    = " << norm_input_fixed << endl; // LCOV_EXCL_LINE
+      assert(false); // LCOV_EXCL_LINE
     }
   }
   // Update the variable for old_real_output.
@@ -191,13 +228,18 @@ void monotonicity_check(
 }
 
 // ==============================================================================
-// Function: test_driver_fixed()
-// Description: A templatized function that can be configured for certain bit-
-//   widths of AC datatypes. It uses the type information to iterate through a
+// Functions: test_driver functions
+// Description: Templatized functions that can be configured for certain bit-
+//   widths of AC datatypes. They use the type information to iterate through a
 //   range of valid values on that type in order to compare the precision of the
 //   piece-wise linear reciprocal model with the computed reciprocal using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
+
+// ==============================================================================
+// Function: test_driver_fixed()
+// Description: test_driver function for ac_fixed and ac_complex<ac_fixed> inputs
+//   and outputs.
 
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 int test_driver_fixed(
@@ -212,12 +254,11 @@ int test_driver_fixed(
   bool check_monotonic = true;
   double max_error_fixed = 0.0; // reset for this run
   double max_error_cmplx_fixed = 0.0; // reset for this run
-  double old_max_error_cmplx_fixed = 0.0; // used later to help in finding max error
 
   ac_fixed<   Wfi,    Ifi,    Sfi, AC_TRN, AC_WRAP>   input_fixed;
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>   output_fixed;
-  ac_complex<ac_fixed<   Wfi,    Ifi,    Sfi, AC_TRN, AC_WRAP> > cmplx_input_fixed;
-  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >  cmplx_output_fixed;
+  ac_complex<ac_fixed<   Wfi,    Ifi,  Sfi, AC_TRN, AC_WRAP> > cmplx_input_fixed;
+  ac_complex<ac_fixed<outWfi, outIfi, true, AC_TRN, AC_WRAP> >  cmplx_output_fixed;
 
   double lower_limit_fixed, upper_limit_fixed, step_fixed;
 
@@ -226,191 +267,49 @@ int test_driver_fixed(
   upper_limit_fixed   = input_fixed.template set_val<AC_VAL_MAX>().to_double();
   step_fixed          = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  printf("TEST: ac_reciprocal_pwl() INPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s> OUTPUT: ac_fixed<%2d,%2d,%5s,%7s,%7s>  RESULT: ",
-         Wfi,Ifi,(Sfi?"true":"false"),"AC_TRN","AC_WRAP",outWfi,outIfi,(outSfi?"true":"false"),"AC_TRN","AC_WRAP");
+  cout << "TEST: ac_reciprocal_pwl() INPUT: ";
+  cout.width(38);
+  cout << left << input_fixed.type_name();
+  cout << "        OUTPUTS: ";
+  cout.width(38);
+  cout << left << output_fixed.type_name();
+  cout.width(50);
+  cout << left << cmplx_output_fixed.type_name();
+  cout << "RESULT: ";
 
   // Dump the test details
   if (details) {
-    cout << endl;
-    cout << "  Ranges for input types:" << endl;
-    cout << "    lower_limit_fixed    = " << lower_limit_fixed << endl;
-    cout << "    upper_limit_fixed    = " << upper_limit_fixed << endl;
-    cout << "    step_fixed           = " << step_fixed << endl;
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit_fixed    = " << lower_limit_fixed << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit_fixed    = " << upper_limit_fixed << endl; // LCOV_EXCL_LINE
+    cout << "    step_fixed           = " << step_fixed << endl; // LCOV_EXCL_LINE
   }
 
   double old_real_output;
-  bool compare = false;
   double actual_value_fixed;
 
   // test fixed-point real and complex.
-
-  // Fix the real part of the input at 0, and iterate through all possible values of imaginary part based on its type.
-  for(double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
-    cmplx_input_fixed.r() = 0;
-    cmplx_input_fixed.i() = i;
-    input_fixed = i;
-
-    if(input_fixed != 0) {
-      // Pass all inputs at one go
+  for (double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
+    bool compare = false;
+    for (double j = lower_limit_fixed; j <= upper_limit_fixed; j += step_fixed) {
+      cmplx_input_fixed.r() = i;
+      cmplx_input_fixed.i() = j;
+      input_fixed = j;
       test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
 
       double this_error_fixed = err_calc(input_fixed, actual_value_fixed, output_fixed, allowed_error_fixed, threshold);
       double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
 
-      if(check_monotonic) { monotonicity_check(old_real_output, actual_value_fixed, compare, input_fixed, output_fixed); }
+      if (check_monotonic) { monotonicity_check(old_real_output, actual_value_fixed, compare, input_fixed, output_fixed); }
       if (this_error_fixed > max_error_fixed) {max_error_fixed = this_error_fixed;}
       if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
     }
   }
 
-  // Store max_error variable in another variable for later comparisons.
-  old_max_error_cmplx_fixed = max_error_cmplx_fixed;
-
-  // Do the same thing as above, but while keeping the imaginary part fixed at 0
-  for(double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
-    cmplx_input_fixed.r() = i;
-    cmplx_input_fixed.i() = 0;
-    input_fixed = i;
-
-    if(input_fixed != 0) {
-      // Pass all inputs at one go
-      test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
-      double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
-      // Note: there's no need to check monotonicity, because that was already taken care of in the set of iterations before this.
-      if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
-    }
-  }
-
-  // If the old value for max_error is smaller than the current one, store the current value in the variable for the old value.
-  if(max_error_cmplx_fixed > old_max_error_cmplx_fixed) { old_max_error_cmplx_fixed = max_error_cmplx_fixed; }
-
-  // Now, keep the real part at the maximum value while iterating through all the possible values for the imaginary part.
-  for(double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
-    cmplx_input_fixed.r() = upper_limit_fixed;
-    cmplx_input_fixed.i() = i;
-    input_fixed = upper_limit_fixed;
-
-    if(input_fixed != 0) {
-      // Pass all inputs at one go
-      test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
-      double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
-      if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
-    }
-  }
-
-  // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-  if(max_error_cmplx_fixed > old_max_error_cmplx_fixed) { old_max_error_cmplx_fixed = max_error_cmplx_fixed; }
-
-  // If the real/imaginary part is unsigned, minimum limit is zero. Hence, we need not go through this stage of testing if the real part
-  // is unsigned, because it has always been covered in the first two sets of iterations, in which we fix the real/imaginary value at zero.
-  if(Sfi) {
-    // Now, keep the real part at the minimum value while iterating through all the possible values for the imaginary part.
-    for(double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
-      cmplx_input_fixed.r() = lower_limit_fixed;
-      cmplx_input_fixed.i() = i;
-      input_fixed = lower_limit_fixed;
-
-      if(input_fixed != 0) {
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
-        double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
-        if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_fixed > old_max_error_cmplx_fixed) { old_max_error_cmplx_fixed = max_error_cmplx_fixed; }
-
-    // Now, keep the real part at the minimum value while iterating through all the possible values for the imaginary part.
-    for(double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
-      cmplx_input_fixed.r() = i;
-      cmplx_input_fixed.i() = lower_limit_fixed;
-      input_fixed = lower_limit_fixed;
-
-      if(input_fixed != 0) {
-      // Pass all inputs at one go
-      test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
-      double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
-      if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_fixed > old_max_error_cmplx_fixed) { old_max_error_cmplx_fixed = max_error_cmplx_fixed; }
-  }
-
-  // Now, iterate through all the possible combinations of one-hot encodings of the real/imaginary parts
-
-  if(!Sfi) {
-    // Give the input a non-zero dummy value
-    input_fixed[0] = 1;
-
-    for(int i = 0; i < Wfi; i++) {
-      cmplx_input_fixed.r() = 0;
-      cmplx_input_fixed.r()[i] = 1;
-      for(int j = 0; j < Wfi; j++) {
-        cmplx_input_fixed.r() = 0;
-        cmplx_input_fixed.r()[i] = 1;
-
-        // The inputs can never be of zero magnitude in this case. Hence, skip zero checking for inputs.
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
-        double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
-        if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_fixed > old_max_error_cmplx_fixed) { old_max_error_cmplx_fixed = max_error_cmplx_fixed; }
-  } else {
-    // If input is signed, two separate sets of iterations are required: one to go through the negative
-    // inputs and the other to go through the positive inputs, all of which are positive/negative powers
-    // of two due to one-hot encoding.
-    for(int i = 0; i < Wfi - 1; i++) {
-      cmplx_input_fixed.r() = 0;
-      cmplx_input_fixed.r()[i] = 1;
-      for(int j = 0; j < Wfi - 1; j++) {
-        cmplx_input_fixed.i() = 0;
-        cmplx_input_fixed.i()[j] = 1;
-
-        // The inputs can never be of zero magnitude in this case. Hence, skip zero checking for inputs.
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
-        double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
-        if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_fixed > old_max_error_cmplx_fixed) { old_max_error_cmplx_fixed = max_error_cmplx_fixed; }
-
-    for(int i = 0; i < Wfi - 1; i++) {
-      cmplx_input_fixed.r() = 0;
-      cmplx_input_fixed.r()[i] = 1;
-      cmplx_input_fixed.r() = -cmplx_input_fixed.r();
-      for(int j = 0; j < Wfi - 1; j++) {
-        cmplx_input_fixed.i() = 0;
-        cmplx_input_fixed.i()[j] = 1;
-        cmplx_input_fixed.i() = -cmplx_input_fixed.i();
-
-        // The inputs can never be of zero magnitude in this case. Hence, skip zero checking for inputs.
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
-        double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
-        if (this_error_complex > max_error_cmplx_fixed) {max_error_cmplx_fixed = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_fixed > old_max_error_cmplx_fixed) { old_max_error_cmplx_fixed = max_error_cmplx_fixed; }
-  }
-
-  max_error_cmplx_fixed = old_max_error_cmplx_fixed;
-
   passed = (max_error_fixed < allowed_error_fixed) && (max_error_cmplx_fixed < allowed_error_fixed);
 
   if (passed) { printf("PASSED , max err (%f) (%f complex)\n", max_error_fixed, max_error_cmplx_fixed); }
-  else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_fixed, max_error_cmplx_fixed); }
+  else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_fixed, max_error_cmplx_fixed); } // LCOV_EXCL_LINE
 
   if (max_error_fixed>cumulative_max_error_fixed) { cumulative_max_error_fixed = max_error_fixed; }
   if (max_error_cmplx_fixed>cumulative_max_error_cmplx_fixed) { cumulative_max_error_cmplx_fixed = max_error_cmplx_fixed; }
@@ -420,12 +319,8 @@ int test_driver_fixed(
 
 // ==============================================================================
 // Function: test_driver_float()
-// Description: A templatized function that can be configured for certain bit-
-//   widths of AC datatypes. It uses the type information to iterate through a
-//   range of valid values on that type in order to compare the precision of the
-//   piece-wise linear reciprocal model with the computed reciprocal using a
-//   standard C double type. The maximum error for each type is accumulated
-//   in variables defined in the calling function.
+// Description: test_driver function for ac_float and ac_complex<ac_float> inputs
+//   and outputs.
 
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 int test_driver_float(
@@ -439,7 +334,6 @@ int test_driver_float(
   bool passed = true;
   double max_error_float = 0.0; // reset for this run
   double max_error_cmplx_float = 0.0; // reset for this run
-  double old_max_error_cmplx_float = 0.0;
 
   ac_float<   Wfl,    Ifl,    Efl, AC_TRN>   input_float;
   ac_float<outWfl, outIfl, outEfl, AC_TRN>   output_float;
@@ -447,7 +341,6 @@ int test_driver_float(
   ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > cmplx_output_float;
 
   double lower_limit_mantissa, upper_limit_mantissa, step_mantissa;
-  double old_real_output;
   double actual_value_float;
 
   // Declare an ac_fixed variable of same type as mantissa
@@ -457,8 +350,23 @@ int test_driver_float(
   upper_limit_mantissa = sample_mantissa.template set_val<AC_VAL_MAX>().to_double();
   step_mantissa        = sample_mantissa.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  printf("TEST: ac_reciprocal_pwl() INPUT: ac_float<%2d,%2d,%2d,%7s> OUTPUT: ac_float<%2d,%2d,%2d,%7s>  RESULT: ",
-         Wfl,Ifl,Efl,"AC_RND",outWfl,outIfl,outEfl,"AC_RND");
+  string empty_str = "";
+
+  cout << "TEST: ac_reciprocal_pwl() AC_FLOAT INPUT: ";
+  cout.width(38);
+  cout << left << input_float.type_name();
+  cout << "AC_FLOAT OUTPUT: ";
+  cout.width(38);
+  cout << left << output_float.type_name();
+  cout << "RESULT: ";
+
+  // Dump the test details
+  if (details) {
+    cout << endl << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout         << "    lower_limit_mantissa = " << lower_limit_mantissa << endl; // LCOV_EXCL_LINE
+    cout         << "    upper_limit_mantissa = " << upper_limit_mantissa << endl; // LCOV_EXCL_LINE
+    cout         << "    step_mantissa        = " << step_mantissa << endl; // LCOV_EXCL_LINE
+  }
 
   // Declare arrays to store all values of exponent to be tested.
   const int exp_arr_size = 2*(Efl - 1) + 3;
@@ -480,29 +388,17 @@ int test_driver_float(
     sample_exponent_array[Efl - i - 1] = -sample_exponent;
   }
 
-  // Dump the test details
-  if (details) {
-    cout << endl << "  Ranges for input types:" << endl;
-    cout         << "    lower_limit_mantissa = " << lower_limit_mantissa << endl;
-    cout         << "    upper_limit_mantissa = " << upper_limit_mantissa << endl;
-    cout         << "    step_mantissa        = " << step_mantissa << endl;
-    cout         << "    allowed_error_float  = " << allowed_error_float << endl;
-  }
-
   for (int i = 0; i < exp_arr_size; i++) {
     // Extract a value to be tested for the exponent part.
     input_float.e = sample_exponent_array[i];
     cmplx_input_float.r().e = sample_exponent_array[i];
     cmplx_input_float.i().e = sample_exponent_array[i];
 
-    // Fix the real part of the input at 0, and iterate through all possible values of imaginary part based on its type.
-    for(double i = lower_limit_mantissa; i <= upper_limit_mantissa; i += step_mantissa) {
-      cmplx_input_float.r().m = 0;
-      cmplx_input_float.i().m = i;
-      input_float.m = i;
-
-      if(input_float.m != 0) {
-        // Pass all inputs at one go
+    for (double i = lower_limit_mantissa; i <= upper_limit_mantissa; i += step_mantissa) {
+      for (double j = lower_limit_mantissa; j <= upper_limit_mantissa; j += step_mantissa) {
+        cmplx_input_float.r().m = i;
+        cmplx_input_float.i().m = j;
+        input_float.m = i;
         test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
 
         double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
@@ -512,127 +408,12 @@ int test_driver_float(
         if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
       }
     }
-
-    // Store max_error variable in another variable for later comparisons.
-    old_max_error_cmplx_float = max_error_cmplx_float;
-
-    // Do the same thing as above, but while keeping the imaginary part fixed at 0
-    for(double i = lower_limit_mantissa; i <= upper_limit_mantissa; i += step_mantissa) {
-      cmplx_input_float.r().m = i;
-      cmplx_input_float.i().m = 0;
-      input_float.m = i;
-
-      if(input_float.m != 0) {
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
-        double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
-        if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
-      }
-    }
-
-    // If the old value for max_error is smaller than the current one, store the current value in the variable for the old value.
-    if(max_error_cmplx_float > old_max_error_cmplx_float) { old_max_error_cmplx_float = max_error_cmplx_float; }
-
-    // Now, keep the real part at the maximum value while iterating through all the possible values for the imaginary part.
-    for(double i = lower_limit_mantissa; i <= upper_limit_mantissa; i += step_mantissa) {
-      cmplx_input_float.r().m = upper_limit_mantissa;
-      cmplx_input_float.i().m = i;
-      input_float.m = upper_limit_mantissa;
-
-      if(input_float.m != 0) {
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
-        double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
-        if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_float > old_max_error_cmplx_float) { old_max_error_cmplx_float = max_error_cmplx_float; }
-
-    // Now, keep the real part at the minimum value while iterating through all the possible values for the imaginary part.
-    for(double i = lower_limit_mantissa; i <= upper_limit_mantissa; i += step_mantissa) {
-      cmplx_input_float.r().m = lower_limit_mantissa;
-      cmplx_input_float.i().m = i;
-      input_float.m = lower_limit_mantissa;
-
-      if(input_float.m != 0) {
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
-        double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
-        if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_float > old_max_error_cmplx_float) { old_max_error_cmplx_float = max_error_cmplx_float; }
-
-    // Now, keep the real part at the minimum value while iterating through all the possible values for the imaginary part.
-    for(double i = lower_limit_mantissa; i <= upper_limit_mantissa; i += step_mantissa) {
-      cmplx_input_float.r().m = i;
-      cmplx_input_float.i().m = lower_limit_mantissa;
-      input_float.m = lower_limit_mantissa;
-
-      if(input_float.m != 0) {
-      // Pass all inputs at one go
-      test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
-      double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
-      if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_float > old_max_error_cmplx_float) { old_max_error_cmplx_float = max_error_cmplx_float; }
-
-    // Now, iterate through all the possible combinations of one-hot encodings of the real/imaginary parts
-    // Two separate sets of iterations are required: one to go through the negative
-    // inputs and the other to go through the positive inputs, all of which are positive/negative powers
-    // of two due to one-hot encoding.
-    for(int i = 0; i < Wfl - 1; i++) {
-      cmplx_input_float.r().m = 0;
-      cmplx_input_float.r().m[i] = 1;
-      for(int j = 0; j < Wfl - 1; j++) {
-        cmplx_input_float.i().m = 0;
-        cmplx_input_float.i().m[j] = 1;
-
-        // The inputs can never be of zero magnitude in this case. Hence, skip zero checking for inputs.
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
-        double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
-        if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_float > old_max_error_cmplx_float) { old_max_error_cmplx_float = max_error_cmplx_float; }
-
-    for(int i = 0; i < Wfl - 1; i++) {
-      cmplx_input_float.r().m = 0;
-      cmplx_input_float.r().m[i] = 1;
-      cmplx_input_float.r().m = -cmplx_input_float.r().m;
-      for(int j = 0; j < Wfl - 1; j++) {
-        cmplx_input_float.i().m = 0;
-        cmplx_input_float.i().m[j] = 1;
-        cmplx_input_float.i().m = -cmplx_input_float.i().m;
-
-        // The inputs can never be of zero magnitude in this case. Hence, skip zero checking for inputs.
-        // Pass all inputs at one go
-        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
-        double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
-        if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
-      }
-    }
-
-    // If the old values for max_error were smaller than the current ones, store the current values in the variables for the old value.
-    if(max_error_cmplx_float > old_max_error_cmplx_float) { old_max_error_cmplx_float = max_error_cmplx_float; }
-
-    max_error_cmplx_float = old_max_error_cmplx_float;
   }
 
   passed = (max_error_float < allowed_error_float) && (max_error_cmplx_float < allowed_error_float);
 
   if (passed) { printf("PASSED , max err (%f) (%f complex)\n", max_error_float, max_error_cmplx_float); }
-  else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_float, max_error_cmplx_float); }
+  else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_float, max_error_cmplx_float); } // LCOV_EXCL_LINE
 
   if (max_error_float>cumulative_max_error_float) { cumulative_max_error_float = max_error_float; }
   if (max_error_cmplx_float>cumulative_max_error_cmplx_float) { cumulative_max_error_cmplx_float = max_error_cmplx_float; }
@@ -650,18 +431,21 @@ int main(int argc, char *argv[])
   cout << "=============================================================================" << endl;
   cout << "Testing function: ac_reciprocal_pwl() - Allowed error " << allowed_error_fixed << " (fixed pt), " << allowed_error_float << " (float pt)" << endl;
 
-  // template <int Wfi, int Ifi, int Sfi>
-  test_driver_fixed< 12,  3,  true, 64, 32, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed<  4,  9,  true, 64, 32, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed<  4, -2,  true, 64, 32, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed<  5,  8, false, 64, 32, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed<  4, -2, false, 60, 30, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed< 13,  4,  true, 64, 32, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed< 14,  3, false, 64, 32, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed<  9,  4,  true, 60, 30, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
-  test_driver_fixed<  9,  2, false, 64, 32, true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+  test_driver_fixed< 10,  3,  true, 64, 32,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed< 11,  1,  true, 64, 32,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed< 10,  0, false, 64, 32, false>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed< 12,  2, false, 64, 32,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed<  4,  9,  true, 64, 32,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed<  4, -2,  true, 64, 32,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed<  5,  8, false, 64, 32, false>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed<  4, -2, false, 60, 30, false>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed< 10,  4,  true, 64, 32,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed< 10,  3, false, 64, 32, false>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed<  9,  4,  true, 60, 30,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_fixed<  9,  2, false, 64, 32, false>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
 
-  // template <int Wfl, int Ifl, int Efl>
+  // template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
   test_driver_float<  5,  3, 3, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float<  5,  1, 8, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float<  5,  0, 3, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
@@ -669,7 +453,7 @@ int main(int argc, char *argv[])
   test_driver_float<  5,  9, 6, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float<  5,  5, 3, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float<  5,  5, 1, 60, 30, 11>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
-  test_driver_float< 10,  5, 8, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
+  test_driver_float< 10,  5, 4, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float<  5,  3, 5, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
 
   cout << "=============================================================================" << endl;
@@ -682,11 +466,11 @@ int main(int argc, char *argv[])
   // If error limits on any tested datatype have been crossed, the test has failed
   bool test_fail = (max_error_fixed > allowed_error_fixed) || (cmplx_max_error_fixed > allowed_error_fixed) || (max_error_float > allowed_error_float) || (cmplx_max_error_float > allowed_error_float);
 
-  // Notify the user that the test was a failure.
+  // Notify the user whether or not the test was a failure.
   if (test_fail) {
-    cout << "  ac_reciprocal_pwl - FAILED - Error tolerance(s) exceeded" << endl;
-    cout << "=============================================================================" << endl;
-    return -1;
+    cout << "  ac_reciprocal_pwl - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
+    cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
+    return -1; // LCOV_EXCL_LINE
   } else {
     cout << "  ac_reciprocal_pwl - PASSED" << endl;
     cout << "=============================================================================" << endl;
