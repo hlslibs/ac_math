@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -141,7 +141,7 @@ using namespace std;
 
 namespace ac_math
 {
-  template<ac_q_mode pwl_Q = AC_RND,
+  template<ac_q_mode pwl_Q = AC_TRN,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
   void ac_reciprocal_pwl(
@@ -160,41 +160,62 @@ namespace ac_math
 
     ac_fixed<outW, outI, outS, outQ, outO> output_temp;
 
+    // Start of code outputted by ac_reciprocal_pwl_lutgen.cpp
+    // Note that the LUT generator file also outputs values for x_max_lut (upper limit of PWL domain) and sc_constant_lut (scaling factor used to scale the input from
+    // 0 to n_segments_lut). However, these values aren't explicitly considered in the header file because it has been optimized to work with an 8-segment PWL model that
+    // covers the domain of [0.5, 1). For other PWL implementations, the user will probably have to take these values into account explicitly. Guidelines for doing so
+    // are given in the comments.
+    // In addition, some of the slope values here are modified slightly in order to ensure monotonicity of the PWL function as the input crosses segment boundaries.
+    // The user might want to take care to ensure that for their own PWL versions.
+
     // Initialization for PWL LUT
     static const unsigned n_segments_lut = 8;
-    static const ac_fixed<10, 0, true> m_lut[n_segments_lut] = {-.22265625, -.1767578125, -.14453125, -.12109375, -.1025390625, -.087890625, -.0751953125, -.06640625};
-    static const ac_fixed<11, 1, false> c_lut[n_segments_lut] = {1.9970703125, 1.7744140625, 1.59765625, 1.453125, 1.33203125, 1.2294921875, 1.1416015625, 1.06640625};
-    // Domain of PWL
+    // The number of fractional bits for the LUT values is chosen by first finding the maximum absolute error over the domain of the PWL
+    // when double-precision values are used for LUT values. This error will correspond to a number of fractional bits that are always
+    // guaranteed to be error-free, for fixed-point PWL outputs.
+    // This number of fractional bits is found out by the formula:
+    // nbits = abs(ceil(log2(abs_error_max)) - 1.
+    // The number of fractional bits hereafter used to store the LUT values is nbits + 2.
+    const int nfrac_bits = 10;
+    // For this particular PWL implementation, the number of fractional bits is 10.
+    static const ac_fixed<nfrac_bits, 0, true> m_lut[n_segments_lut] = {-.22265625, -.1767578125, -.14453125, -.12109375, -.1025390625, -.087890625, -.0751953125, -.06640625};
+    static const ac_fixed<nfrac_bits + 1, 1, false> c_lut[n_segments_lut] = {1.9970703125, 1.7744140625, 1.59765625, 1.453125, 1.33203125, 1.2294921875, 1.1416015625, 1.06640625};
     static const ac_fixed<1, 0, false> x_min_lut = 0.5;
-    static const ac_fixed<1, 1, false> x_max_lut = 1;
-    // Scaling constant used later to scale the normalized input from 0 to n_segments_lut
-    static const ac_fixed<5, 5, false> sc_constant_lut = n_segments_lut/(x_max_lut - x_min_lut);
+
+    // End of code outputted by ac_reciprocal_pwl_lutgen.cpp
 
     // The absolute value of the input is taken and passed to the normalization function. Initialize variables for the same.
     ac_fixed<W, I, false> input_abs_value;
     ac_fixed<W, 0, false> normalized_fixed;
 
     // If input is signed, take absolute value and assign to intermediate variable.
-    if (S) {input_abs_value = ((input >= 0) ? (ac_fixed <W, I, false>)input : (ac_fixed <W, I, false>)(-input));}
+    if (S) {
+      input_abs_value = ((input >= 0) ? (ac_fixed <W, I, false>)input : (ac_fixed <W, I, false>)(-input));
+    }
     // If input is unsigned, assign value of input to intermediate variable.
-    else {input_abs_value = input;}
+    else {
+      input_abs_value = input;
+    }
 
     // Normalize the absolute value. expret stores the value of the returned base 2 exponential.
     int expret_temp = ac_math::ac_normalize(input_abs_value, normalized_fixed);
 
+    const int int_bits = ac::nbits<n_segments_lut - 1>::val;
     // Compute reciprocal using pwl.
-
-    // Scale the normalized input from 0 to n_segments_lut
-    ac_fixed<14, 4, true> x_in_sc = (normalized_fixed - x_min_lut)*sc_constant_lut;
+    // Scale the normalized input from 0 to n_segments_lut. Any other PWL implementation
+    // with a different number of segments/domain should be scaled according to the formula: x_in_sc = (normalized_fixed - x_min_lut) * sc_constant_lut
+    // where sc_constant_lut = n_segments_lut / (x_max_lut - x_min_lut)
+    // (x_min_lut and and x_max_lut are the lower and upper limits of the domain)
+    ac_fixed<int_bits + nfrac_bits, int_bits, false> x_in_sc = ((ac_fixed<int_bits + nfrac_bits + 4, int_bits, false>)(normalized_fixed - x_min_lut)) << 4;
     // Take out the fractional bits of the scaled input
-    ac_fixed<14 - 4, 0, false> x_in_sc_frac;
-    x_in_sc_frac.set_slc(0, x_in_sc.template slc<14 - 4>(0));
-    ac_int<4, false> index;
+    ac_fixed<nfrac_bits, 0, false> x_in_sc_frac;
+    x_in_sc_frac.set_slc(0, x_in_sc.template slc<nfrac_bits>(0));
     // The integer part of the input is the index of the LUT table
-    index = x_in_sc.to_int();
+    ac_int<int_bits, false> index = x_in_sc.to_int();
     // The output of the PWL approximation should have the same signedness as the output of the function.
-    // Define the type in such a way that the signedness is the same without affecting precision.
-    typedef ac_fixed<22 + int(outS), 2 + int(outS), outS, pwl_Q> output_pwl_type;
+    // The precision given below will ensure that there is no precision lost in the assignment to output_pwl, hence rounding for the variable is switched off by default.
+    // However, if the user uses less fractional bits and turn rounding on instead, they are welcome to do so by giving a different value for pwl_Q.
+    typedef ac_fixed<2*nfrac_bits + 1 + int(outS), 1 + int(outS), outS, pwl_Q> output_pwl_type;
     output_pwl_type output_pwl = m_lut[index]*x_in_sc_frac + c_lut[index];
 
     if (input != 0) { // If input is non-zero, De-normalize output by shifting right by expret_temp
@@ -272,7 +293,7 @@ namespace ac_math
 //
 //-------------------------------------------------------------------------
 
-  template<ac_q_mode pwl_Q = AC_RND,
+  template<ac_q_mode pwl_Q = AC_TRN,
            int W, int I, int E, ac_q_mode Q,
            int outW, int outI, int outE, ac_q_mode outQ>
   void ac_reciprocal_pwl(
@@ -280,34 +301,35 @@ namespace ac_math
     ac_float<outW, outI, outE, outQ> &output
   )
   {
-    ac_float<outW, outI, outE, outQ> output_temp;
+    const int W1 = W + 20 + 1;
+    const int I1 = W - I + 2;
 
     // Find the reciprocal of the mantissa using the ac_fixed implementation.
-    ac_fixed<outW, outI, true, outQ> recip_mantissa;
+    ac_fixed<W1, I1, true, outQ> recip_mantissa;
     ac_reciprocal_pwl<pwl_Q>(input.mantissa(), recip_mantissa);
-    output_temp.m = recip_mantissa;
 
-    // If the input is non-zero, assign the additive inverse of the input's
-    // exponent to the output's exponent. If the input is zero, set the
-    // output exponent to the max. possible value.
-
-    // The output mantissa will have already been set to the max possible value
-    // by the ac_fixed version.
-    if (input.m != 0) {output_temp.e = -input.exp();}
-    else {output_temp.e.template set_val<AC_VAL_MAX>();}
+    // Find the additive inverse of the input's exponent.
+    // Pass it and recip_mantissa to an ac_float constructor that takes care of
+    // normalization.
+    ac_float<outW, outI, outE, outQ> output_temp(recip_mantissa, -input.exp(), true);
+ 
+    // If the input is zero, set the temp output to the max. possible value.
+    if (input.m == 0) { output_temp.template set_val<AC_VAL_MAX>(); }
 
     output = output_temp;
 
 #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "input             = " << input << endl;
-    cout << "input.mantissa()  = " << input.mantissa() << endl;
-    cout << "input.exp()       = " << input.exp() << endl;
-    cout << "recip_mantissa    = " << recip_mantissa << endl;
-    cout << "output_temp       = " << output_temp << endl;
-    cout << "output            = " << output << endl;
-    cout << "output.mantissa() = " << output.mantissa() << endl;
-    cout << "output.exp()      = " << output.exp() << endl;
+    cout << "input                   = " << input << endl;
+    cout << "input.mantissa()        = " << input.mantissa() << endl;
+    cout << "input.exp()             = " << input.exp() << endl;
+    cout << "recip_mantissa          = " << recip_mantissa << endl;
+    cout << "output.type_name()      = " << output.type_name() << endl;
+    cout << "output_temp.type_name() = " << output_temp.type_name() << endl;
+    cout << "output_temp             = " << output_temp << endl;
+    cout << "output                  = " << output << endl;
+    cout << "output.mantissa()       = " << output.mantissa() << endl;
+    cout << "output.exp()            = " << output.exp() << endl;
 #endif
   }
 
@@ -369,7 +391,7 @@ namespace ac_math
 //
 //-------------------------------------------------------------------------
 
-  template<ac_q_mode pwl_Q = AC_RND,
+  template<ac_q_mode pwl_Q = AC_TRN,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
   void ac_reciprocal_pwl(
@@ -379,7 +401,12 @@ namespace ac_math
   {
     ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > output_temp;
 
-    ac_fixed<outW, outI, false, outQ, outO> recip_mag_sqr;
+    const int W1 = S ? 2*W - 1 : 2*W + 1;
+    const int I1 = S ? 2*I - 1 : 2*I + 1;
+    const int W2 = W1 + 20 + int(!S);
+    const int I2 = W1 - I1 + 1;
+
+    ac_fixed<W2, I2, false, outQ, outO> recip_mag_sqr;
     ac_reciprocal_pwl<pwl_Q>(input.mag_sqr(), recip_mag_sqr);
 
     if (input.r() != 0 || input.i() != 0) {
@@ -461,7 +488,7 @@ namespace ac_math
 //
 //-------------------------------------------------------------------------
 
-  template<ac_q_mode pwl_Q = AC_RND,
+  template<ac_q_mode pwl_Q = AC_TRN,
            int W, int I, int E, ac_q_mode Q,
            int outW, int outI, int outE, ac_q_mode outQ>
   void ac_reciprocal_pwl(
@@ -485,8 +512,7 @@ namespace ac_math
     ac_float<outW, outI, E + 3, outQ> recip_mag_sqr;
 
     // Store value of input_mag_sqr to the variable.
-    input_mag_sqr = (i_m_s_type)(input_real*input_real);
-    input_mag_sqr += (i_m_s_type)(input_imag*input_imag);
+    input_mag_sqr.add(input_real*input_real, input_imag*input_imag);
     ac_reciprocal_pwl<pwl_Q>(input_mag_sqr, recip_mag_sqr);
 
     if (input_mag_sqr.mantissa() != 0) {
@@ -504,17 +530,21 @@ namespace ac_math
 
 #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "input         = " << input << endl;
-    cout << "input_mag_sqr = " << input_mag_sqr << endl;
-    cout << "recip_mag_sqr = " << recip_mag_sqr << endl;
-    cout << "output_temp   = " << output_temp << endl;
-    cout << "output        = " << output << endl;
+    cout << "input                     = " << input << endl;
+    cout << "input_mag_sqr             = " << input_mag_sqr << endl;
+    cout << "input_mag_sqr.to_double() = " << input_mag_sqr.to_double() << endl;
+    cout << "recip_mag_sqr             = " << recip_mag_sqr << endl;
+    cout << "recip_mag_sqr.to_double() = " << recip_mag_sqr.to_double() << endl;
+    cout << "output_temp               = " << output_temp << endl;
+    cout << "output                    = " << output << endl;
+    cout << "output.r().to_double()    = " << output.r().to_double() << endl;
+    cout << "output.i().to_double()    = " << output.i().to_double() << endl;
 #endif
   }
 
 //=========================================================================
 // Version that allows returning of values.
-  template<class T_out, ac_q_mode pwl_Q = AC_RND, class T_in>
+  template<class T_out, ac_q_mode pwl_Q = AC_TRN, class T_in>
   T_out ac_reciprocal_pwl(
     const T_in &input
   )

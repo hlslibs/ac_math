@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -316,7 +316,7 @@ int test_driver_float(
     input_float.e = sample_exponent_array[i];
 
     // For that particular exponent value, go through every possible value that can be represented by the mantissa.
-    for (double mant_i = 0; mant_i <= upper_limit_mantissa; mant_i += step_mantissa) {
+    for (double mant_i = lower_limit_mantissa; mant_i <= upper_limit_mantissa; mant_i += step_mantissa) {
       input_float.m = mant_i;
       test_ac_abs_float(input_float, output_float);
       // If any iteration does not produce the correct value for the output, then the "correct" variable will be set to false.
@@ -363,13 +363,13 @@ int main(int argc, char *argv[])
   test_driver_fixed< 7,  9, 14, 10>(all_tests_pass);
 
   // template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
-  test_driver_float<12,  5, 10, 12,  5, 10>(all_tests_pass);
+  test_driver_float<12,  5, 10, 12,  5, 11>(all_tests_pass);
   test_driver_float<14,  4,  5, 16,  5,  7>(all_tests_pass);
-  test_driver_float<12, -5, 10, 12, -5, 10>(all_tests_pass);
+  test_driver_float<12, -5, 10, 12, -5, 11>(all_tests_pass);
   test_driver_float<12, -5, 10, 13, -4, 12>(all_tests_pass);
-  test_driver_float< 4,  9,  5,  4,  9,  5>(all_tests_pass);
-  test_driver_float< 4,  9,  5,  6,  9,  5>(all_tests_pass);
-  test_driver_float< 4,  9,  5, 12,  9,  5>(all_tests_pass);
+  test_driver_float< 4,  9,  5,  4,  9,  6>(all_tests_pass);
+  test_driver_float< 4,  9,  5,  6,  9,  6>(all_tests_pass);
+  test_driver_float< 4,  9,  5, 12,  9,  6>(all_tests_pass);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished." << endl;

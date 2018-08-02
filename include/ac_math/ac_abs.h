@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -119,7 +119,7 @@ namespace ac_math
   )
   {
     ac_int<1,true> xltz = (x < 0);
-    ac_int<XW+1,false> xabs = (xltz^x).template slc<XW>(0) - xltz;
+    ac_int<XW,false> xabs = (xltz^x).template slc<XW>(0) - xltz;
     y = xabs;
   }
 
@@ -129,7 +129,7 @@ namespace ac_math
     ac_int<YW,true> &y
   )
   {
-    ac_int<XW+1,false> xabs;
+    ac_int<XW,false> xabs;
     ac_abs(x, xabs);
     y = xabs;
   }
@@ -184,7 +184,7 @@ namespace ac_math
     ac_int<XW,true> xi = x.template slc<XW>(0);
     ac_int<XW,false> xiabs;
     ac_abs(xi, xiabs);
-    ac_fixed<XW,XI,false,XQ,XO> xabs;
+    ac_fixed<XW,XI,false> xabs;
     xabs.set_slc(0, xiabs.template slc<XW>(0));
     y = xabs;
   }
@@ -196,7 +196,7 @@ namespace ac_math
     ac_fixed<YW,YI,true,YQ,YO> &y
   )
   {
-    ac_fixed<XW,XI,false,XQ,XO> xabs;
+    ac_fixed<XW,XI,false> xabs;
     ac_abs(x,xabs);
     y = xabs;
   }
@@ -248,14 +248,14 @@ namespace ac_math
     ac_float<YW,YI,YE,YQ> &y
   )
   {
-    ac_fixed<XW,XI,false,XQ,AC_WRAP> xabs_m;
+    ac_fixed<XW,XI,false> xabs_m;
     ac_abs(x.m, xabs_m);
-    ac_float<XW,XI,XE+1,XQ> xabs;
+    ac_float<XW,XI,XE+1> xabs;
     // |-2^I*2^E| = 2^I*2^E > (2^I - ulp)*2^E
     //   adjust 2^I*2^E to 2^(I-1)*2^(E+1)
-    bool ismax = xabs_m.template slc<1>(XW-1);
+    bool ismax = xabs_m[XW - 1];
     xabs.e = x.e + ismax;
-    xabs.m.set_slc(XW-1, ac_int<1,false>(0));
+    xabs.m[XW - 1] = 0;
     xabs.m.set_slc(0, xabs_m.template slc<XW-1>(ismax));
     y = xabs;
   }

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -32,19 +32,19 @@
  *************************************************************************/
 // *******************************************************************************************
 // File: ac_chol_d.h
-// 
+//
 // Description: Provides an implementation for the Cholesky Decomposition of ac_fixed
 //    and ac_complex<ac_fixed> matrices.
-// 
+//
 // Usage:
 //    (see the type-specific examples below)
-// 
+//
 // Notes:
 //    This file uses C++ function overloading to target implementations specific to each type
 //    of data. Attempting to call the function with a type that is not implemented will result
 //    in a compile error.
-// 
-//    The user may choose to use the PWL functions for the internal calculations or they may 
+//
+//    The user may choose to use the PWL functions for the internal calculations or they may
 //    choose to use the accurate div and sqrt functions provided in the ac_math library,
 //    using an optional template parameter. Please refer to the documentation for more details.
 //
@@ -58,7 +58,7 @@
 //    Niramay Sanghvi : Aug 10 2017 : Added template parameters for precision configuration.
 //    Niramay Sanghvi : Aug 09 2017 : Made output go to zero for non-positive def. matrix.
 //    Niramay Sanghvi : Jul 28 2017 : Added choice between PWL and accurate functions.
-// 
+//
 // *******************************************************************************************
 
 #if __cplusplus < 201103L
@@ -86,11 +86,11 @@ using namespace std;
 
 // =========================================================================
 // Function: ac_chol_d (for ac_fixed using native C-style arrays)
-// 
+//
 // Description:
 //    Calculation of the Cholesky Decomposition of real-valued matrices of
 //    ac_fixed variables.
-// 
+//
 //    The Cholesky-Crout algorithm is used for Cholesky Decomposition.
 //    By default, all temporary variables use the same precision as the
 //    output. The user can change that by specifying number of bits to be
@@ -98,22 +98,22 @@ using namespace std;
 //    add extra template parameters change the rounding and saturation
 //    modes of the intermediate variables (by default, the rounding mode is
 //    AC_RND and saturation mode is AC_SAT).
-// 
+//
 //    The user can also choose between using PWL vs. using accurate
 //    division/sqrt functions, as mentioned earlier.
-// 
+//
 // Usage:
 //    A sample implementation and its testbench looks like this:
-// 
+//
 //    #include <ac_fixed.h>
 //    #include <ac_math/ac_chol_d.h>
 //    using namespace ac_math;
-// 
+//
 //    // Define data types for input and output matrices
 //    typedef ac_fixed<41, 21, true, AC_RND, AC_SAT> input_type;
 //    typedef ac_fixed<64, 32, true, AC_RND, AC_SAT> output_type;
 //    const unsigned M = 7;
-// 
+//
 //    #pragma hls_design top
 //    void project(
 //      const input_type input[M][M],
@@ -122,7 +122,7 @@ using namespace std;
 //    {
 //      ac_chol_d(input, output);
 //    }
-// 
+//
 //    #ifndef __SYNTHESIS__
 //    #include <mc_scverify.h>
 //    CCS_MAIN(int arg, char **argc)
@@ -135,13 +135,13 @@ using namespace std;
 //      CCS_RETURN (0);
 //    }
 //    #endif
-// 
+//
 // Notes:
 //    A runtime error is thrown by AC_ASSERT if the input matrix is not
 //    positive definite. Additionally the function will return a matrix
 //    of all zeros if the input matrix is not positive definite, in case
 //    the AC_ASSERT cannot provide an indication of that.
-// 
+//
 // -------------------------------------------------------------------------
 
 namespace ac_math
@@ -247,27 +247,27 @@ namespace ac_math
 
 // ==============================================================================================
 // Function: ac_chol_d (for ac_complex<ac_fixed> using native C-style arrays)
-// 
+//
 // Description:
 //    Calculation of the Cholesky Decomposition of complex-valued matrices
 //    with ac_complex<ac_fixed> variables.
-// 
+//
 //    This function can also be configured to change the type for the
 //    intermediate variables, and to use the pwl/accurate math functions for
 //    intermediate computations, just like the ac_fixed version.
-// 
+//
 // Usage:
 //    A sample implementation and its testbench looks like this:
-// 
+//
 //    #include <ac_fixed.h>
 //    #include <ac_math/ac_chol_d.h>
 //    using namespace ac_math;
-// 
+//
 //    // Define data types for input and output matrices
 //    typedef ac_complex<ac_fixed<41, 21, true, AC_RND, AC_SAT> > input_type;
 //    typedef ac_complex<ac_fixed<64, 32, true, AC_RND, AC_SAT> > output_type;
 //    const unsigned M = 7;
-// 
+//
 //    #pragma hls_design top
 //    void project(
 //      const input_type input[M][M],
@@ -276,7 +276,7 @@ namespace ac_math
 //    {
 //      ac_chol_d(input, output);
 //    }
-// 
+//
 //    #ifndef __SYNTHESIS__
 //    #include <mc_scverify.h>
 //    CCS_MAIN(int arg, char **argc)
@@ -288,14 +288,14 @@ namespace ac_math
 //      CCS_RETURN (0);
 //    }
 //    #endif
-// 
+//
 // Notes:
 //    Similar to the ac_fixed version, the ac_complex version also has an AC_ASSERT and a backup
 //    functionality to return a matrix of zeros if the input matrix is not positive definite.
 //
-//    As the diagonal elements of the output matrix are always real, the calculations involved 
-//    are optimized to ensure that only the real part of diagonal elements is ever calculated, 
-//    and only the real part is used for future calculations. The imaginary part is always set 
+//    As the diagonal elements of the output matrix are always real, the calculations involved
+//    are optimized to ensure that only the real part of diagonal elements is ever calculated,
+//    and only the real part is used for future calculations. The imaginary part is always set
 //    to zero.
 //
 // ----------------------------------------------------------------------------------------------
@@ -433,32 +433,32 @@ namespace ac_math
 
 // ===============================================================================
 // Function: ac_chol_d (for ac_fixed using ac_matrix 2-D storage class)
-// 
+//
 // Description:
 //    Calculation of the Cholesky Decomposition of real-valued matrices of
 //    ac_fixed variables.
-// 
+//
 //    The Cholesky-Crout algorithm is used for Cholesky Decomposition.
 //    By default, all temporary variables use the same precision as the
 //    output. The user can change that by specifying number of bits to be
 //    added or taken away from this default value. The user can also
 //    add extra template parameters to turn off rounding and saturation
 //    and rounding for temp. variables (these are turned on by default).
-// 
+//
 //    The user can also choose between using PWL vs. using accurate
 //    division/sqrt functions, as mentioned earlier.
-// 
+//
 // Usage:
 //    A sample implementation and its testbench looks like this:
-// 
+//
 //    #include <ac_fixed.h>
 //    #include <ac_math/ac_chol_d.h>
 //    #include <ac_matrix.h>
-// 
+//
 //    // Define data types for input and output matrices
 //    typedef ac_matrix<ac_fixed<41, 21, true, AC_RND, AC_SAT>, 7, 7> input_type;
 //    typedef ac_matrix<ac_fixed<64, 32, true, AC_RND, AC_SAT>, 7, 7> output_type;
-// 
+//
 //    #pragma hls_design top
 //    void project(
 //      const input_type &input,
@@ -467,7 +467,7 @@ namespace ac_math
 //    {
 //      ac_chol_d(input, output);
 //    }
-// 
+//
 //    #ifndef __SYNTHESIS__
 //    #include <mc_scverify.h>
 //    CCS_MAIN(int arg, char **argc)
@@ -475,18 +475,18 @@ namespace ac_math
 //      input_type input;
 //      output_type output;
 //      // Hypothetical function that generates a pos. def. matrix:
-//      gen_pos_def_matrix(input); 
+//      gen_pos_def_matrix(input);
 //      CCS_DESIGN(project)(input, output);
 //      CCS_RETURN (0);
 //    }
 //    #endif
-// 
+//
 // Notes:
 //    This version uses the C++ 2D array implementation for it's functioning.
 //    It does this by using indirect_chol_d friend function from the
 //    ac_matrix class to pass the 2D array member data to the relevant
 //    implementation.
-// 
+//
 // -------------------------------------------------------------------------------
 
   template<bool use_pwl = false,
@@ -504,27 +504,27 @@ namespace ac_math
 
 // ==============================================================================================
 // Function: ac_chol_d (for ac_complex<ac_fixed> using ac_matrix 2-D storage class)
-// 
+//
 // Description:
 //    Calculation of the Cholesky Decomposition of complex-valued matrices
 //    with ac_complex<ac_fixed> variables.
-// 
+//
 //    This function can also be configured to change the type for the
 //    temporary variables, and to use the pwl/accurate math functions for
 //    intermediate computations, just like the ac_fixed version.
-// 
+//
 // Usage:
 //    A sample implementation and its testbench looks like this:
-// 
+//
 //    #include <ac_fixed.h>
 //    #include <ac_math/ac_chol_d.h>
 //    using namespace ac_math;
 //    #include <ac_matrix.h>
-// 
+//
 //    // Define data types for input and output matrices
 //    typedef ac_matrix<ac_complex<ac_fixed<41, 21, true, AC_RND, AC_SAT> >, 7, 7> input_type;
 //    typedef ac_matrix<ac_complex<ac_fixed<64, 32, true, AC_RND, AC_SAT> >, 7, 7> output_type;
-// 
+//
 //    #pragma hls_design top
 //    void project(
 //      const input_type &input,
@@ -533,7 +533,7 @@ namespace ac_math
 //    {
 //      ac_chol_d(input, output);
 //    }
-// 
+//
 //    #ifndef __SYNTHESIS__
 //    #include <mc_scverify.h>
 //    CCS_MAIN(int arg, char **argc)
@@ -541,18 +541,18 @@ namespace ac_math
 //      input_type input;
 //      output_type output;
 //      // Hypothetical function that generates a pos. def. matrix:
-//      gen_pos_def_matrix(input); 
+//      gen_pos_def_matrix(input);
 //      CCS_DESIGN(project)(input, output);
 //      CCS_RETURN (0);
 //    }
 //    #endif
-// 
+//
 // Notes:
 //    This version uses the C++ 2D array implementation for its functioning.
 //    It does this by using indirect_chol_d friend function from the
 //    ac_matrix class to pass the 2D array member data to the relevant
 //    implementation.
-// 
+//
 // ----------------------------------------------------------------------------------------------
 
   template<bool use_pwl = false,

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -131,12 +131,12 @@ int test_driver(
   bool compare_tan = false;
   double old_output_tan;
 
-  for (i = lower_limit; i < upper_limit; i += step) {
+  for (i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input = i;
 
     // For now, skip zero values.
-    if(input == 0) { continue; }
+    if (input == 0) { continue; }
     // call reference tan() with fixed-pt value converted back to double
     // an additional step of typecasting is required in order to perform
     // quantization on the expected output.
@@ -144,7 +144,7 @@ int test_driver(
 
     // If input is zero, saturate the expected value according to the min. value representible by
     // the fixed point output.
-    if(input == 0) {
+    if (input == 0) {
       T_out output_min;
       output_min.template set_val<AC_VAL_MIN>();
       expected_tan = output_min.to_double();
@@ -224,25 +224,26 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_tan_pwl() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, int outWfi, int outIfi>
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 45);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 50);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 55);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 60);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 65);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 70);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 75);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 80);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 81);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 82);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 83);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 84);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 85);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 86);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 87);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 88);
-  test_driver<18,  2, 64, 20>(max_error_tan, allowed_error, threshold, 89);
-  test_driver<18, -2, 64, 20>(max_error_tan, allowed_error, threshold, 10);
-  test_driver<18, -3, 64, 20>(max_error_tan, allowed_error, threshold, 10);
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 50   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 55   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 60   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 65   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 70   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 75   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 80   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 81   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 82   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 83   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 84   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 85   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 86   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 87   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 88   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 89   );
+  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 89.18);
+  test_driver<22, -2, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
+  test_driver<22, -3, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;

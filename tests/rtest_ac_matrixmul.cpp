@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -55,7 +55,7 @@ void test_ac_matrixmul(
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> C1[M][P],
   const ac_complex<ac_fixed<Wfi1, Ifi1, Sfi1, AC_TRN, AC_WRAP> > A2[M][N],
   const ac_complex<ac_fixed<Wfi2, Ifi2, Sfi2, AC_TRN, AC_WRAP> > B2[N][P],
-  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > C2[M][P],  
+  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > C2[M][P],
   const ac_matrix<ac_fixed<Wfi1, Ifi1, Sfi1, AC_TRN, AC_WRAP>, M, N> &A3,
   const ac_matrix<ac_fixed<Wfi2, Ifi2, Sfi2, AC_TRN, AC_WRAP>, N, P> &B3,
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, P> &C3,
@@ -234,11 +234,11 @@ double compare_matrices(
   ac_complex<double> act_op, exp_op;
   for (int i=0; i<(int)M; i++) {
     for (int j=0; j<(int)P; j++) {
-			act_op.r() = C[i][j].r().to_double();
-			act_op.i() = C[i][j].i().to_double();
-			// Use typecasting to perform quantization on testbench double output
-			exp_op.r() = ((T_op)C_tb[i][j].r()).to_double();
-			exp_op.i() = ((T_op)C_tb[i][j].i()).to_double();
+      act_op.r() = C[i][j].r().to_double();
+      act_op.i() = C[i][j].i().to_double();
+      // Use typecasting to perform quantization on testbench double output
+      exp_op.r() = ((T_op)C_tb[i][j].r()).to_double();
+      exp_op.i() = ((T_op)C_tb[i][j].i()).to_double();
       this_error = (abs( conv_val(act_op) - conv_val(exp_op)) / conv_val(exp_op)) * 100;
       if (this_error > max_error) { max_error = this_error; }
     }
@@ -252,7 +252,7 @@ double compare_matrices(
 //   widths of the fixed point AC datatype. It uses the type information to
 //   iterate through a range of valid values on that type in order to compare
 //   the precision of the DUT matrix multiplication with the computed matrix
-//   multiplication using the standard C double types. The maximum error for each 
+//   multiplication using the standard C double types. The maximum error for each
 //   type is accumulated in variables defined in the calling function.
 
 template <unsigned M, unsigned N, unsigned P, int Wfi1, int Ifi1, bool Sfi1, int Wfi2, int Ifi2, bool Sfi2, int outWfi, int outIfi, bool outSfi>
@@ -264,8 +264,8 @@ int test_driver(
 {
   bool passed = true;
 
-	ac_fixed<Wfi1, Ifi1, Sfi1, AC_TRN, AC_WRAP> A_c_array[M][N];
-	ac_fixed<Wfi2, Ifi2, Sfi2, AC_TRN, AC_WRAP> B_c_array[N][P];
+  ac_fixed<Wfi1, Ifi1, Sfi1, AC_TRN, AC_WRAP> A_c_array[M][N];
+  ac_fixed<Wfi2, Ifi2, Sfi2, AC_TRN, AC_WRAP> B_c_array[N][P];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> C_c_array[M][P];
   ac_complex<ac_fixed<Wfi1, Ifi1, Sfi1, AC_TRN, AC_WRAP> > cmplx_A_c_array[M][N];
   ac_complex<ac_fixed<Wfi2, Ifi2, Sfi2, AC_TRN, AC_WRAP> > cmplx_B_c_array[N][P];
@@ -276,7 +276,7 @@ int test_driver(
   ac_matrix<ac_complex<ac_fixed<Wfi1, Ifi1, Sfi1, AC_TRN, AC_WRAP> >, M, N> cmplx_A_ac_matrix;
   ac_matrix<ac_complex<ac_fixed<Wfi2, Ifi2, Sfi2, AC_TRN, AC_WRAP> >, N, P> cmplx_B_ac_matrix;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, P> cmplx_C_ac_matrix;
-  
+
   cout << "TEST: ac_matrixmul(), M = ";
   cout << M << ",";
   cout << " N = ";
@@ -300,7 +300,7 @@ int test_driver(
   //initialize the matrix elements using ac_random
   gen_matrix<M, N, P>(A_c_array, B_c_array);
   gen_matrix<M, N, P>(cmplx_A_c_array, cmplx_B_c_array);
-  
+
   copy_to_A_ac_matrix<M, N>(A_c_array, A_ac_matrix);
   copy_to_B_ac_matrix<N, P>(B_c_array, B_ac_matrix);
   copy_to_A_ac_matrix<M, N>(cmplx_A_c_array, cmplx_A_ac_matrix);
@@ -372,5 +372,5 @@ int main(int argc, char *argv[])
     cout << "  ac_matrixmul - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }
-	return 0;
+  return 0;
 }

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -123,7 +123,7 @@ int test_driver(
   bool passed = true;
   double max_log_error = 0.0;
 
-  for (i = lower_limit; i < upper_limit; i += step) {
+  for (i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input = i;
     if (input.to_double() == 0) { continue; }
@@ -179,14 +179,22 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_log_cordic() - Allowed error " << allowed_error << endl;
 
   //template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
+  test_driver<16, -5, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -4, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -3, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -2, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -1, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  0, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  1, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  2, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  3, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  4, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  5, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  6, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  7, 40, 12, true>(max_error_log, allowed_error, threshold);
   test_driver<16,  8, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  9, 40, 12, true>(max_error_log, allowed_error, threshold);
   test_driver< 8, 12, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver< 8, -2, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<20, 12, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<20,  0, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<20,  1, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<20,  2, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<20,  3, 40, 12, true>(max_error_log, allowed_error, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;

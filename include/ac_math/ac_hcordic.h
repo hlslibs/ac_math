@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -82,12 +82,14 @@
 #endif
 
 #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+#include <string.h>
 #include <iostream>
 using namespace std;
 #endif
 
 #include <ac_int.h>
 #include <ac_fixed.h>
+#include <ac_math/ac_normalize.h>
 
 namespace ac_math
 {
@@ -229,25 +231,6 @@ namespace ac_math
     48,49,50,51,52,53,54,55,56,57
   };
 
-  // Statically computed log2(x)
-  template <int W>
-  struct slog2 {
-    enum {
-      floor = 1 + slog2< (W >> 1) >::floor,
-      pow2 = (1 << floor) == W,
-      ceil = pow2 ? floor : floor + 1
-    };
-  };
-
-  template <>
-  struct slog2<1> {
-    enum {
-      floor = 0,
-      pow2 = 1,
-      ceil = 0
-    };
-  };
-
   template<int J>
   struct XtraIters {
     static const int valid = AcHtrigAssert<(J <= 60)>::test;
@@ -298,31 +281,6 @@ namespace ac_math
     return _inv_K;
   }
 
-  // Find the positition of the msb (zero-indexed) in an unsigned integer x.
-  // r     : msb position.
-  // valid : equal to zero if all bits of x are zero, otherwise 1.
-  template <int W, int WO>
-  struct LOD {
-    static void get(ac_int<W,false> x, ac_int<WO,false> &r, bool &valid)
-    {
-      const int N = slog2<W>::ceil - 1;
-      ac_int<W, true> mask(-1);
-      mask <<= (1 << N);
-      bool sel = (x & mask);
-      valid |= sel;
-      r |= sel << N;
-      LOD<(1 << N), WO>::get(sel ? (x >> (1 << N)) : x, r, valid);
-    }
-  };
-
-  template <int WO>
-  struct LOD<1, WO> {
-    static void get(ac_int<1,false> x, ac_int<WO,false> &r, bool &valid)
-    {
-      valid |= (x & 1);
-    }
-  };
-
   template< int ZW >
   static ac_fixed< ZW, 0, false > hcordic_table_function(int i)
   {
@@ -336,7 +294,6 @@ namespace ac_math
     (void)AcHtrigAssert< ZW <= 56 >::test;
     return shift_dist_table[i];
   }
-
 
   template< int ZW >
   static ac_fixed< ZW, 0, false > hcordic_table_inv_ln2_function(int i)
@@ -367,7 +324,7 @@ namespace ac_math
     const int L = ZW - ZI + (XtraIters<ZW-ZI>::B0 +
                              XtraIters<ZW-ZI>::B1 +
                              XtraIters<ZW-ZI>::B2);
-    const int LW = L+slog2<L>::ceil;
+    const int LW = L + ac::nbits<L>::val;
     typedef ac_fixed<LW,I+1,true> dp_t;
     dp_t xi = x;
     dp_t yi = y;
@@ -408,9 +365,9 @@ namespace ac_math
   }
 
   // Range Reduced to: 0.5 <= x < 1, -.69 < z < 0
-  template <int AW,int AI,bool AS,ac_q_mode AQ,ac_o_mode AV,
-            int ZW,int ZI,bool ZS,ac_q_mode ZQ,ac_o_mode ZV>
-  void ac_ln_rr(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
+            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
+  void ac_ln_rr(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
     const int EW = (AW-AI) > (ZW-ZI) ? (AW-AI) : (ZW-ZI);
     ac_fixed<EW+2,2,true> xc = x;
@@ -426,9 +383,9 @@ namespace ac_math
   }
 
   // Range reduced to 0.5 <= x < 1, -1 <= z < 1
-  template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
+  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
             int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_log2_rr(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+  void ac_log2_rr(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
     const int EW = (AW-AI) > (ZW-ZI) ? (AW-AI) : (ZW-ZI);
     ac_fixed<EW+2,2,true> xc = x;
@@ -463,8 +420,8 @@ namespace ac_math
 
   // Range Reduced to: 0 <= |x| < 1  0 <= x < 1, 1 <= z < 2
   template <int AW,int AI,bool AS,ac_q_mode AQ,ac_o_mode AV,
-            int ZW,int ZI,bool ZS,ac_q_mode ZQ,ac_o_mode ZV>
-  void ac_exp2_rr(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+            int ZW,int ZI,ac_q_mode ZQ,ac_o_mode ZV>
+  void ac_exp2_rr(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
   {
     const int EW = AW > ZW ? AW : ZW;
     ac_fixed<EW+3,3,true> xc = 1.0;
@@ -487,101 +444,71 @@ namespace ac_math
     };
   };
 
-  template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
-            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV, enum AcLogRR::base BASE >
-  void ac_log_(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+  template <enum AcLogRR::base BASE,
+            int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
+            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
+  void ac_log_(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
     // BASE_E: RR: ln( m 2^q ) = ln(m) + q*ln(2)
     // BASE_2: RR: ln( m 2^q ) = log2(m) + q*log2(2) = log2(m) + q
-    const int LODW = slog2<AW>::ceil+1;
-    ac_int<LODW,false> leading_one = 0;
-    bool no_bits_set;
-    ac_int<AW,false> x_int;
-    x_int.set_slc(0, x.template slc<AW>(0));
-    LOD<AW,LODW>::get(x_int, leading_one, no_bits_set);
+
     ac_fixed<AW,0,false,AQ,AV> x_norm;
-    int dist;
-    bool right_shift;
-    leading_one += 1; // From index to bits.
+    int expret = ac_normalize(x, x_norm);
 
-    // The expressions below take into account the fact that the input integer width
-    // may be negative, or that the input integer width may be greater than bitwidth.
-    const int AW_m = (AI > 0) ? (AI > AW ? AI : AW) : (AW - AI);
-
-    if (leading_one > AW - AI) {
-      dist = leading_one - (AW - AI);
-      ac_fixed<2*AW_m,AW_m,false> x_shift = x;
-      x_norm = x_shift >> dist;
-      right_shift = true;
-    } else {
-      dist = (AW - AI) - leading_one;
-      ac_fixed<2*AW_m,AW_m,false> x_shift = x;
-      x_norm = x_shift << dist;
-      right_shift = false;
-    }
-    ac_fixed<ZW+2,2,true> zc;
-    if (BASE == AcLogRR::BASE_E) {
-      ac_ln_rr(x_norm, zc);
-    }
-    if (BASE == AcLogRR::BASE_2) {
-      ac_log2_rr(x_norm, zc);
-    }
     // Max shift-distance is S = max(AW-AI,AI).
     //   BASE_E: max-offset = S*ln(2)
     //   BASE_2: max-offset = S
 
-    const int OFW = ac::nbits<(AW-AI>(AI-AS)?AW-AI:(AI-AS))>::val;
-    ac_fixed<ZW+1+OFW+1,OFW+1,true> offset;
+    const int OFW = ac::nbits<(AW - AI > AI ? AW - AI : AI)>::val;
 
     if (BASE == AcLogRR::BASE_E) {
+      ac_fixed<ZW+1,1,true> zc;
+      // Range Reduced to: 0.5 <= x < 1, -.69 < z < 0
+      ac_ln_rr(x_norm, zc);
+      ac_fixed<ZW+1+OFW+1,OFW+1,true> offset;
       offset = ln2_function<ZW+1>();
-      if (right_shift) {
-        offset *= dist;
-      } else {
-        offset *= -dist;
-      }
+      offset *= expret;
+      z = offset + zc;
     }
     if (BASE == AcLogRR::BASE_2) {
-      if (right_shift)
-      { offset = dist; }
-      else
-      { offset = -dist; }
+      ac_fixed<ZW+2,2,true> zc;
+      // Range reduced to 0.5 <= x < 1, -1 <= z < 1
+      ac_log2_rr(x_norm, zc);
+      ac_fixed<OFW+1,OFW+1,true> offset;
+      offset = expret;
+      z = offset + zc;
     }
-    z = offset;
-    z += zc;
 
 #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
+    cout << base_string << endl;
     cout << "x = " << x << endl;
-    cout << "leading_one = " << leading_one << endl;
     cout << "x_norm = " << x_norm << endl;
-    cout << "dist = " << dist << endl;
-    cout << "zc   = " << zc << endl;
-    cout << "offset = " << offset << endl;
-    cout << "right_shift = " << right_shift << endl;
-    cout << "offset.type_name() = " << offset.type_name() << endl;
+    cout << "expret = " << expret << endl;
+    cout << "z = " << z << endl;
 #endif
 
   }
 
-  template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
+  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
             int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_log_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+  void ac_log_cordic(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
-    ac_log_<AW,AI,AS,AQ,AV,ZW,ZI,ZS,ZQ,ZV,AcLogRR::BASE_E>(x, z);
+    ac_log_<AcLogRR::BASE_E,AW,AI,AQ,AV,ZW,ZI,ZS,ZQ,ZV>(x, z);
   }
 
-  template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
+  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
             int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_log2_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+  void ac_log2_cordic(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
-    ac_log_<AW,AI,AS,AQ,AV,ZW,ZI,ZS,ZQ,ZV,AcLogRR::BASE_2>(x, z);
+    ac_log_<AcLogRR::BASE_2,AW,AI,AQ,AV,ZW,ZI,ZS,ZQ,ZV>(x, z);
   }
 
   // The result is expected to have a range which accomodates all
   // resulting values exp(x) for inputs x.
   template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
-            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_exp_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+            int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
+  void ac_exp_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
   {
     // Range reduction: prescale x by 1/ln(2)
     // Let R = trunc(1/ln(2), 2^-(AW - AI))
@@ -605,38 +532,60 @@ namespace ac_math
     // Output should be at least wide enough to represent exp(2^(AI-AS)), i.e.,
     //  log2(exp(2^(AI-AS)))
     //  = 2^(AI-AS)*log2(exp(1))
-    const int QWE = (int)(1.443*(1 << AC_MAX(AI-AS, 0)))+1+1;
-    //const int QW = slog2<QWE>::ceil+AS;
-    const int QW = ac::nbits<QWE>::val + AS;
-    ac_int<QW+1,true> q_int;
-    ac_fixed<ZW-ZI+QWE+QW+1,QW+1,true> m;
+
+    // There is one corner case where one extra bit is required for QW. That occurs when
+    // AI = 1 and the input is signed. The equation for QWE takes that corner case into account.
+    const int QWE = (int)(1.443*(1 << AC_MAX(AI-AS, 0))) + ((AI == 1) && AS ? 1 : 0);
+    const int QW = ac::nbits<QWE>::val;
     ac_fixed<ZW-ZI,1,false> inv_ln2 = inv_ln2_function<ZW-ZI>();
-    ac_fixed<QW+1,QW+1,true> q = x*inv_ln2;
-    q_int = 0;
-    q_int.set_slc(0, q.template slc<QW+1>(0));
+    ac_fixed<QW + int(AS), QW + int(AS), AS> q = x*inv_ln2;
+    ac_int<QW + int(AS), AS> q_int = q.to_int();
     const int MW = ZW-ZI > AW-AI ? ZW-ZI : AW-AI;
-    m = ln2_function<MW+QWE>();
+
+    // Even though there are intermediate calculations being carried out and the result of those intermediate
+    // calculations is stored in m, we can adjust the precision of m to only accomodate the result of x - q*ln(2)
+    // This is due to the fact that wrapping around for m is switched on by default, and the extra bits that result
+    // due to the intermediate calculations can be safely ignored by merely ignoring bits that go beyond the bounds
+    // of the MSB. If, however, m has saturation turned on, the output will be incorrect. Hence, the user is advised
+    // to use AC_WRAP (the default) for the saturation mode of m.
+    // M = x - Q*ln(2);
+    ac_fixed<MW + QWE + 1, 1, true> m = ln2_function<MW+QWE>();
     m *= -q;
     m += x;
-    // May need up to QWE extra bits forpost-scaling by 2^Q.
-    ac_fixed<MW+QWE+3,3,true> zc;
+    const int zc_I = 2;
+    const int zc_W = ZW - ZI + QWE + zc_I;
+    ac_fixed<zc_W, zc_I, false> zc;
     ac_exp_rr(m, zc);
-    // May shift left or right by up to QWE positions.
-    ac_fixed<MW+QWE+3+QWE,3+QWE,true> zs = zc;
-    if (q_int < 0) {
-      q_int = -q_int;
-      zs = zs >> q_int;
-    } else {
-      zs = zs << q_int;
-    }
+    // Find the maximum amount of right/left-shifting that q_int can cause.
+    const int q_int_max_rs = AS ? 1 << (AC_MAX(QW, 0) - 1) : 0;
+    const int q_int_max_ls = QWE;
+    const int zs_W = zc_W + q_int_max_ls + q_int_max_rs;
+    const int zs_I = zc_I + q_int_max_ls;
+    ac_fixed<zs_W, zs_I, false> zs = ((ac_fixed<zs_W, zs_I, false>)zc) << q_int;
+
     z = zs;
+
+#if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    cout << "x = " << x << endl;
+    cout << "q_int = " << q_int << endl;
+    cout << "q = " << q << endl;
+    cout << "m = " << m << endl;
+    cout << "zc = " << zc << endl;
+    cout << "zs = " << zs << endl;
+    cout << "x*inv_ln2 = " << x *inv_ln2 << endl;
+    cout << "q_int.type_name() = " << q_int.type_name() << endl;
+    cout << "q.type_name() = " << q.type_name() << endl;
+    cout << "zc.type_name() = " << zc.type_name() << endl;
+    cout << "zs.type_name() = " << zs.type_name() << endl;
+#endif
+
   }
 
   // Example range-reduction algorithm which invokes the ac_exp_rr
   // routine.
   template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
-            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_exp2_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+            int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
+  void ac_exp2_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
   {
     // If exp(t) = 2^x, then t = x ln(2), i.e., we can compute 2^x
     // using exp(x ln(2)).
@@ -648,31 +597,29 @@ namespace ac_math
     // Therefore t = xI ln(2) + xF ln(2), i.e., our Q value is
     // directly obtained from xI. Similarly our M value is obtained
     // from multiplying xF by ln(2), i.e., M = xF*ln(2).
-    //const int QW = AI-AS;
     const int QW = AC_MAX(AI-AS, 0);
-    const int QWE = (1<<QW)+1;
-    //ac_int<AI+1,true> q_int;
-    ac_int<AC_MAX(AI+1, 2),true> q_int;
-    ac_fixed<AW-AI+QWE+1,1,true> m;
-    //ac_fixed<AI+1,AI+1,true> q = x;
-    ac_fixed<AC_MAX(AI+1, 2), AC_MAX(AI+1, 2),true> q = x;
-    q_int.set_slc(0, q.template slc<AC_MAX(AI+1, 2)>(0));
-    m = 0;
-    m.set_slc(QWE, x.template slc<AW-AI>(0));
+    const int QWE = (1<<QW) + 1;
+    // Find the maximum amount of right/left-shifting that x_int can cause.
+    const int x_int_max_rs = AS ? 1 << (AC_MAX(AI, 1) - 1) : 0;
+    const int x_int_max_ls = (1<<QW) - 1;
+    ac_int<AC_MAX(AI, 1 + int(AS)), AS> x_int = x.to_int();
+    // m stores the fractional part of the input. By default it is set to 0
+    ac_fixed<AC_MAX(AW - AI, 1), 0, false> m = 0;
+    // Only slice out the fractional part if the input has a fractional component.
+    // If the input doesn't have a fractional part, the default value of m, i.e. 0,
+    // is suitable to be used in later calculations.
+    if (AW > AI) {m.set_slc(0, x.template slc<AC_MAX(AW - AI, 1)>(0));}
     const int MW = ZW-ZI > AW-AI ? ZW-ZI : AW-AI;
-    ac_fixed<MW+QWE+1,1,true> mw = m; // Widen m if required.
+    ac_fixed<MW + QWE, 0, false> mw = m; // Widen m if required.
     mw *= ln2_function<MW+QWE>();
-    ac_fixed<ZW-ZI+QWE+3,3,true> zc;
+    const int zc_I = 2;
+    const int zc_W = ZW - ZI + QWE + zc_I;
+    ac_fixed<zc_W, zc_I, false> zc;
     ac_exp_rr(mw, zc);
-    ac_fixed<ZW-ZI+QWE+3+QWE,3+QWE,true> zs = zc;
-    if (q_int < 0) {
-      q_int = -q_int;
-      zs = zs >> q_int;
-    } else {
-      zs = zs << q_int;
-    }
+    const int zs_W = zc_W + x_int_max_ls + x_int_max_rs;
+    const int zs_I = zc_I + x_int_max_ls;
+    ac_fixed<zs_W, zs_I, false> zs = ((ac_fixed<zs_W, zs_I, false>)zc) << x_int;
     z = zs;
-
   }
 
   // This implementation tries to be as general as possible without
@@ -690,22 +637,23 @@ namespace ac_math
   //
   // This bounds the argument qF of exp2(qF) between 0 and 1.
   // Factor exp2(qI) is accounted for with a final shift.
-  template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
+  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
             int BW, int BI, bool BS, ac_q_mode BQ, ac_o_mode BV,
-            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_pow_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &a,
+            int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
+  void ac_pow_cordic(const ac_fixed<AW,AI,false,AQ,AV> &a,
                      const ac_fixed<BW,BI,BS,BQ,BV> &b,
-                     ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+                     ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
   {
     // log2(min(a)) = log(2^-(AW-AI))
-    const int TI_MIN = slog2<AW-AI>::ceil;
+    const int TI_MIN = ac::nbits<AW-AI>::val;
     // log2(max(a)) = log(2^AI)
-    const int TI_MAX = slog2<AI>::ceil;
+    const int TI_MAX = ac::nbits<AI>::val;
     const int TI = (TI_MIN < TI_MAX ? TI_MAX : TI_MIN)+1;
     const int TW = ZW-ZI+TI;
     ac_fixed<TW,TI,true> t;
     ac_log2_cordic(a, t);
-    const int QI = TI+(BI-BS);
+    const int QI = TI+BI-BS;
+    const int QW = TW+BW-BS;
     // A left shift results in loss of precision if the bits to be shifted-in
     // aren't computed. This is possible when 'a' has a large number of fractional
     // positions and 'b' can be negative.
@@ -721,27 +669,22 @@ namespace ac_math
     // dependent on the maximum value of 'a', and not on its number of fractional
     // bits.
     const int SHIFT_W = BS?(1<<(QI-1)):(1<<(BI+TI_MAX));
-    const int QW = ZW-ZI+SHIFT_W+QI;
     ac_fixed<QW,QI,true> q = b*t;
-    ac_fixed<QI,QI,true> q_i = 0;
-    q_i.set_slc(0, q.template slc<QI>(QW-QI));
     ac_fixed<QW-QI,0,false> q_f = 0;
     q_f.set_slc(0, q.template slc<QW-QI>(0));
-    ac_int<QI,true> q_int = 0;
-    q_int.set_slc(0, q.template slc<QI>(QW-QI));
+    ac_int<QI,true> q_int;
+    q_int = q.to_int();
     // 0 <= q_f < 1
     const int ZCI = 2;
     const int ZCW = QW-QI+2;
     ac_fixed<ZCW,ZCI,false> zc;
     ac_exp2_cordic(q_f, zc);
-    ac_fixed<ZCW+SHIFT_W,SHIFT_W+2,false> zc_shift = zc;
-    if (q_int < 0) {
-      q_int = -q_int;
-      zc_shift >>= q_int;
-    } else {
-      zc_shift <<= q_int;
-    }
+    ac_fixed<ZCW+SHIFT_W,SHIFT_W+2,false> zc_shift = ((ac_fixed<ZCW+SHIFT_W,SHIFT_W+2,false>)zc) << q_int;
     z = zc_shift;
+
+#if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    cout << "zc_shift.type_name() = " << zc_shift.type_name() << endl;
+#endif
   }
 
 }

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -118,7 +118,7 @@ int test_driver(
   double old_output_exp;
   bool compare_exp = false;
 
-  for (double i = lower_limit; i < upper_limit; i += step) {
+  for (double i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input = i;
     test_ac_exp_pwl(input, output_exp);
@@ -206,7 +206,6 @@ int main(int argc, char *argv[])
   test_driver<  4, -2, false, 60, 30>(max_error_exp, allowed_error, threshold);
   test_driver<  3,  4, false, 64, 32>(max_error_exp, allowed_error, threshold);
   test_driver<  1,  5, false, 61, 33>(max_error_exp, allowed_error, threshold);
-  test_driver<  2,  5, false, 64, 32>(max_error_exp, allowed_error, threshold);
   test_driver< 16,  4, false, 64, 32>(max_error_exp, allowed_error, threshold);
   test_driver< 16,  0, false, 64, 32>(max_error_exp, allowed_error, threshold);
 

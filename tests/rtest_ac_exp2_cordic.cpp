@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -123,7 +123,7 @@ int test_driver(
     cout << "    step                 = " << step << endl; // LCOV_EXCL_LINE
   }
 
-  for (double i = lower_limit; i < upper_limit; i += step) {
+  for (double i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input = i;
     test_ac_exp2_cordic(input, output_exp2);
@@ -175,13 +175,33 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_exp2_cordic() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
-  test_driver< 16, -4, false, 40, 20>(max_error_exp2, allowed_error, threshold);
-  test_driver<  8,  4, false, 40, 20>(max_error_exp2, allowed_error, threshold);
-  test_driver< 12,  3,  true, 40, 20>(max_error_exp2, allowed_error, threshold);
-  test_driver< 20,  4,  true, 40, 20>(max_error_exp2, allowed_error, threshold);
-  test_driver< 16,  4,  true, 40, 20>(max_error_exp2, allowed_error, threshold);
-  test_driver< 12,  3, false, 40, 20>(max_error_exp2, allowed_error, threshold);
-  test_driver< 16,  4, false, 40, 20>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  4, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  3, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  2, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  1, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  0, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -1, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -2, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -3, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -4, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  2,  4, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  3,  4, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  1,  3, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  5,  4, false, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  5,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  4,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  3,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  2,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  1,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16,  0,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -1,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -2,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -3,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver< 16, -4,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  2,  4,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  3,  4,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  3,  3,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
+  test_driver<  5,  4,  true, 50, 30>(max_error_exp2, allowed_error, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum error observed across all bit-width variations:" << endl;

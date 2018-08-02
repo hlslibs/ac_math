@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -86,8 +86,7 @@ using namespace std;
 template <unsigned M>
 struct determinant_double {
   template <typename T>
-  static T determinant_comp (T a[M][M])
-  {
+  static T determinant_comp (T a[M][M]) {
     // defining the arrays to store the determinant answers of smaller matrices and storing the answer of the accumulation output.
     T c[M], temp1, b[M-1][M-1];
     unsigned j,p,q;
@@ -121,8 +120,7 @@ struct determinant_double {
 // Template specialized case for 2x2 matrix
 template <> struct determinant_double <2> {
   template <typename T>
-  static T determinant_comp (T a[2][2])
-  {
+  static T determinant_comp (T a[2][2]) {
     // Determinant of 2x2 matrix formula.
     return ((a[0][0]*a[1][1])-(a[0][1]*a[1][0]));
   }
@@ -131,8 +129,7 @@ template <> struct determinant_double <2> {
 // Template specialized case for 1x1 matrix
 template <> struct determinant_double <1> {
   template <typename T>
-  static T determinant_comp (T a[1][1])
-  {
+  static T determinant_comp (T a[1][1]) {
     // Determinant of 1x1 matrix formula.
     return a[0][0];
   }
@@ -164,17 +161,17 @@ int test_driver(
 {
   bool passed = true;
 
-  typedef ac_fixed<M*Wfi + ac::log2_floor<Factorial<M>::value >::val, M*Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> T_out;
+  typedef ac_fixed<M *Wfi + ac::log2_floor<Factorial<M>::value >::val, M *Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> T_out;
 
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> input_arr[M][M];
-  ac_fixed<M*Wfi + ac::log2_floor<Factorial<M>::value >::val, M*Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> output_arr;
+  ac_fixed<M *Wfi + ac::log2_floor<Factorial<M>::value >::val, M *Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> output_arr;
   ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > input_cmplx_arr[M][M];
-  ac_complex<ac_fixed<M*Wfi + ac::log2_floor<Factorial<M>::value >::val, M*Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> > output_cmplx_arr;
+  ac_complex<ac_fixed<M *Wfi + ac::log2_floor<Factorial<M>::value >::val, M *Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> > output_cmplx_arr;
 
   ac_matrix<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>, M, M> input;
-  ac_fixed<M*Wfi + ac::log2_floor<Factorial<M>::value >::val, M*Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> output;
+  ac_fixed<M *Wfi + ac::log2_floor<Factorial<M>::value >::val, M *Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> output;
   ac_matrix<ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> >, M, M> input_cmplx;
-  ac_complex<ac_fixed<M*Wfi + ac::log2_floor<Factorial<M>::value >::val, M*Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> > output_cmplx;
+  ac_complex<ac_fixed<M *Wfi + ac::log2_floor<Factorial<M>::value >::val, M *Ifi + ac::log2_floor<Factorial<M>::value >::val, true, AC_TRN, AC_WRAP> > output_cmplx;
 
   double input_double[M][M];
   double output_double;

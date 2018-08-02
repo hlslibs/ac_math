@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -88,7 +88,6 @@ template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
 int test_driver(
   double &cumulative_max_error_log2,
   const double allowed_error,
-  const double threshold,
   bool details = false
 )
 {
@@ -99,7 +98,14 @@ int test_driver(
   T_out log2_out;
 
   // set ranges and step size for testbench
-  ac_fixed<Wfi, Ifi, false> lower_limit = input.template set_val<AC_VAL_MIN>();
+  ac_fixed<Wfi, Ifi, false> lower_limit;
+  // If output is unsigned, make sure that the input is always greater than or equal to 1
+  // by setting the lower_limit of the testbench to 1. This is because input values lesser
+  // than 1 correspond to a negative output, which can't be stored in unsigned variables. 
+  // Also, keep in mind that the output can only ever be negative if the
+  // input word-width is greater than the integer width.
+  if(outSfi || (Wfi <= Ifi)) { lower_limit = input.template set_val<AC_VAL_MIN>(); }
+  else                       { lower_limit = 1.0; }
   ac_fixed<Wfi, Ifi, false> upper_limit = input.template set_val<AC_VAL_MAX>();
   ac_fixed<Wfi, Ifi, false> step        = input.template set_val<AC_VAL_QUANTUM>();
 
@@ -120,8 +126,6 @@ int test_driver(
     cout << "    step        = " << step << endl; // LCOV_EXCL_LINE
   }
 
-  if (step < 0.01) { step = 0.01; }
-
   bool passed = true;
   double max_log2_error = 0.0;
 
@@ -129,7 +133,7 @@ int test_driver(
   bool compare_log2 = false;
   double old_output_log2;
 
-  for (i = lower_limit; i < upper_limit; i += step) {
+  for (i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input = i;
 
@@ -140,7 +144,7 @@ int test_driver(
 
     // If input is zero, saturate the expected value according to the min. value representible by
     // the fixed point output.
-    if(input == 0) {
+    if (input == 0) {
       T_out output_min;
       output_min.template set_val<AC_VAL_MIN>();
       expected_log2 = output_min.to_double();
@@ -152,9 +156,10 @@ int test_driver(
     double actual_log2 = log2_out.to_double();
     double this_error_log2;
 
-    // If expected value of either output falls below the threshold, calculate absolute error instead of relative
-    if (expected_log2 > threshold) {this_error_log2 = abs_double( (expected_log2 - actual_log2) / expected_log2 ) * 100.0;}
-    else {this_error_log2 = abs_double(expected_log2 - actual_log2) * 100.0;}
+    // Calculate absolute value of error for log2 and log output. Since the scaling of outputs that lie outside the range of normalization of log2 is done
+    // using an addition instead of a shift, the absolute value should work out as an error metric for all outputs, large and small, provided that the
+    // output has enough precision.
+    this_error_log2 = abs_double(expected_log2 - actual_log2) * 100.0;
 
     if (check_monotonic) {
       // MONOTONIC: Make sure that function is monotonic. Compare old value (value of previous iteration) with current value. Since the logarithm function we
@@ -191,7 +196,6 @@ int test_driver(
       cout << "  expected_log2   = " << expected_log2 << endl;
       cout << "  actual_log2     = " << actual_log2 << endl;
       cout << "  this_error_log2 = " << this_error_log2 << endl;
-      cout << "  threshold       = " << threshold << endl;
       assert(false);
     }
 #endif
@@ -213,19 +217,21 @@ int main(int argc, char *argv[])
 {
   double max_error_log2 = 0.0;
   double allowed_error = 1;
-  double threshold = 0.1;
 
   cout << "=============================================================================" << endl;
   cout << "Testing function: ac_log2_pwl() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
-  test_driver<20, 12, 64, 32, true>(max_error_log2, allowed_error, threshold);
-  test_driver<20,  8, 64, 32, true>(max_error_log2, allowed_error, threshold);
-  test_driver<20, 30, 64, 32, true>(max_error_log2, allowed_error, threshold);
-  test_driver<20, 30, 64, 32, true>(max_error_log2, allowed_error, threshold);
-  test_driver<20, 30, 64, 32, true>(max_error_log2, allowed_error, threshold);
-  test_driver<20, -2, 64, 32, true>(max_error_log2, allowed_error, threshold);
-  test_driver<20, -3, 64, 32, true>(max_error_log2, allowed_error, threshold);
+  test_driver<20, 12, 64, 32,  true>(max_error_log2, allowed_error);
+  test_driver<20,  8, 64, 32,  true>(max_error_log2, allowed_error);
+  test_driver<20, 30, 64, 32,  true>(max_error_log2, allowed_error);
+  test_driver<20, 20, 64, 32,  true>(max_error_log2, allowed_error);
+  test_driver<20, -2, 64, 32,  true>(max_error_log2, allowed_error);
+  test_driver<20, -3, 64, 32,  true>(max_error_log2, allowed_error);
+  test_driver<20, 12, 64, 32, false>(max_error_log2, allowed_error);
+  test_driver<20,  8, 64, 32, false>(max_error_log2, allowed_error);
+  test_driver<20, 30, 64, 32, false>(max_error_log2, allowed_error);
+  test_driver<20, 20, 64, 32, false>(max_error_log2, allowed_error);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;

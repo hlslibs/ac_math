@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -425,12 +425,13 @@ double compare_matrices(
 template<unsigned M, class T>
 bool check_if_zero_matrix(
   const T L[M][M]
-) {
+)
+{
   bool is_zero_matrix = true;
 
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
-      if(L[i][j] != 0) {
+      if (L[i][j] != 0) {
         is_zero_matrix = false;
 #ifdef DEBUG
         cout << "Matrix was not zero for a positive definite input. Non-zero element found:" << endl;
@@ -448,12 +449,13 @@ bool check_if_zero_matrix(
 template<unsigned M, class T>
 bool check_if_zero_matrix(
   const ac_complex<T> L[M][M]
-) {
+)
+{
   bool is_zero_matrix = true;
 
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
-      if(L[i][j].r() != 0 || L[i][j].i() != 0) {
+      if (L[i][j].r() != 0 || L[i][j].i() != 0) {
         is_zero_matrix = false;
 #ifdef DEBUG
         cout << "Matrix was not zero for a positive definite input. Non-zero element found:" << endl;
@@ -715,7 +717,6 @@ int test_driver_accurate(
 
   passed = (max_error_overall < allowed_error) && (max_error_cmplx_overall < allowed_error);
 
-#if 0
   // Also, we must make sure that the output on passing a non-positive definite matrix is a zero matrix. To do this, we pass a matrix
   // with all the values set to the quantum values of the ac_fixed type as the input.
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> ac_fixed_quantum_value;
@@ -735,7 +736,6 @@ int test_driver_accurate(
 
   // Make sure that a zero matrix is returned at the output.
   passed = passed && check_if_zero_matrix(L_C_array) && check_if_zero_matrix(cmplx_L_C_array) && check_if_zero_matrix(L_ac_matrix_converted) && check_if_zero_matrix(L_cmplx_ac_matrix_converted);
-#endif
 
   if (passed) { printf("PASSED , max err (%f) (%f complex)\n", max_error_overall, max_error_cmplx_overall); }
   else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_overall, max_error_cmplx_overall); } // LCOV_EXCL_LINE

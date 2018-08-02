@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -118,7 +118,7 @@ int test_driver(
   double old_output_pow2;
   bool compare_pow2 = false;
 
-  for (double i = lower_limit; i < upper_limit; i += step) {
+  for (double i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input = i;
     test_ac_pow2_pwl(input, output_pow2);

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -58,7 +58,7 @@ void test_ac_qrd_pwl(
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_arr[M][M],
   ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > in_cmplx_arr[M][M],
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > Q_cmplx_arr[M][M],
-  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > R_cmplx_arr[M][M],  
+  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > R_cmplx_arr[M][M],
   ac_matrix<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>, M, M> &in_matrix,
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> &Q_matrix,
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> &R_matrix,
@@ -73,7 +73,7 @@ void test_ac_qrd_pwl(
   ac_qrd<true>(in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 }
 
-// Test Design for real and complex fixed point values, using the accurate 
+// Test Design for real and complex fixed point values, using the accurate
 // functions for QR decomposition.
 template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 void test_ac_qrd_accurate(
@@ -82,7 +82,7 @@ void test_ac_qrd_accurate(
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_arr[M][M],
   ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > in_cmplx_arr[M][M],
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > Q_cmplx_arr[M][M],
-  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > R_cmplx_arr[M][M],  
+  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > R_cmplx_arr[M][M],
   ac_matrix<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>, M, M> &in_matrix,
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> &Q_matrix,
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> &R_matrix,
@@ -112,20 +112,20 @@ using namespace std;
 // Overloaded function to convert type specific test input data to double
 template<int input_width, int input_int, bool input_S, ac_q_mode input_Q, ac_o_mode input_O>
 double type_to_double(
-    ac_fixed<input_width, input_int, input_S, input_Q, input_O> &  type_value)
+  ac_fixed<input_width, input_int, input_S, input_Q, input_O>   &type_value)
 {
-    return type_value.to_double();
+  return type_value.to_double();
 }
 
 // Overloaded function to convert type specific test input data to ac_complex<double>
 template<int input_width, int input_int, bool input_S, ac_q_mode input_Q, ac_o_mode input_O>
 ac_complex <double> type_to_double(
-    ac_complex <ac_fixed<input_width, input_int, input_S, input_Q, input_O> > &type_value)
+  ac_complex <ac_fixed<input_width, input_int, input_S, input_Q, input_O> > &type_value)
 {
-    ac_complex <double> double_value;
-    double_value.r() = type_to_double(type_value.r());
-    double_value.i() = type_to_double(type_value.i());
-    return double_value;
+  ac_complex <double> double_value;
+  double_value.r() = type_to_double(type_value.r());
+  double_value.i() = type_to_double(type_value.i());
+  return double_value;
 }
 
 // Copy a C-style array's contents over to an ac_matrix.
@@ -177,55 +177,49 @@ void gen_matrix(ac_complex<T_in> in_cmplx_arr[M][M])
 //Overloaded implementation for square root of complex numbers, defined using double datatypes
 ac_complex <double> sqrt (ac_complex <double> input)
 {
-    ac_complex <double> output;
-    double a= input.r();
-    double b= input.i();
-    double mod = a*a+b*b;
-    double sqrt_mod = sqrt(mod);
-    double sqr_x = (sqrt_mod + a)/ 2.0;
-    double sqr_y = (sqrt_mod - a)/ 2.0;
-    double x = sqrt(sqr_x);
-    double y = sqrt(sqr_y);
-    output.r() = x;
-    output.i() = y;
-    return output;
+  ac_complex <double> output;
+  double a= input.r();
+  double b= input.i();
+  double mod = a*a+b*b;
+  double sqrt_mod = sqrt(mod);
+  double sqr_x = (sqrt_mod + a)/ 2.0;
+  double sqr_y = (sqrt_mod - a)/ 2.0;
+  double x = sqrt(sqr_x);
+  double y = sqrt(sqr_y);
+  output.r() = x;
+  output.i() = y;
+  return output;
 }
 
-//Matrix multiplication 
+//Matrix multiplication
 template <unsigned M, typename T>
 void matrixmul_double (T Q[M][M], T R[M][M], T mult[M][M])
 {
-    T sum = 0;
-    for (unsigned i = 0; i<M; i++)
-    {
-        for (unsigned j = 0; j<M; j++)
-        {
-            for (unsigned k = 0; k<M; k++)
-            {
-                sum = sum + Q[i][k] * R[k][j];
-            }
-            mult[i][j] = sum;
-            sum = 0;
-        }
+  T sum = 0;
+  for (unsigned i = 0; i<M; i++) {
+    for (unsigned j = 0; j<M; j++) {
+      for (unsigned k = 0; k<M; k++) {
+        sum = sum + Q[i][k] * R[k][j];
+      }
+      mult[i][j] = sum;
+      sum = 0;
     }
+  }
 }
 
 template <unsigned M, typename T>
 void matrixmul_double (ac_matrix <T, M, M> &Q, ac_matrix <T, M, M> &R, ac_matrix <T, M, M> &mult)
 {
-    T sum = 0;
-    for (unsigned i = 0; i<M; i++)
-    {
-        for (unsigned j = 0; j<M; j++)
-        {
-            for (unsigned k = 0; k<M; k++)
-            {
-                sum = sum + Q(i,k) * R(k,j);
-            }
-            mult(i,j) = sum;
-            sum = 0;
-        }
+  T sum = 0;
+  for (unsigned i = 0; i<M; i++) {
+    for (unsigned j = 0; j<M; j++) {
+      for (unsigned k = 0; k<M; k++) {
+        sum = sum + Q(i,k) * R(k,j);
+      }
+      mult(i,j) = sum;
+      sum = 0;
     }
+  }
 }
 
 // Convert complex double element to mag_sqr.
@@ -280,7 +274,7 @@ double compare_matrices(
 //   widths of the fixed point AC datatype. It uses the type information to
 //   iterate through a range of valid values on that type in order to compare
 //   the precision of the DUT matrix multiplication with the computed matrix
-//   multiplication using the standard C double types. The maximum error for each 
+//   multiplication using the standard C double types. The maximum error for each
 //   type is accumulated in variables defined in the calling function.
 
 template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
@@ -292,8 +286,8 @@ int test_driver_pwl(
 {
   bool passed = true;
 
-	ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M];
-	ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M];
+  ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M];
+  ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_arr[M][M];
   ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > in_cmplx_arr[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > Q_cmplx_arr[M][M];
@@ -304,7 +298,7 @@ int test_driver_pwl(
   ac_matrix<ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> >, M, M> in_cmplx_matrix;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> Q_cmplx_matrix;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> R_cmplx_matrix;
-  
+
   cout << "TEST: ac_qrd(), M = ";
   cout << M << ",";
   cout << "INPUT: ";
@@ -340,14 +334,14 @@ int test_driver_pwl(
   //initialize the matrix elements using ac_random
   gen_matrix(in_arr);
   gen_matrix(in_cmplx_arr);
-  
+
   copy_to_input_ac_matrix(in_arr, in_matrix);
   copy_to_input_ac_matrix(in_cmplx_arr, in_cmplx_matrix);
 
   for (int i = 0; i < (int)M; i++) {
-  	for (int j = 0; j < (int)M; j++) {
-    	input_double[i][j] = type_to_double (in_arr[i][j]);
-    	input_cmplx_double[i][j] = type_to_double (in_cmplx_arr[i][j]);
+    for (int j = 0; j < (int)M; j++) {
+      input_double[i][j] = type_to_double (in_arr[i][j]);
+      input_cmplx_double[i][j] = type_to_double (in_cmplx_arr[i][j]);
     }
   }
 
@@ -364,21 +358,21 @@ int test_driver_pwl(
   copy_to_C_array_2D(R_cmplx_matrix, R_cmplx_ac_matrix_converted);
 
   for (int i = 0; i < (int)M; i++) {
-  	for (int j = 0; j < (int)M; j++) {
-    	Q_actual_double[i][j] = type_to_double (Q_arr[i][j]);
+    for (int j = 0; j < (int)M; j++) {
+      Q_actual_double[i][j] = type_to_double (Q_arr[i][j]);
       R_actual_double[i][j] = type_to_double (R_arr[i][j]);
-    	Q_actual_matrix_double[i][j] = type_to_double (Q_ac_matrix_converted[i][j]);
+      Q_actual_matrix_double[i][j] = type_to_double (Q_ac_matrix_converted[i][j]);
       R_actual_matrix_double[i][j] = type_to_double (R_ac_matrix_converted[i][j]);
       Q_actual_cmplx_double[i][j] = type_to_double (Q_cmplx_arr[i][j]);
-    	R_actual_cmplx_double[i][j] = type_to_double (R_cmplx_arr[i][j]);
+      R_actual_cmplx_double[i][j] = type_to_double (R_cmplx_arr[i][j]);
       Q_actual_matrix_cmplx_double[i][j] = type_to_double (Q_cmplx_ac_matrix_converted[i][j]);
-    	R_actual_matrix_cmplx_double[i][j] = type_to_double (R_cmplx_ac_matrix_converted[i][j]);
+      R_actual_matrix_cmplx_double[i][j] = type_to_double (R_cmplx_ac_matrix_converted[i][j]);
     }
   }
 
   // Recover the original matrix value
-	matrixmul_double (Q_actual_double, R_actual_double, recovered_double);	
-	matrixmul_double (Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
+  matrixmul_double (Q_actual_double, R_actual_double, recovered_double);
+  matrixmul_double (Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
   matrixmul_double (Q_actual_matrix_double, R_actual_matrix_double, recovered_matrix_double);
   matrixmul_double (Q_actual_matrix_cmplx_double, R_actual_matrix_cmplx_double, recovered_cmplx_matrix_double);
 
@@ -412,8 +406,8 @@ int test_driver_accurate(
 {
   bool passed = true;
 
-	ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M];
-	ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M];
+  ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M];
+  ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_arr[M][M];
   ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > in_cmplx_arr[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > Q_cmplx_arr[M][M];
@@ -424,7 +418,7 @@ int test_driver_accurate(
   ac_matrix<ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> >, M, M> in_cmplx_matrix;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> Q_cmplx_matrix;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> R_cmplx_matrix;
-  
+
   cout << "TEST: ac_qrd(), M = ";
   cout << M << ",";
   cout << "INPUT: ";
@@ -460,14 +454,14 @@ int test_driver_accurate(
   //initialize the matrix elements using ac_random
   gen_matrix(in_arr);
   gen_matrix(in_cmplx_arr);
-  
+
   copy_to_input_ac_matrix(in_arr, in_matrix);
   copy_to_input_ac_matrix(in_cmplx_arr, in_cmplx_matrix);
 
   for (int i = 0; i < (int)M; i++) {
-  	for (int j = 0; j < (int)M; j++) {
-    	input_double[i][j] = type_to_double (in_arr[i][j]);
-    	input_cmplx_double[i][j] = type_to_double (in_cmplx_arr[i][j]);
+    for (int j = 0; j < (int)M; j++) {
+      input_double[i][j] = type_to_double (in_arr[i][j]);
+      input_cmplx_double[i][j] = type_to_double (in_cmplx_arr[i][j]);
     }
   }
 
@@ -484,21 +478,21 @@ int test_driver_accurate(
   copy_to_C_array_2D(R_cmplx_matrix, R_cmplx_ac_matrix_converted);
 
   for (int i = 0; i < (int)M; i++) {
-  	for (int j = 0; j < (int)M; j++) {
-    	Q_actual_double[i][j] = type_to_double (Q_arr[i][j]);
+    for (int j = 0; j < (int)M; j++) {
+      Q_actual_double[i][j] = type_to_double (Q_arr[i][j]);
       R_actual_double[i][j] = type_to_double (R_arr[i][j]);
-    	Q_actual_matrix_double[i][j] = type_to_double (Q_ac_matrix_converted[i][j]);
+      Q_actual_matrix_double[i][j] = type_to_double (Q_ac_matrix_converted[i][j]);
       R_actual_matrix_double[i][j] = type_to_double (R_ac_matrix_converted[i][j]);
       Q_actual_cmplx_double[i][j] = type_to_double (Q_cmplx_arr[i][j]);
-    	R_actual_cmplx_double[i][j] = type_to_double (R_cmplx_arr[i][j]);
+      R_actual_cmplx_double[i][j] = type_to_double (R_cmplx_arr[i][j]);
       Q_actual_matrix_cmplx_double[i][j] = type_to_double (Q_cmplx_ac_matrix_converted[i][j]);
-    	R_actual_matrix_cmplx_double[i][j] = type_to_double (R_cmplx_ac_matrix_converted[i][j]);
+      R_actual_matrix_cmplx_double[i][j] = type_to_double (R_cmplx_ac_matrix_converted[i][j]);
     }
   }
 
   // Recover the original matrix value
-	matrixmul_double (Q_actual_double, R_actual_double, recovered_double);	
-	matrixmul_double (Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
+  matrixmul_double (Q_actual_double, R_actual_double, recovered_double);
+  matrixmul_double (Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
   matrixmul_double (Q_actual_matrix_double, R_actual_matrix_double, recovered_matrix_double);
   matrixmul_double (Q_actual_matrix_cmplx_double, R_actual_matrix_cmplx_double, recovered_cmplx_matrix_double);
 
@@ -562,5 +556,5 @@ int main(int argc, char *argv[])
     cout << "  ac_qrd - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }
-	return 0;
+  return 0;
 }

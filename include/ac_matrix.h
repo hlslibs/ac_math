@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -107,22 +107,19 @@ public:
   ac_matrix() {}
 
   // Constructor: new MxN matrix initialized with value v
-  ac_matrix(const T &v)
-  {
+  ac_matrix(const T &v) {
     initialize(v);
   }
 
   // Copy constructor
-  ac_matrix(const ac_matrix<T,M,N>& other )
-  {
+  ac_matrix(const ac_matrix<T,M,N> &other ) {
     copy_contents(other);
   }
 
   // Destructor
   ~ac_matrix() { }
 
-  inline static std::string type_name()
-  {
+  inline static std::string type_name() {
     typedef typename ac_private::map<T>::t map_T;
     std::string r = "ac_matrix<";
     r += map_T::type_name();
@@ -147,22 +144,19 @@ public: // Class Member Functions
    }*/
 
   // Set all elements of matrix equal to constant
-  ac_matrix<T,M,N> & operator=(const T &v)
-  {
+  ac_matrix<T,M,N> &operator=(const T &v) {
     initialize(v);
     return *this;
   }
 
   // Get (modifiable) element
-  T &operator()(const unsigned r, const unsigned c)
-  {
+  T &operator()(const unsigned r, const unsigned c) {
     //assert( (r<M) && (c<N) );
     return m_data[r][c];
   }
 
   // Get element value
-  const T& operator()(const unsigned r, const unsigned c) const
-  {
+  const T &operator()(const unsigned r, const unsigned c) const {
     //assert( (r<M) && (c<N) );
     return m_data[r][c];
   }
@@ -170,8 +164,7 @@ public: // Class Member Functions
   // Return a new read-only submatrix of this matrix
   // row,col args select starting position
   template <unsigned R, unsigned S>
-  const ac_matrix<T,R,S> operator()(unsigned row, unsigned col) const
-  {
+  const ac_matrix<T,R,S> operator()(unsigned row, unsigned col) const {
     ac_matrix<T,R,S> submatrix;
     //assert(row+R<M);
     //assert(col+S<N);
@@ -188,8 +181,7 @@ public: // Relational operators
   //----------------------------------------------------------------------
   // OPERATOR !=
   template <class T2, unsigned M2, unsigned N2>
-  bool operator!=(const ac_matrix<T2,M2,N2> & other) const
-  {
+  bool operator!=(const ac_matrix<T2,M2,N2> &other) const {
     if (M2 != M) { return true; }
     if (N2 != N) { return true; }
     for ( unsigned i = 0; i < M; i++ ) {
@@ -205,8 +197,7 @@ public: // Relational operators
   //----------------------------------------------------------------------
   // OPERATOR ==
   template <class T2, unsigned M2, unsigned N2>
-  bool operator==(const ac_matrix<T2,M2,N2> & other) const
-  {
+  bool operator==(const ac_matrix<T2,M2,N2> &other) const {
     return ( ! this->operator!=(other) );
   }
 
@@ -215,9 +206,7 @@ public: // Math operators
   //----------------------------------------------------------------------
   // OPERATOR + (piecewise matrix addition)
   template <typename T2>
-  ac_matrix<typename ac::rt_2T<T,T2>::plus, M, N>
-  operator+(const ac_matrix<T2,M,N> &op2) const
-  {
+  ac_matrix<typename ac::rt_2T<T,T2>::plus, M, N> operator+(const ac_matrix<T2,M,N> &op2) const {
     ac_matrix<typename ac::rt_2T<T,T2>::plus, M, N> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
@@ -229,8 +218,7 @@ public: // Math operators
 
   //----------------------------------------------------------------------
   // OPERATOR +=
-  ac_matrix<T,M,N> &operator+=(const ac_matrix<T,M,N> &op2)
-  {
+  ac_matrix<T,M,N> &operator+=(const ac_matrix<T,M,N> &op2) {
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
         (*this)(i,j) += op2(i,j);
@@ -242,9 +230,7 @@ public: // Math operators
   //----------------------------------------------------------------------
   // OPERATOR -
   template <typename T2>
-  ac_matrix<typename ac::rt_2T<T,T2>::minus, M, N>
-  operator-(const ac_matrix<T2,M,N> &op2) const
-  {
+  ac_matrix<typename ac::rt_2T<T,T2>::minus, M, N> operator-(const ac_matrix<T2,M,N> &op2) const {
     ac_matrix<typename ac::rt_2T<T,T2>::minus, M, N> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
@@ -256,8 +242,7 @@ public: // Math operators
 
   //----------------------------------------------------------------------
   // OPERATOR -=
-  ac_matrix<T,M,N> &operator-=(const ac_matrix<T,M,N> &op2)
-  {
+  ac_matrix<T,M,N> &operator-=(const ac_matrix<T,M,N> &op2) {
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
         (*this)(i,j) -= op2(i,j);
@@ -273,9 +258,7 @@ public: // Matrix math functions
   // Description: piecewise multiplication of two matrices
   // Return: matrix of the same dimension as this
   template <typename T2>
-  ac_matrix<typename ac::rt_2T<T,T2>::mult, M, N>
-  pwisemult(const ac_matrix<T2,M,N>& op2 ) const
-  {
+  ac_matrix<typename ac::rt_2T<T,T2>::mult, M, N> pwisemult(const ac_matrix<T2,M,N> &op2 ) const {
     ac_matrix<typename ac::rt_2T<T,T2>::mult, M, N> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
@@ -291,9 +274,7 @@ public: // Matrix math functions
   //    result[M][Q] = this[M][N] X op2[N][Q]
   // Return: matrix sized MxQ
   template <typename T2, unsigned Q>
-  ac_matrix<typename ac::rt_2T<T,T2>::mult, M, Q>
-  operator*(const ac_matrix<T2,N,Q>& op2 ) const
-  {
+  ac_matrix<typename ac::rt_2T<T,T2>::mult, M, Q> operator*(const ac_matrix<T2,N,Q> &op2 ) const {
     ac_matrix<typename ac::rt_2T<T,T2>::mult, M, Q> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < Q; j++ ) {
@@ -311,8 +292,7 @@ public: // Matrix math functions
   // Function: transpose
   // Description: compute transpose of this matrix
   // Return: matrix sized NxM
-  ac_matrix<T,N,M> transpose() const
-  {
+  ac_matrix<T,N,M> transpose() const {
     ac_matrix<T,N,M> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
@@ -326,8 +306,7 @@ public: // Matrix math functions
   // Function: sum
   // Description: Calculate the sum of all elements of this matrix
   // Return: scalar value
-  T sum() const
-  {
+  T sum() const {
     T t = (T)0;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
@@ -342,8 +321,7 @@ public: // Matrix math functions
   // Description: Scale all elements of this matrix with scale factor
   // Return: matrix sized MxN
   template <class TF>
-  ac_matrix<T,M,N> scale(TF scale) const
-  {
+  ac_matrix<T,M,N> scale(TF scale) const {
     ac_matrix<T,M,N> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
@@ -380,8 +358,7 @@ private: // Class Member Data
   T m_data[M][N];
 
 private: // Internal class member functions
-  void copy_contents(const ac_matrix<T,M,N> &other)
-  {
+  void copy_contents(const ac_matrix<T,M,N> &other) {
     for (unsigned x = 0; x < M; x++) {
       for (unsigned y = 0; y < N; y++) {
         (*this)(x,y) = other(x,y);
@@ -389,8 +366,7 @@ private: // Internal class member functions
     }
   }
 
-  void initialize(const T &v)
-  {
+  void initialize(const T &v) {
     for (unsigned x = 0; x < M; x++) {
       for (unsigned y = 0; y < N; y++) {
         (*this)(x,y) = v;
@@ -440,7 +416,7 @@ T determinant(ac_matrix<T,2,2> &m)
 // Description: print the contents of an ac_matrix to cout
 
 template <class T, unsigned M, unsigned N>
-std::ostream& operator<<(std::ostream& os, const ac_matrix<T,M,N> & m )
+std::ostream &operator<<(std::ostream &os, const ac_matrix<T,M,N> &m )
 {
   char buf[20];
   // column header

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -96,7 +96,7 @@ double err_calc(
 {
   double expected_value;
 
-  if(input.to_double() != 0) {
+  if (input.to_double() != 0) {
     // The typecasting is done in order to provide quantization on the expected output.
     expected_value = ((T_out)(1.0 / sqrt(input.to_double()))).to_double();
   } else {
@@ -157,7 +157,7 @@ double cmplx_err_calc(
   ac_complex<double> exp_op_no_quant = exp_op;
 #endif
 
-  if(input.r() != 0 || input.i() != 0) {
+  if (input.r() != 0 || input.i() != 0) {
     // The typecasting is done in order to provide quantization on the expected output.
     exp_op.r() = ((T_out)exp_op.r()).to_double();
     exp_op.i() = ((T_out)exp_op.i()).to_double();
@@ -165,7 +165,7 @@ double cmplx_err_calc(
     // If input is zero, saturate the expected output according to the type of the real/imaginary part.
     T_out output_max;
     exp_op.r() = output_max.template set_val<AC_VAL_MAX>().to_double();
-    exp_op.i() = 0;
+    exp_op.i() = output_max.template set_val<AC_VAL_MAX>().to_double();
   }
 
   act_op.r() = output.r().to_double();

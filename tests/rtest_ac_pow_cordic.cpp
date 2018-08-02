@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -135,7 +135,7 @@ int test_driver(
     cout << "    step_exponent            = " << step_exponent << endl; // LCOV_EXCL_LINE
   }
 
-  for (double i = lower_limit_base; i < upper_limit_base; i += step_base) {
+  for (double i = lower_limit_base; i <= upper_limit_base; i += step_base) {
     for (double j = lower_limit_exponent; j < upper_limit_exponent; j += step_exponent) {
       // Set values for inputs
       base = i;

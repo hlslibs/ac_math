@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -81,11 +81,7 @@ using namespace std;
 // -------------------------------------------------------
 // Helper functions for output-matching/ error calculation
 
-// See if output is correct for real ac_int inputs. No
-// error calculation required for this datatype, as we are
-// only passing even powers of two for it (any other power
-// will result in a substantial error due to the fact that
-// the ac_int output doesn't have fractional bits)
+// See if output is correct for real ac_int inputs.
 
 template <int Wint, int outWint>
 bool output_check_int(
@@ -93,7 +89,18 @@ bool output_check_int(
   ac_int<outWint, false> output
 )
 {
-  return output.to_double() == sqrt(input.to_double());
+  bool correct = output == (ac_int<outWint, false>)(sqrt(input.to_double()));
+
+#ifdef DEBUG
+  if (!correct) {
+    cout << "Output not correct" << endl;
+    cout << "input = " << input << endl;
+    cout << "output = " << output << endl;
+    assert(false);
+  }
+#endif
+
+  return correct;
 }
 
 // Calculating error for real, ac_fixed datatype.
@@ -146,16 +153,18 @@ int test_driver_int(
 
   bool correct = true;
 
-  // test integer values. Only pass even powers of two as inputs, because any other input will result in a fractional component for a square root
-  // , which cannot be expressed with an ac_int output
-  for (int i = 0; i < Wint - 1; i++) {
-    input_int = 0;
-    if (i % 2 == 0) {
-      input_int[i] = 1;
-      test_ac_sqrt_int(input_int, output_int);
-      bool correct_iteration = output_check_int(input_int, output_int);
-      correct = correct && correct_iteration;
-    }
+  // set ranges and step size for integer testbench
+  double lower_limit_int   = input_int.template set_val<AC_VAL_MIN>().to_double();
+  double upper_limit_int   = input_int.template set_val<AC_VAL_MAX>().to_double();
+  double step_int          = input_int.template set_val<AC_VAL_QUANTUM>().to_double();
+
+  // Test integer inputs
+  for (double i = lower_limit_int; i <= upper_limit_int; i += step_int) {
+    // Set values for input.
+    input_int = i;
+    test_ac_sqrt_int(input_int, output_int);
+    bool correct_iteration = output_check_int(input_int, output_int);
+    correct = correct_iteration && correct;
   }
 
   if (correct) { printf("PASSED\n"); }
@@ -214,7 +223,7 @@ int test_driver_fixed(
   }
 
   // Test unsigned fixed point inputs
-  for (double i = lower_limit_fixed; i < upper_limit_fixed; i += step_fixed) {
+  for (double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
     // Set values for input.
     input_fixed = i;
     test_ac_sqrt_fixed(input_fixed, output_fixed);
@@ -250,11 +259,11 @@ int main(int argc, char *argv[])
   // If any of the tests fail for ac_int, the all_tests_pass variable will be set to false
 
   // template <int Wint, int outWint>
-  test_driver_int<24, 24>(all_tests_pass);
-  test_driver_int<12, 24>(all_tests_pass);
+  test_driver_int<13, 24>(all_tests_pass);
+  test_driver_int<10, 24>(all_tests_pass);
   test_driver_int<16, 32>(all_tests_pass);
-  test_driver_int<17, 32>(all_tests_pass);
-  test_driver_int<18, 18>(all_tests_pass);
+  test_driver_int< 8, 16>(all_tests_pass);
+  test_driver_int<11, 16>(all_tests_pass);
 
   // template <int Wfi, int Ifi, int outWfi, int outIfi>
   test_driver_fixed< 12,  0, 64, 32>(max_error_fixed, allowed_error_fixed, threshold_fixed);

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -91,7 +91,7 @@
 
 namespace ac_math
 {
-  typedef ac_fixed<TE+2,0,false,AC_RND,AC_WRAP> table_t;
+  typedef ac_fixed<TE+1,0,false,AC_RND,AC_WRAP> table_t;
 
   static table_t atan_pow2_table[] = {
     .78539816339744827899949086713604629039764404296875,
@@ -205,13 +205,15 @@ namespace ac_math
     const int XYI = AC_MAX(YI, XI) + 2;
     const int XYW = ICW+4+XYI;
     typedef ac_fixed<XYW,XYI,true> fx_xy;
+    typedef ac_fixed<XYW-1,XYI-1,false> fx_xy_1;
+    typedef ac_fixed<XYW-2,XYI-2,false> fx_xy_2;
 
-    fx_xy x1 = x_neg ? (fx_xy) -x : (fx_xy) x;
+    fx_xy_1 x1 = x_neg ? (fx_xy_1) -x : (fx_xy_1) x;
     fx_xy y1 = y;
 
     for (int i = 0; i < N_I; i++) {
-      ac_fixed<ICW+1,0,false> d_a = atan_2mi(i);
-      fx_xy x_2mi = x1 >> i;  // x1 * pow(2, -i)
+      ac_fixed<ICW,0,false> d_a = atan_2mi(i);
+      fx_xy_2 x_2mi = x1 >> i;  // x1 * pow(2, -i)
       fx_xy y_2mi = y1 >> i;  // y1 * pow(2, -i)
       if (y1 < 0) {
         x1 -= y_2mi;

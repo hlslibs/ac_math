@@ -30,75 +30,54 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
-#ifndef _INCLUDED_AC_MATH_H_
-#define _INCLUDED_AC_MATH_H_
+// Usage:
+//   g++ -I$MGC_HOME/shared/include ac_sincos_lut_lutgen.cpp -o ac_sincos_lut_lutgen
+//   ./ac_sincos_lut_lutgen
+// results in a text file ac_sincos_lut_values.txt which can be pasted into
+// a locally modified version of ac_sincos_lut.h.
 
-#include <ac_math/ac_abs.h>
-// ac_abs()
+#include<iostream>
+#include<cstring>
+#include<cstdlib>
+#include<stdio.h>
+#include<math.h>
 
-#include <ac_math/ac_arccos_cordic.h>
-// ac_arccos_cordic()
+//==========================================================================================
+// Note:
+//      This file is used to generate a lookup table for the ac_sincos_lut.h library header.
+//      In this file, a lookup table has been generated for an input width of 12 bits and
+//      input integer width of 0 bits. So for example, if a lookup table has to be generated
+//      for an input width of 14 bits and input integer width of 2 bits, then the variables
+//      input_width and input_int have to be replaced accordingly.
+//------------------------------------------------------------------------------------------
 
-#include <ac_math/ac_arcsin_cordic.h>
-// ac_arcsin_cordic()
+int main()
+{
 
-#include <ac_math/ac_atan_pwl.h>
-// ac_atan_pwl()
+  FILE *f = fopen("ac_sincos_lut.txt", "w");
+  if (f == NULL) {
+    printf("Error opening file!\n");
+    exit(1);
+  }
 
-#include <ac_math/ac_atan2_cordic.h>
-// ac_atan2_cordic()
+  const int input_width = 12;
+  const int input_int = 0;
 
-#include <ac_math/ac_div.h>
-// ac_div()
+  unsigned int NTE = 1<<(input_width - input_int -3); //No of table entries
+  double step = M_PI/(4*NTE);                         //Interval between angles
+  double y = 0;
+  double scaled_angle = 0;
 
-#include <ac_math/ac_hcordic.h>
-// ac_log_cordic()
-// ac_log2_cordic()
-// ac_exp_cordic()
-// ac_exp2_cordic()
-// ac_pow_cordic()
+  fprintf(f, "static const luttype sincos[%d] = { \n", NTE);
 
-#include <ac_math/ac_inverse_sqrt_pwl.h>
-// ac_inverse_sqrt_pwl()
+  for (unsigned int i=0; i < NTE; i++) {
+    fprintf(f, "  {%23.22f, %23.22f}, //index = %d, scaled angle = %13.12f \n", cos(y), sin(y), i, scaled_angle);
+    y += step;
+    scaled_angle = y/(2*M_PI);
+  }
 
-#include <ac_math/ac_log_pwl.h>
-// ac_log_pwl()
-// ac_log2_pwl()
+  fclose(f);
 
-#include <ac_math/ac_normalize.h>
-// ac_normalize()
+  return 0;
 
-#include <ac_math/ac_pow_pwl.h>
-// ac_pow2_pwl()
-// ac_exp_pwl()
-
-#include <ac_math/ac_random.h>
-// ac_random()
-
-#include <ac_math/ac_reciprocal_pwl.h>
-// ac_reciprocal_pwl()
-
-#include <ac_math/ac_shift.h>
-// ac_shift_left()
-// ac_shift_right()
-
-#include <ac_math/ac_sigmoid_pwl.h>
-// ac_sigmoid_pwl()
-
-#include <ac_math/ac_sincos_cordic.h>
-// ac_sincos_cordic()
-
-#include <ac_math/ac_sincos_lut.h>
-// ac_sincos_lut()
-
-#include <ac_math/ac_sqrt.h>
-// ac_sqrt()
-
-#include <ac_math/ac_sqrt_pwl.h>
-// ac_sqrt_pwl()
-
-#include <ac_math/ac_tan_pwl.h>
-// ac_tan_pwl()
-
-#endif
-
+}

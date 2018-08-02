@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -144,26 +144,41 @@ namespace ac_math
     // is suitable to be used in later calculations.
     if (W > I) {input_frac_part.set_slc(0, input.template slc<AC_MAX(W - I, 1)>(0));}
 
+    // Start of code outputted by ac_pow_pwl_lutgen.cpp
+    // Note that the LUT generator file also outputs values for x_min_lut (lower limit of PWL domain), x_max_lut (upper limit of PWL domain)
+    // and sc_constant_lut (scaling factor used to scale the input from 0 to n_segments_lut). However, these values aren't considered in the header
+    // file because it has been optimized to work with a 4-segment PWL model that covers the domain of [0, 1). For other PWL implementations, the user will probably have
+    // to take these values into account explicitly. Guidelines for doing so are given in the comments.
+    // In addition, some of the slope values here are modified slightly in order to ensure monotonicity of the PWL function as the input crosses segment boundaries.
+    // The user might want to take care to ensure that for their own PWL versions.
+
     // Initialization for PWL LUT
-    const unsigned n_segments_lut = 3;
+    const unsigned n_segments_lut = 4;
+    // The number of fractional bits for the LUT values is chosen by first finding the maximum absolute error over the domain of the PWL
+    // when double-precision values are used for LUT values. This error will correspond to a number of fractional bits that are always
+    // guaranteed to be error-free, for fixed-point PWL outputs.
+    // This number of fractional bits is found out by the formula:
+    // nbits = abs(ceil(log2(abs_error_max)).
+    // The number of fractional bits hereafter used to store the LUT values is nbits + 2.
+    // For this particular PWL implementation, the number of fractional bits is 9.
     // Initializing the LUT arrays
-    static const ac_fixed<9, 0, false> m_lut[n_segments_lut] = {.2587890625, .326171875, .412109375};
-    static const ac_fixed<10, 1, false> c_lut[n_segments_lut] = {.998046875, 1.255859375, 1.58203125};
-    // Domain of the PWL implementation
-    static const ac_fixed<1, 0, false> x_min_lut = 0;
-    static const ac_fixed<1, 1, false> x_max_lut = 1;
-    // Scaling constant used later to scale the normalized input from 0 to n_segments_lut
-    static const ac_fixed<2, 2, false> sc_constant_lut = n_segments_lut/(x_max_lut - x_min_lut);
+    static const ac_fixed<10, 0, false> m_lut[n_segments_lut] = {.189453125, .224609375, 0.2666015625, .3173828125};
+    static const ac_fixed<11, 1, false> c_lut[n_segments_lut] = {.998046875, 1.1875, 1.412109375, 1.6787109375};
+
+    // End of code outputted by ac_pow_pwl_lutgen.cpp
 
     // Compute power of two using pwl
-    // Scale the normalized input from 0 to n_segments_lut
-    ac_fixed<11, 2, false> x_in_sc = (input_frac_part - x_min_lut)*sc_constant_lut;
-    ac_fixed<11 - 2, 0, false> x_in_sc_frac;
+    // Scale the normalized input from 0 to n_segments_lut. Any other PWL implementation
+    // with a different number of segments/domain should be scaled according to the formula: x_in_sc = (input_frac_part - x_min_lut) * sc_constant_lut
+    // where sc_constant_lut = n_segments_lut / (x_max_lut - x_min_lut)
+    // (x_min_lut and and x_max_lut are the lower and upper limits of the domain)
+    ac_fixed<12, 2, false> x_in_sc = ((ac_fixed<14, 2, false>)input_frac_part) << 2;
+    ac_fixed<12 - 2, 0, false> x_in_sc_frac;
     // Slice out the fractional part from the scaled input, store it in another variable.
-    x_in_sc_frac.set_slc(0, x_in_sc.template slc<11 - 2>(0));
+    x_in_sc_frac.set_slc(0, x_in_sc.template slc<12 - 2>(0));
     // The integer part of the scaled input is the index of the LUT table
     ac_int<2, false> index = x_in_sc.to_int();
-    typedef ac_fixed<20, 2, false, pwl_Q> output_pwl_type;
+    typedef ac_fixed<21, 1, false, pwl_Q> output_pwl_type;
     output_pwl_type output_pwl = m_lut[index] * x_in_sc_frac + c_lut[index];
 
     // Shift left by the integer part of the input to cancel out the previous normalization.

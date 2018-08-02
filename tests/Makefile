@@ -1,4 +1,3 @@
-
 ifeq "$(AC_TYPES_INC)" ""
   $(error Error: The AC_TYPES_INC variable was not set. Cannot locate AC Datatypes installation)
 endif
@@ -31,13 +30,14 @@ RM        := rm -f
 ECHO      := echo
 
 SOURCES_CPP = \
+  rtest_ac_div.cpp \
   rtest_ac_atan_pwl.cpp \
   rtest_ac_tan_pwl.cpp \
+  rtest_ac_sigmoid_pwl.cpp \
+  rtest_ac_hyperbolic_tan_pwl.cpp \
   rtest_ac_cholinv.cpp \
   rtest_ac_exp_cordic.cpp \
   rtest_ac_exp2_cordic.cpp \
-  rtest_ac_log_cordic.cpp \
-  rtest_ac_log2_cordic.cpp \
   rtest_ac_pow2_pwl.cpp \
   rtest_ac_exp_pwl.cpp \
   rtest_ac_determinant.cpp \

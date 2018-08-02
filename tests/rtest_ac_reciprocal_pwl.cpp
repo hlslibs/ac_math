@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -98,7 +98,7 @@ double err_calc(
 {
   double expected_value;
 
-  if(input.to_double() != 0) {
+  if (input.to_double() != 0) {
     // The typecasting is done in order to provide quantization on the expected output.
     expected_value = ((T_out)(1.0 / input.to_double())).to_double();
   } else {
@@ -157,7 +157,7 @@ double cmplx_err_calc(
   exp_op.r() =  in_r / (in_r * in_r + in_i * in_i);
   exp_op.i() = -in_i / (in_r * in_r + in_i * in_i);
 
-  if(input.r() != 0 || input.i() != 0) {
+  if (input.r() != 0 || input.i() != 0) {
     // The typecasting is done in order to provide quantization on the expected output.
     exp_op.r() = ((T_out)exp_op.r()).to_double();
     exp_op.i() = ((T_out)exp_op.i()).to_double();

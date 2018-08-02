@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -177,9 +177,9 @@ namespace ac_math
 //    and output typedefs.
 //
 // Note:
-//    This implementation provides an accurate computation of determinant. However, errors are introduced as 
-//    higher dimension matrices are used at input, which leads to the internally calculated bitwidths being 
-//    insufficient. This problem is handled by giving user complete control over internal bitwidths by supplying 
+//    This implementation provides an accurate computation of determinant. However, errors are introduced as
+//    higher dimension matrices are used at input, which leads to the internally calculated bitwidths being
+//    insufficient. This problem is handled by giving user complete control over internal bitwidths by supplying
 //    them as template parameters.
 //
 // ----------------------------------------------------------------------------------------------------------------
@@ -188,8 +188,7 @@ namespace ac_math
   struct determinant_matrix {
     // Function inside helper struct that carries out the procedure of computing determinant
     template <typename input_type, typename output_type, typename c_type, typename temp_type, typename d_type, typename base_type>
-    static output_type determinant_compute (const ac_matrix <input_type, M, M> &A)
-    {
+    static output_type determinant_compute (const ac_matrix <input_type, M, M> &A) {
       int pr = -1; // pr is used to keep track of sign in determinant computation
       c_type c[M]; // c is used to store the internal results of intermediate matrices, before multiplication and accumulation happens
       d_type d = 0; // d is used to store and return the final result
@@ -233,8 +232,7 @@ namespace ac_math
   template <>
   struct determinant_matrix<2> {
     template <typename input_type, typename output_type, typename c_type, typename temp_type, typename d_type, typename base_type>
-    static base_type determinant_compute (const ac_matrix <input_type, 2, 2> &a)
-    {
+    static base_type determinant_compute (const ac_matrix <input_type, 2, 2> &a) {
       base_type result;
       base_type temp1 = a(0,0) * a(1,1);
       base_type temp2 = a(0,1) * a(1,0);
@@ -251,8 +249,7 @@ namespace ac_math
   template <>
   struct determinant_matrix<1> {
     template <typename input_type, typename output_type, typename c_type, typename temp_type, typename d_type, typename base_type>
-    static base_type determinant_compute (const ac_matrix <input_type, 1, 1> &a)
-    {
+    static base_type determinant_compute (const ac_matrix <input_type, 1, 1> &a) {
       base_type result;
       result = a(0,0);
       return result;

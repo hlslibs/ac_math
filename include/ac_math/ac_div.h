@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2.0                                                 *
  *                                                                        *
- *  Release Date    : Tue May  1 13:47:52 PDT 2018                        *
+ *  Release Date    : Thu Aug  2 11:10:37 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.2                                               *
+ *  Release Build   : 2.0.10                                              *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -167,7 +167,7 @@ namespace ac_math
     { R += divisor; }
 
     // In case the AC_ASSERT isn't activated and the divisor is still zero, saturate the quotient output.
-    if(divisor == 0) { Q.template set_val<AC_VAL_MAX>(); }
+    if (divisor == 0) { Q.template set_val<AC_VAL_MAX>(); }
 
     quotient = Q;
     remainder = R;
@@ -233,8 +233,8 @@ namespace ac_math
 
     // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val. based
     // on whether the dividend is negative or positive.
-    if(divisor == 0) {
-      if(neg_dividend) { quotient_temp.template set_val<AC_VAL_MIN>(); }
+    if (divisor == 0) {
+      if (neg_dividend) { quotient_temp.template set_val<AC_VAL_MIN>(); }
       else { quotient_temp.template set_val<AC_VAL_MAX>(); }
     }
 
@@ -340,7 +340,7 @@ namespace ac_math
     ac_math::ac_shift_right(Q_fx, (NW-NI) - (DW-DI) + (ZW-NW), quotient_temp);
 
     // In case the AC_ASSERT isn't activated and the divisor is still zero, saturate the quotient output.
-    if(divisor == 0) { quotient_temp.template set_val<AC_VAL_MAX>(); }
+    if (divisor == 0) { quotient_temp.template set_val<AC_VAL_MAX>(); }
 
     quotient = quotient_temp;
 
@@ -415,8 +415,8 @@ namespace ac_math
 
     // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val. based
     // on whether the dividend is negative or positive.
-    if(divisor == 0) {
-      if(neg_N) { quotient.template set_val<AC_VAL_MIN>(); }
+    if (divisor == 0) {
+      if (neg_N) { quotient.template set_val<AC_VAL_MIN>(); }
       else { quotient.template set_val<AC_VAL_MAX>(); }
     }
 
@@ -459,8 +459,8 @@ namespace ac_math
 
     // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val. based
     // on whether the dividend is negative or positive.
-    if(divisor.m == 0) {
-      if(dividend.m < 0) { quotient.template set_val<AC_VAL_MIN>(); }
+    if (divisor.m == 0) {
+      if (dividend.m < 0) { quotient.template set_val<AC_VAL_MIN>(); }
       else { quotient.template set_val<AC_VAL_MAX>(); }
     }
 
@@ -508,13 +508,13 @@ namespace ac_math
     bool has_rem = ac_div(prod.r(), s, Q._r);
     has_rem |= ac_div(prod.i(), s, Q._i);
 
-    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate the real 
-    // and imaginary parts of the output to the min or max val. based on 
+    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate the real
+    // and imaginary parts of the output to the min or max val. based on
     // whether the real/imaginary parts of "prod" are negative or positive.
-    if(D.r() == 0 && D.i() == 0) {
-      if(prod.r() < 0) { Q.r().template set_val<AC_VAL_MIN>(); }
+    if (D.r() == 0 && D.i() == 0) {
+      if (prod.r() < 0) { Q.r().template set_val<AC_VAL_MIN>(); }
       else { Q.r().template set_val<AC_VAL_MAX>(); }
-      if(prod.i() < 0) { Q.i().template set_val<AC_VAL_MIN>(); }
+      if (prod.i() < 0) { Q.i().template set_val<AC_VAL_MIN>(); }
       else { Q.i().template set_val<AC_VAL_MAX>(); }
     }
 
