@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2.0                                                 *
+ *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Thu Aug  2 11:19:34 PDT 2018                        *
+ *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.10                                              *
+ *  Release Build   : 3.1.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -476,6 +476,7 @@ int main(int argc, char *argv[])
   test_driver_fixed< 10,  5, 64, 32>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, allowed_error_complex, threshold_fixed);
 
   // template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
+  test_driver_float< 23,  0, 8, 23,  0, 20>(max_error_float, allowed_error_float, threshold_float);
   test_driver_float<  8, 20, 3, 64, 32, 10>(max_error_float, allowed_error_float, threshold_float);
   test_driver_float<  5,  3, 3, 64, 32, 10>(max_error_float, allowed_error_float, threshold_float);
   test_driver_float< 16,  0, 4, 61, 33, 11>(max_error_float, allowed_error_float, threshold_float);

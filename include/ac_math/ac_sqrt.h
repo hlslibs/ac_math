@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2.0                                                 *
+ *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Thu Aug  2 11:19:34 PDT 2018                        *
+ *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.10                                              *
+ *  Release Build   : 3.1.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -138,7 +138,7 @@ namespace ac_math
       mask_d = (mask_d << 2) | 0x3;
       d = mask_d & (d << 2) | ((z >> z_shift) & 0x3 );
 
-      ac_int<RW+2, false> t = d - (( ((ac_int<RW+1, false>)r) << 1) | 0x1);
+      ac_int<RW+2, false> t = (ac_int<RW+2, false>)(d - (( ((ac_int<RW+1, false>)r) << 1) | 0x1));
       if ( !t[RW+1] ) { // since t is unsigned, look at MSB
         r |= 0x1;
         d = mask_d & t;
@@ -205,7 +205,7 @@ namespace ac_math
       mask_d = (mask_d << 2) | 0x3;
       d = mask_d & (d << 2) | ((z >> z_shift) & 0x3 );
 
-      ac_int<RW+2,false> t = d - (( ((ac_int<RW+1,false>)r) << 1) | 0x1);
+      ac_int<RW+2,false> t = (ac_int<RW+2, false>)(d - (( ((ac_int<RW+1,false>)r) << 1) | 0x1));
       if ( !t[RW+1] ) { // since t is unsigned, look at MSB
         r |= 0x1;
         d = mask_d & t;

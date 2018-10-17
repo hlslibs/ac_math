@@ -31,10 +31,10 @@
  *                                                                        *
  *************************************************************************/
 // Usage:
-//   g++ -I$MGC_HOME/shared/include ac_sigmoid_pwl_lutgen.cpp -o ac_sigmoid_pwl_lutgen
-//   ./ac_sigmoid_pwl_lutgen
-// results in a text file ac_sigmoid_pwl_lut_values.txt which can be pasted into
-// a locally modified version of ac_sigmoid_pwl.h.
+//   g++ -I$MGC_HOME/shared/include ac_tanh_pwl_lutgen.cpp -o ac_tanh_pwl_lutgen
+//   ./ac_tanh_pwl_lutgen
+// results in a text file ac_tanh_pwl_lut_values.txt which can be pasted into
+// a locally modified version of ac_tanh_pwl.h.
 
 #include<ac_fixed.h>
 #include<stdio.h>
@@ -48,10 +48,10 @@ using namespace std;
 
 
 //Define the number of points in your LUT.
-const unsigned npoints = 9;
+const unsigned npoints = 13;
 const unsigned nsegments = npoints - 1;
 const double x_min = 0;
-const double x_max = 5;
+const double x_max = 3;
 const double prop_constant = nsegments/(x_max - x_min);
 double m[nsegments];
 double c[nsegments];
@@ -65,7 +65,7 @@ int main()
   //The output ROM values will be printed to a file in c++ syntax.
   //Define the filename below. The new file will be in the same folder
   //as this .cpp file
-  const char filename[] = "ac_sigmoid_pwl_lut_values.txt";
+  const char filename[] = "ac_tanh_pwl_lut_values.txt";
 
   //Define your domain for calculation. In case you want to use the
   //value of pi, use M_PI, a math.h macro that has the value of pi.
@@ -83,7 +83,7 @@ int main()
   for (int i = 0; i < npoints; i++) {
     //Replace this line with whichever function you want, e.g.
     //"y[i] = sin(x_val_inc)"
-    y[i] = 1/(1 + exp(-x_val_inc));
+    y[i] = tanh(x_val_inc); 
     x[i] = x_val_inc;
     x_sc[i] = (x_val_inc - x_min)*prop_constant;
     x_val_inc += (1/prop_constant);
@@ -96,9 +96,8 @@ int main()
     double x_mid = 0.5*(x[i + 1] + x[i]);
     //Insert your function as the last term here, e.g.
     //double max_diff = (m[i] * x_mid + c[i] - sin(x_mid));
-    double max_diff = (pwl_new(x_mid) - (1/(1 + exp(-x_mid))));
+    double max_diff = pwl_new(x_mid) - tanh(x_mid); 
     c[i] = c[i] - 0.5*(max_diff);
-    //cout << "max_diff = " << max_diff << endl;
   }
 
   double y1_new, y2_new;
@@ -114,13 +113,13 @@ int main()
 
   //double increment = (x_max - x_min) / 65536;
 
-  double increment = 5.0 / 65536.0;
+  double increment = 3.0 / 65536.0;
   double abs_error, abs_error_max = 0, rel_error_max = 0, input_error_max;
 
   for (double input_tb = x_min; input_tb < x_max; input_tb += increment) {
     //Insert your function here,
     //e.g. double actual = sin(input_tb);
-    double expected = 1/(1 + exp(-input_tb));
+    double expected = tanh(input_tb); 
     double actual = pwl_new(input_tb);
     double rel_error = abs( (expected - actual) / expected) * 100;
     if (rel_error > rel_error_max) { rel_error_max = rel_error; }

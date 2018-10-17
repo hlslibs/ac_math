@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2.0                                                 *
+ *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Thu Aug  2 11:19:34 PDT 2018                        *
+ *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.10                                              *
+ *  Release Build   : 3.1.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -301,6 +301,10 @@ namespace ac_math
     ac_float<outW, outI, outE, outQ> &output
   )
   {
+    // The derived type for the mantissa has it's bitwidths calculated to ensure
+    // a lossless return type for the mantissa. Note that this is only applicable
+    // for a PWL implementation that operates with 8 segments and uses 10 fractional
+    // bits to store the slope and intercept values.
     const int W1 = W + 20 + 1;
     const int I1 = W - I + 2;
 
@@ -312,7 +316,7 @@ namespace ac_math
     // Pass it and recip_mantissa to an ac_float constructor that takes care of
     // normalization.
     ac_float<outW, outI, outE, outQ> output_temp(recip_mantissa, -input.exp(), true);
- 
+
     // If the input is zero, set the temp output to the max. possible value.
     if (input.m == 0) { output_temp.template set_val<AC_VAL_MAX>(); }
 
@@ -401,6 +405,12 @@ namespace ac_math
   {
     ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > output_temp;
 
+    // The derived type for the reciprocal of the mag_sqr() of the input has its
+    // bitwidths calculated to ensure a lossless return type for said reciprocal. 
+    // Note that this is only applicable for a PWL implementation that operates with 
+    // 8 segments and uses 10 fractional bits to store the slope and intercept values.
+    // Your own PWL implementation may require a different return type to ensure 
+    // losslessness.
     const int W1 = S ? 2*W - 1 : 2*W + 1;
     const int I1 = S ? 2*I - 1 : 2*I + 1;
     const int W2 = W1 + 20 + int(!S);
@@ -509,7 +519,16 @@ namespace ac_math
     typedef ac_float<2*W + 1, 2*I + 1, E + 2, Q> i_m_s_type;
     i_m_s_type input_mag_sqr;
 
-    ac_float<outW, outI, E + 3, outQ> recip_mag_sqr;
+    // Calculate bitwidths for the return type of reciprocal of the input magnitude
+    // squared to ensure that there is no loss in precision.
+    // Note that this is only applicable for a PWL implementation that operates with 
+    // 8 segments and uses 10 fractional bits to store the slope and intercept values.
+    // Your own PWL implementation may require a different return type to ensure 
+    // losslessness.
+    const int W_r_m_s = 2*W + 1 + 20 + 1;
+    const int I_r_m_s = 2*W + 1 - (2*I + 1) + 2;
+
+    ac_float<W_r_m_s, I_r_m_s, E + 3, outQ> recip_mag_sqr;
 
     // Store value of input_mag_sqr to the variable.
     input_mag_sqr.add(input_real*input_real, input_imag*input_imag);

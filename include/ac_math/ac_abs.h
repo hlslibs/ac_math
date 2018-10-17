@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2.0                                                 *
+ *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Thu Aug  2 11:19:34 PDT 2018                        *
+ *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2.0.10                                              *
+ *  Release Build   : 3.1.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -119,7 +119,7 @@ namespace ac_math
   )
   {
     ac_int<1,true> xltz = (x < 0);
-    ac_int<XW,false> xabs = (xltz^x).template slc<XW>(0) - xltz;
+    ac_int<XW,false> xabs = (xltz^x).template slc<XW>(0) + (ac_int<1, false>)xltz;
     y = xabs;
   }
 

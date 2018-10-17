@@ -34,7 +34,7 @@ SOURCES_CPP = \
   rtest_ac_atan_pwl.cpp \
   rtest_ac_tan_pwl.cpp \
   rtest_ac_sigmoid_pwl.cpp \
-  rtest_ac_hyperbolic_tan_pwl.cpp \
+  rtest_ac_tanh_pwl.cpp \
   rtest_ac_cholinv.cpp \
   rtest_ac_exp_cordic.cpp \
   rtest_ac_exp2_cordic.cpp \

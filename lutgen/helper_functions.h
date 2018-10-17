@@ -30,54 +30,50 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
-// Usage:
-//   g++ -I$MGC_HOME/shared/include ac_sincos_lut_lutgen.cpp -o ac_sincos_lut_lutgen
-//   ./ac_sincos_lut_lutgen
-// results in a text file ac_sincos_lut_values.txt which can be pasted into
-// a locally modified version of ac_sincos_lut.h.
+#ifndef HELPER_FUNCTIONS_H
+#define HELPER_FUNCTIONS_H
 
-#include<iostream>
-#include<cstring>
-#include<cstdlib>
-#include<stdio.h>
-#include<math.h>
-
-//==========================================================================================
-// Note:
-//      This file is used to generate a lookup table for the ac_sincos_lut.h library header.
-//      In this file, a lookup table has been generated for an input width of 12 bits and
-//      input integer width of 0 bits. So for example, if a lookup table has to be generated
-//      for an input width of 14 bits and input integer width of 2 bits, then the variables
-//      input_width and input_int have to be replaced accordingly.
-//------------------------------------------------------------------------------------------
-
-int main()
+double pwl_new(double x_in)
 {
-
-  FILE *f = fopen("ac_sincos_lut.txt", "w");
-  if (f == NULL) {
-    printf("Error opening file!\n");
-    exit(1);
-  }
-
-  const int input_width = 12;
-  const int input_int = 0;
-
-  unsigned int NTE = 1<<(input_width - input_int -3); //No of table entries
-  double step = M_PI/(4*NTE);                         //Interval between angles
-  double y = 0;
-  double scaled_angle = 0;
-
-  fprintf(f, "static const luttype sincos[%d] = { \n", NTE);
-
-  for (unsigned int i=0; i < NTE; i++) {
-    fprintf(f, "  {%23.22f, %23.22f}, //index = %d, scaled angle = %13.12f \n", cos(y), sin(y), i, scaled_angle);
-    y += step;
-    scaled_angle = y/(2*M_PI);
-  }
-
-  fclose(f);
-
-  return 0;
-
+  unsigned index;
+  double x_in_sc = (x_in - x_min) * prop_constant;
+  if (x_in_sc < nsegments) {index = floor(x_in_sc);}
+  else {index = nsegments - 1;}
+  double y_out = m[index] * (x_in_sc - index) + c[index];
+  return y_out;
 }
+
+// Function that returns max value and presence of negative elements in an array.
+bool is_neg_max_array(const double input_array[nsegments], double &max_val)
+{
+  // This variable is set to true if even a single element is negative.
+  bool is_neg = false;
+  max_val = abs(input_array[0]);
+  for(unsigned i = 1; i < nsegments; i++) {
+    if(input_array[i] < 0) { is_neg = true; }
+    if(abs(input_array[i]) > max_val) { max_val = input_array[i]; }
+  }
+  return is_neg;
+}
+
+// Make a number non-zero, useful for log calculations.
+double make_non_zero(double input)
+{
+  if(input == 0) {input = 1;}
+  return input;
+}
+
+//int m_int_bits = ceil(log2(make_non_zero(abs(m_max_val)))) + 2*int(is_neg_m) + 1;
+int int_bits_calc(double val, bool S)
+{
+  return ceil(log2(make_non_zero(abs(val)))) + int(S) + 1;
+}
+
+// This function takes a double variable and performs an operation that mimics the quantization of the same double variable into an ac_fixed variable with "nfrac_bits" number of fractional
+// bits and rounding turned on (AC_RND).
+ac_fixed<128, 64, true> o_ac_f(double input, int nfrac_bits)
+{
+  return (ac_fixed<128, 64, true>)((double)rint(input * (1 << nfrac_bits)) * pow(2, (double)(-nfrac_bits)));
+}
+
+#endif // HELPER_FUNCTIONS_H
