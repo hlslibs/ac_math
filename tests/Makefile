@@ -57,6 +57,7 @@ SOURCES_CPP = \
   rtest_ac_matrixmul.cpp \
   rtest_ac_normalize.cpp \
   rtest_ac_pow2_pwl.cpp \
+  rtest_ac_pow_pwl.cpp \
   rtest_ac_pow_cordic.cpp \
   rtest_ac_reciprocal_pwl.cpp \
   rtest_ac_shift.cpp \

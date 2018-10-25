@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
+ *  Release Date    : Thu Oct 25 11:05:01 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.0                                               *
+ *  Release Build   : 3.1.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -30,21 +30,26 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
-/*! /file This file provides random number generators ac_random(T&)
- *  for all types T Catapult considers as primitive types. These
- *  functions are used in the automatically generated testbench.
- */
+//***************************************************************************
+// File: ac_random.h
+//
+// Description: This file provides random number generators ac_random(T&)
+//  for all types T Catapult considers as primitive types. These
+//  functions are used in the automatically generated testbench.
+//
+//***************************************************************************
+
+#ifndef _INCLUDED_AC_RANDOM_H_
+#define _INCLUDED_AC_RANDOM_H_
+
+#ifdef __SYNTHESIS__
+
+// Skip contents if compiled for synthesis
+
+#else
 
 #include <stdlib.h>
 #include <limits.h>
-
-#ifndef AC_RANDOM_H_INC
-#define AC_RANDOM_H_INC
-
-// Make sure that this library does not get synthesized by throwing a compilation error if synthesis directive is defined
-#ifdef __SYNTHESIS__
-#error Synthesis directive defined for ac_random.h
-#endif
 
 // Check for macro definitions that will conflict with template parameter names in this file
 #if defined(T)
@@ -126,6 +131,10 @@ inline void ac_random_c_builtin(T &v)
   ac_random_c_builtin_s<T,size>()(v);
 }
 
+// ======================================================================
+// Native C Type Support
+//
+
 inline void ac_random(long long int &v) { ac_random_c_builtin(v); }
 inline void ac_random(long long unsigned &v) { ac_random_c_builtin(v); }
 inline void ac_random(long int &v) { ac_random_c_builtin(v); }
@@ -143,6 +152,10 @@ inline void ac_random(bool &v) { v = rand() & 1; }
 #if (defined(SYSTEMC_INCLUDED) || defined(SYSTEMC_H)) && !defined(MC_SYSTEMC)
 #define AC_SYSTEMC
 #endif
+
+// ======================================================================
+// SystemC Type Support
+//
 
 #if defined(AC_SYSTEMC) && !defined(AC_RANDOM_H_INC_SYSTEMC_INCLUDED)
 #define AC_RANDOM_H_INC_SYSTEMC_INCLUDED
@@ -177,6 +190,9 @@ void ac_random(sc_fxnum &v) {  ac_systemc_builtin_it(v, v.wl()); }
 
 #endif // AC_RANDOM_H_INC_SC_INCLUDE_FX
 
+// ======================================================================
+// AC Datatype "ac_int" Support
+//
 
 #if defined(__AC_INT_H) && !defined(AC_RANDOM_H_INC__AC_INT_H)
 #define AC_RANDOM_H_INC__AC_INT_H
@@ -213,6 +229,10 @@ inline void ac_random(ac_int<W,S> &v)
 
 #endif // AC_RANDOM_H_INC__AC_INT_H
 
+// ======================================================================
+// AC Datatype "ac_fixed" Support
+//
+
 #if defined(__AC_FIXED_H) && !defined(AC_RANDOM_H_INC__AC_FIXED_H)
 #define AC_RANDOM_H_INC__AC_FIXED_H
 
@@ -224,6 +244,10 @@ inline void ac_random(ac_fixed<W,I,S,Q,O> &v)
 
 #endif // AC_RANDOM_H_INC__AC_FIXED_H
 
+// ======================================================================
+// AC Datatype "ac_channel" Support
+//
+
 #if defined(__AC_CHANNEL_H) && !defined(AC_RANDOM_H_INC__AC_CHANNEL_H)
 #define AC_RANDOM_H_INC__AC_CHANNEL_H
 
@@ -234,4 +258,7 @@ struct ac_extract_chan_subtype<ac_channel<Tsubtype> > {
   typedef Tsubtype chan_subtype;
 };
 
-#endif // AC_RANDOM_H_INC__AC_CHANNEL_H
+#endif
+
+#endif
+

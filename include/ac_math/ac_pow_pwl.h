@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
+ *  Release Date    : Thu Oct 25 11:05:01 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.0                                               *
+ *  Release Build   : 3.1.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -70,6 +70,8 @@
 // Notes:
 //    Attempting to call the function with a type that is not implemented will result
 //    in a compile error.
+//    The file uses the ac_log2_pwl function from the ac_log_pwl.h file and the
+//    ac_shift_left function from the ac_shift.h header file.
 //
 // Revision History:
 //    Niramay Sanghvi : Aug 15 2017 : Default template parameters for configurability added
@@ -96,6 +98,7 @@
 
 // Include headers for required functions
 #include <ac_math/ac_shift.h>
+#include <ac_math/ac_log_pwl.h>
 
 #if !defined(__SYNTHESIS__)
 #include <iostream>
@@ -119,12 +122,13 @@ using namespace std;
 // Notes:
 //    The PWL implementation utilizes 3 elements, which has a small impact
 //    on accuracy.
+//    Function only supports unsigned output types.
 //
 //-------------------------------------------------------------------------
 
 namespace ac_math
 {
-  template<ac_q_mode pwl_Q = AC_RND,
+  template<ac_q_mode pwl_Q = AC_TRN,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
   void ac_pow2_pwl(
@@ -195,7 +199,7 @@ namespace ac_math
 
 //=============================================================================
 // Version that allows the return of values.
-  template<class T_out, ac_q_mode pwl_Q = AC_RND, class T_in>
+  template<class T_out, ac_q_mode pwl_Q = AC_TRN, class T_in>
   T_out ac_pow2_pwl(
     const T_in &input
   )
@@ -213,10 +217,6 @@ namespace ac_math
 // Description:
 //    Calculation of base e exponential of real inputs, passed as ac_fixed
 //    variables.
-//
-//    Separates input into integer and fractional part, the fractional part
-//    is passed to the PWL approximation. The output is then left-shifted
-//    by the value of the integer part, in order to de-normalize.
 //
 // Usage:
 //    A sample testbench and its implementation look like this:
@@ -254,6 +254,7 @@ namespace ac_math
 //    the ac_pow2_pwl function. In doing so, we also make sure that the
 //    product variable has enough precision to store the result of
 //    input*log2(e).
+//    Function only supports unsigned output types.
 //
 //-----------------------------------------------------------------------------
 
@@ -271,7 +272,7 @@ namespace ac_math
   };
 
   //n_f_b = minimum no of fractional bits used in storing the result of multiplication by log2(e)
-  template<int n_f_b = 9, ac_q_mode pwl_Q = AC_RND,
+  template<int n_f_b = 9, ac_q_mode pwl_Q = AC_TRN,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
   void ac_exp_pwl(
@@ -300,7 +301,7 @@ namespace ac_math
 
 //=============================================================================
 // Version that allows the return of values.
-  template<class T_out, int n_f_b = 9, ac_q_mode pwl_Q = AC_RND, class T_in>
+  template<class T_out, int n_f_b = 9, ac_q_mode pwl_Q = AC_TRN, class T_in>
   T_out ac_exp_pwl(
     const T_in &input
   )
@@ -309,6 +310,102 @@ namespace ac_math
     // to evaluate it. This temporary variable is returned as the output.
     T_out output;
     ac_exp_pwl<n_f_b, pwl_Q>(input, output);
+    return output;
+  }
+
+//=============================================================================
+// Function: ac_pow_pwl (for ac_fixed)
+//
+// Description:
+//    Calculation of exponentials with any base, for ac_fixed variables.
+//
+// Usage:
+//    A sample testbench and its implementation look like this:
+//
+//    #include <ac_math/ac_pow_pwl.h>
+//    using namespace ac_math;
+//
+//    typedef ac_fixed<20, 11, false, AC_RND, AC_SAT> base_type;
+//    typedef ac_fixed<21, 12, true, AC_RND, AC_SAT> expon_type;
+//    typedef ac_fixed<24, 14, false, AC_RND, AC_SAT> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const base_type &base,
+//      const expon_type  &expon,
+//      output_type &output
+//    )
+//    {
+//      ac_pow_pwl(base, expon, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      base_type base = 2.5;
+//      expon_type expon = 2;
+//      output_type output;
+//      CCS_DESIGN(project)(base, expon, output);
+//      CCS_RETURN(0);
+//    }
+//    #endif
+//
+// Notes:
+//    This function relies on the ac_pow2_pwl and ac_log_pwl functions for its
+//    computation. It does this by multiplying expon with log2(base), then 
+//    passing it to the ac_pow2_pwl function. In doing so, we also make sure 
+//    that the product variable has enough precision to store the result of
+//    expon*log2(base).
+//    Input for the base and output for the exponential value have to be
+//    unsigned ac_fixed variables.
+//
+//-----------------------------------------------------------------------------
+
+  template<ac_q_mode pwl_Q = AC_TRN,
+           int baseW, int baseI, ac_q_mode baseQ, ac_o_mode baseO,
+           int exponW, int exponI, bool exponS, ac_q_mode exponQ, ac_o_mode exponO,
+           int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
+  void ac_pow_pwl(
+    const ac_fixed<baseW, baseI, false, baseQ, baseO> &base,
+    const ac_fixed<exponW, exponI, exponS, exponQ, exponO> &expon,
+    ac_fixed<outW, outI, false, outQ, outO> &output
+  )
+  {
+    // Find the number of integer bits required to represent the minimum and maximum values expressable for log2 of the base. 
+    // The number of integer bits used for the temporary variable that stores log2(base) is whichever is larger + 1.
+    const int t_I_frac = ac::nbits<AC_MAX(baseW - baseI, 0)>::val;
+    const int t_I_int  = ac::nbits<AC_MAX(baseI, 0)>::val;
+    const int t_I      = (t_I_frac > t_I_int ? t_I_frac : t_I_int) + 1;
+    // Store the number of fractional bits for the temp output that ensures losslessness. This can change based on the log2 
+    // PWL implementation, hence, the user must handle these changes appropriately.
+    const int n_f_b_pwl_out = 22;
+    ac_fixed <n_f_b_pwl_out + t_I, t_I, true, pwl_Q> log2_base;
+    // Find log2(base)
+    ac_math::ac_log2_pwl(base, log2_base);
+    // Multiply expon by log2(base) and pass it to the ac_pow2_pwl function
+    ac_pow2_pwl(expon*log2_base, output);
+
+#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
+    cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
+    cout << "log2_base          = " << log2_base << endl;
+    cout << "output(ac_pow_pwl) = " << output << endl;
+#endif
+  }
+
+//=============================================================================
+// Version that allows the return of values.
+  template<class T_out, ac_q_mode pwl_Q = AC_TRN, class T_in_base, class T_in_expon>
+  T_out ac_pow_pwl(
+    const T_in_base  &base,
+    const T_in_expon &expon
+  )
+  {
+    // Create a temporary variable for output and use the pass-by-reference version
+    // to evaluate it. This temporary variable is returned as the output.
+    T_out output;
+    ac_pow_pwl<pwl_Q>(base, expon, output);
     return output;
   }
 }

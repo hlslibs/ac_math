@@ -32,31 +32,31 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_pow_cordic() function using a variety of data types and bit-
+// ac_pow_pwl() function using a variety of data types and bit-
 // widths.
 
 // To compile standalone and run:
-//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_pow_cordic.cpp -o design
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_pow_pwl.cpp -o design
 //   ./design
 
 // Include the AC Math function that is exercised with this testbench
-#include <ac_math/ac_hcordic.h>
+#include <ac_math/ac_pow_pwl.h>
 using namespace ac_math;
 
 // ==============================================================================
 // Test Design
-//   This simple function allows executing the ac_pow_cordic() function.
+//   This simple function allows executing the ac_pow_pwl() function.
 //   Template parameters are used to configure the bit-widths of the
 //   ac_fixed inputs.
 
 template <int baseW, int baseI, int expW, int expI, bool expS, int outW, int outI>
-void test_ac_pow_cordic(
+void test_ac_pow_pwl(
   const ac_fixed<baseW, baseI, false, AC_TRN, AC_WRAP> &base,
   const ac_fixed<expW, expI, expS, AC_TRN, AC_WRAP> &exponent,
   ac_fixed<outW, outI, false, AC_TRN, AC_WRAP> &out_pow
 )
 {
-  ac_pow_cordic(base, exponent, out_pow);
+  ac_pow_pwl(base, exponent, out_pow);
 }
 
 // ------------------------------------------------------------------------------
@@ -81,9 +81,9 @@ using namespace std;
 // Description: A templatized function that can be configured for certain bit-
 //   widths of AC datatypes. It uses the type information to iterate through a
 //   range of valid values on that type in order to compare the precision of the
-//   cordic table pow model with the computed power output using a
-//   standard C double type. The maximum error for each type is accumulated
-//   in variables defined in the calling function.
+//   PWL power outpu model with the computed power output using a standard C 
+//   double type. The maximum error for each type is accumulated in variables 
+//   defined in the calling function.
 
 template <int baseW, int baseI, int expW, int expI, bool expS, int outW, int outI>
 int test_driver(
@@ -113,7 +113,7 @@ int test_driver(
   upper_limit_exponent = exponent.template set_val<AC_VAL_MAX>().to_double();
   step_exponent        = exponent.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  cout << "TEST: ac_pow_cordic() INPUTS: ";
+  cout << "TEST: ac_pow_pwl() INPUTS: ";
   cout.width(38);
   cout << left << base.type_name();
   cout.width(38);
@@ -141,7 +141,7 @@ int test_driver(
       base = i;
       exponent = j;
       if (base == 0 || exponent == 0) { continue; }
-      test_ac_pow_cordic(base, exponent, out_pow);
+      test_ac_pow_pwl(base, exponent, out_pow);
       double expected_value_pow = ((T_out)pow(base.to_double(), exponent.to_double())).to_double();
       double actual_value_pow   = out_pow.to_double();
       double this_error_pow;
@@ -181,18 +181,22 @@ int test_driver(
 int main(int argc, char *argv[])
 {
   double max_error_pow = 0;
-  double allowed_error = 0.5;
+  double allowed_error = 1;
   double threshold = 0.005;
 
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_pow_cordic() - Allowed error " << allowed_error << endl;
+  cout << "Testing function: ac_pow_pwl() - Allowed error " << allowed_error << endl;
 
   // template <int baseW, int baseI, int expW, int expI, bool expS, int outW, int outI>
-  test_driver<8, 3, 10, 2,  true, 40, 20>(max_error_pow, allowed_error, threshold);
-  test_driver<8, 2, 10, 2,  true, 40, 20>(max_error_pow, allowed_error, threshold);
-  test_driver<8, 2, 10, 2, false, 40, 20>(max_error_pow, allowed_error, threshold);
-  test_driver<8, 3, 10, 2, false, 40, 20>(max_error_pow, allowed_error, threshold);
-  test_driver<10, 4, 10, 2, false, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver< 8,  3, 10,  2,  true, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver< 8,  2, 10,  2,  true, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver< 8,  2, 10,  2, false, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver< 8,  3, 10,  2, false, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver<10,  3, 12,  2, false, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver<10, -3, 12, -2,  true, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver<10, -2, 12, -2,  true, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver<10, -3, 12, -2, false, 40, 20>(max_error_pow, allowed_error, threshold);
+  test_driver<10, -2, 12, -2, false, 40, 20>(max_error_pow, allowed_error, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;
@@ -203,11 +207,11 @@ int main(int argc, char *argv[])
   // If error limits on any test value have been crossed, the test has failed
   // Notify the user that the test was a failure if that is the case.
   if (test_fail) {
-    cout << "  ac_pow_cordic - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
+    cout << "  ac_pow_pwl - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
     cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
     return -1; // LCOV_EXCL_LINE
   } else {
-    cout << "  ac_pow_cordic - PASSED" << endl;
+    cout << "  ac_pow_pwl - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }
 

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
+ *  Release Date    : Thu Oct 25 11:05:01 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.0                                               *
+ *  Release Build   : 3.1.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -30,6 +30,14 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+// =========================TESTBENCH=======================================
+// This testbench file contains a stand-alone testbench that exercises the
+// ac_matrix class.
+
+// To compile standalone and run:
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_matarix.cpp -o design
+//   ./design
+
 #include <ac_fixed.h>
 #include <ac_complex.h>
 #include <ac_matrix.h>

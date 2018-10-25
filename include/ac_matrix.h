@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Wed Oct 17 16:38:15 PDT 2018                        *
+ *  Release Date    : Thu Oct 25 11:05:01 PDT 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.0                                               *
+ *  Release Build   : 3.1.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
