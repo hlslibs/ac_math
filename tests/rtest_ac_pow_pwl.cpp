@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Thu Oct 25 11:05:01 PDT 2018                        *
+ *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.1.1                                               *
  *                                                                        *
@@ -56,7 +56,7 @@ void test_ac_pow_pwl(
   ac_fixed<outW, outI, false, AC_TRN, AC_WRAP> &out_pow
 )
 {
-  ac_pow_pwl(base, exponent, out_pow);
+  out_pow = ac_pow_pwl<ac_fixed<outW, outI, false, AC_TRN, AC_WRAP> >(base, exponent);
 }
 
 // ------------------------------------------------------------------------------
