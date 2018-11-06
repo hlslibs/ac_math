@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -83,6 +83,9 @@
 //    This file uses C++ function overloading to target implementations
 //    specific to each type of data. Attempting to call the function
 //    with a type that is not implemented will result in a compile error.
+//
+// Revision History:
+//    2.0.10 - Implemented code change to use an XW + 1 bit adder instead of an XW + 2 bit option.
 //
 //*****************************************************************************************
 

@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -72,6 +72,7 @@
 //    be changed to arr(m,n) for this class.
 //
 // Revision History:
+//    3.1.2  - fix bug in transpose member function
 //
 //***************************************************************************
 
@@ -296,7 +297,7 @@ public: // Matrix math functions
     ac_matrix<T,N,M> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < N; j++ ) {
-        result(i,j) = (*this)(i,j);
+        result(j,i) = (*this)(i,j);
       }
     }
     return result;

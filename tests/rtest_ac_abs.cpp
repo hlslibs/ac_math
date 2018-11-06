@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -253,7 +253,8 @@ int test_driver_float(
   bool details = false
 )
 {
-  ac_float<   Wfl,    Ifl,    Efl, AC_TRN> input_float;
+  typedef ac_float<   Wfl,    Ifl,    Efl, AC_TRN> T_in;
+  T_in input_float;
   ac_float<outWfl, outIfl, outEfl, AC_TRN> output_float;
 
   // Declare an ac_fixed variable of same type as mantissa
@@ -312,12 +313,11 @@ int test_driver_float(
   // test floating-point values.
 
   for (int i = 0; i < exp_arr_size; i++) {
-    // Extract a value to be tested for the exponent part.
-    input_float.e = sample_exponent_array[i];
-
-    // For that particular exponent value, go through every possible value that can be represented by the mantissa.
+    // For a particular exponent value, go through every possible value that can be represented by the mantissa.
     for (double mant_i = lower_limit_mantissa; mant_i <= upper_limit_mantissa; mant_i += step_mantissa) {
-      input_float.m = mant_i;
+      // Normalize the mantissa by using a parameterized ac_float constructor.
+      T_in input_float_norm(ac_fixed<Wfl, Ifl, true>(mant_i), sample_exponent_array[i]);
+      input_float = input_float_norm;
       test_ac_abs_float(input_float, output_float);
       // If any iteration does not produce the correct value for the output, then the "correct" variable will be set to false.
       bool correct_iteration = output_check(input_float, output_float);

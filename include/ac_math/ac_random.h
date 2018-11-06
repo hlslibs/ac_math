@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -36,6 +36,8 @@
 // Description: This file provides random number generators ac_random(T&)
 //  for all types T Catapult considers as primitive types. These
 //  functions are used in the automatically generated testbench.
+//
+// Revision History:
 //
 //***************************************************************************
 

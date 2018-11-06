@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -71,6 +71,8 @@
 //    Attempting to call this file with a datatype that is not implemented will
 //    result in a compile-time error.
 //
+// Revision History:
+//    2.0.10 - Made changes to comments and formatting for tanh pwl function.
 //*************************************************************************************************
 
 #ifndef _INCLUDED_AC_TANH_PWL_H_

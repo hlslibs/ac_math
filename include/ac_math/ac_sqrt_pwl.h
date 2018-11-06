@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -78,6 +78,9 @@
 //
 //    This file uses the ac_normalize() function from ac_normalize.h and the ac_shift_left()
 //    function from ac_shift.h
+//
+// Revision History:
+//    2.0.10 - bug51145
 //
 // *****************************************************************************************
 
@@ -225,7 +228,13 @@ namespace ac_math
   template <int n_f_b, int I>
   struct find_rt_sqrt_pwl {
     enum {
-      I1 = I % 2 == 0 ? I / 2 : (I + 1)/2,
+      // An extra bit is added for I1 for even integer widths because as we approach 1 for the normalized input value, the output for the sqrt function can slightly exceed
+      // the expected value, taking into account the upward shifting of PWL segments against the direction of concavity for the sqrt function.
+      // This addition of an extra bit is only required for even integer widths because the maximum value fixed point configurations with even integer widths can store
+      // approaches an even power of two. This maximum value would correspond to an input to the PWL that would approach the maximum limit of the PWL domain after normalization.
+      // For the default implementation, this maximum limit is 1. The corresponding output value slightly exceeds 1 owing to the upward shifting of PWL segments as discussed earlier.
+      // If we don't add the extra bit, this slight increase can result in an overflow at the output.
+      I1 = I % 2 == 0 ? (I/2) + 1 : (I + 1)/2,
       n_f_b_floor = n_f_b % 2 == 0 ? n_f_b / 2 : (n_f_b - 1) / 2,
       W1 = I1 + n_f_b_floor + 22
     };
@@ -282,9 +291,8 @@ namespace ac_math
   {
     static const ac_fixed <16, 1, false> root2 = 1.414215087890625;
 
-
     // mantissa and exponent are separately considered
-    ac_fixed <W - 1, I - 1, false, Q> mantissa = input.m;
+    ac_fixed <W - 1, I - 1, false, Q> mantissa = input.mantissa();
 
     const int W1 = find_rt_sqrt_pwl<W - I, I - 1>::W1;
     const int I1 = find_rt_sqrt_pwl<W - I, I - 1>::I1;
@@ -295,24 +303,30 @@ namespace ac_math
     ac_sqrt_pwl<pwlQ>(mantissa, m2);
 
     // Multiplication by root 2 for odd exponent
-    ac_fixed <W1 + 1, I1 + 1, false> m3 = (input.e % 2 == 0) ? (ac_fixed <W1 + 1, I1 + 1, false>)m2 : (ac_fixed <W1 + 1, I1 + 1, false>)(m2 * root2);
+    // Note that an extra bit does not need to be added to the word and integer widths for the product, for odd integer widths at the input. This is because the addition of the
+    // extra bit in such a case is already done in the find_rt_sqrt_pwl struct, to take into account the fact that the PWL segments for the default (4 segments
+    // and 12 fractional bits) are shifted slightly upward. For any other PWL implementation, this might change and the user might have to add the extra bit.
+    typedef ac_fixed<W1 + int(I%2 == 0), I1 + int(I%2 == 0), false> type_prod;
+    type_prod m3 = (input.exp() % 2 == 0) ? (type_prod)m2 : (type_prod)(m2 * root2);
 
     // The mantissa without normalization will be either the square root of the original mantissa, or that square root multiplied by sqrt(2),
     // depending upon whether the input exponent is even or not.
     // The exponent without normalization will be the input exponent right-shifted by 1/divided by 2. This follows the formula:
     // sqrt(mant * (2^exp)) = sqrt(mant) * (2^(exp/2))
     // These two values are passed to an ac_float constructor that takes care of normalization.
-    ac_float <outW, outI, outE, outQ> output_temp(m3, input.e >> 1, true);
+    ac_float <outW, outI, outE, outQ> output_temp(m3, input.exp() >> 1, true);
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_SQRT_PWL_H_DEBUG)
+#if !defined(__SYNTHESIS__) && defined(AC_SQRT_PWL_FL_H_DEBUG)
     cout << "input = " << input << endl;
     cout << "W = " << W << endl;
     cout << "I = " << I << endl;
     cout << "W1 = " << W1 << endl;
     cout << "I1 = " << I1 << endl;
+    cout << "m2.type_name() = " << m2.type_name() << endl;
     cout << "output of call to ac_fixed version of sqrt_pwl = " << m2 << endl;
+    cout << "m3.type_name() = " << m3.type_name() << endl;
     cout << "m3 = " << m3 << endl;
     cout << "output_temp.m = " << output_temp.m << endl;
     cout << "output_temp.e = " << output_temp.e << endl;
@@ -382,12 +396,15 @@ namespace ac_math
 
     sqrt_mod_type sqrt_mod;
     ac_sqrt_pwl <pwlQ> (input.mag_sqr(), sqrt_mod);     // computation of square root of mag_sqr
+    // Since the output of the PWL function is not exact, temp_real and temp_imag can possibly go negative.
+    // Since negative inputs aren't supported for the real sqrt function, we must ensure that such a thing
+    // never happens. To do so, we use a type that supports saturation, as shown below. By doing
+    // so, we can ensure that the temporary variables saturate at 0 instead of going negative.
     ac_fixed <t_W, t_I, false, AC_TRN, AC_SAT> temp_real = sqrt_mod + input.r();
     ac_fixed <t_W, t_I, false, AC_TRN, AC_SAT> temp_imag = sqrt_mod - input.r();
     ac_fixed <t_W, t_I - 1, false> sqr_real = ((ac_fixed <t_W + 1, t_I, false>)temp_real) >> 1; // calculating square of the output's real part
     ac_fixed <t_W, t_I - 1, false> sqr_imag = ((ac_fixed <t_W + 1, t_I, false>)temp_imag) >> 1; // calculating square of the output's imaginary part
-    x_y_type x;
-    x_y_type y;
+    x_y_type x, y;
     ac_sqrt_pwl <pwlQ> (sqr_real, x); // calculating output's real part
     ac_sqrt_pwl <pwlQ> (sqr_imag, y); // calculating output's imaginary part
     output.r() = x;

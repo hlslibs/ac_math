@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -77,6 +77,7 @@
 //    from the other ac_math header files.
 //
 // Revision History:
+//    2.0.10 - bug51145
 //    Niramay Sanghvi : Aug 10 2017 : Added default parameters for better configurability.
 //    Niramay Sanghvi : Aug 09 2017 : Added zero-input handling
 //    Niramay Sanghvi : Aug 07 2017 : Used right-shift function from mgc_ac_math
@@ -318,7 +319,7 @@ namespace ac_math
     ac_float<outW, outI, outE, outQ> output_temp(recip_mantissa, -input.exp(), true);
 
     // If the input is zero, set the temp output to the max. possible value.
-    if (input.m == 0) { output_temp.template set_val<AC_VAL_MAX>(); }
+    if (input.mantissa() == 0) { output_temp.template set_val<AC_VAL_MAX>(); }
 
     output = output_temp;
 

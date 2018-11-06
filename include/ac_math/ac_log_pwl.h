@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -79,6 +79,8 @@
 //     1. ac_log2_pwl : It takes ac_fixed type value as input outputs log2 value
 //     2. ac_log_pwl : It takes ac_fixed type value as input and outputs loge value
 //    This file uses the normalization function from ac_normalize.h
+//
+// Revision History:
 //
 //***********************************************************************************
 

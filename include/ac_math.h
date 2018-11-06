@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -30,6 +30,11 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+// Revision History:
+//    3.1.0  - Added ac_tanh_pwl.h 
+//    2.0.10 - Removed including of ac_random.h from ac_math.h header file.
+//             Completed list of header file inclusions in ac_math.h
+
 #ifndef _INCLUDED_AC_MATH_H_
 #define _INCLUDED_AC_MATH_H_
 

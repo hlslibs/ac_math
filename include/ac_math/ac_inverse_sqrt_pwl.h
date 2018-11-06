@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -78,6 +78,9 @@
 //
 //    This library uses the following functions from other files: ac_normalize()
 //    , ac_shift_right() and ac_sqrt_pwl().
+//
+// Revision History:
+//    2.0.10 - bug51145
 //
 // *****************************************************************************
 
@@ -334,30 +337,28 @@ namespace ac_math
     const int W_2 = find_rt_inv_sqrt_pwl<W1 - I1, I1 - 1>::W1;
     const int I_2 = find_rt_inv_sqrt_pwl<W1 - I1, I1 - 1>::I1;
     static const ac_fixed <12, 0, false> inverseroot2 = 0.70703125;
+    ac_fixed <W1 - 1, I1 - 1, false, q1> m1 = input.mantissa();
     ac_fixed <W_2, I_2, false, q_mode_temp> output2;
     ac_fixed <W_2 + 1, I_2 + 1,  true, q_mode_temp> output2_mant;
-    ac_fixed <W1, I1, false> m1 = input.m;
-    ac_int<AC_MAX(E1, 2), true> e1 = input.e;
-    // The exponent without normalization will be the additive inverse of the input exponent right-shifted by 1/divided by 2. This follows the formula:
+    // We use the formula:
     // 1 / sqrt(mant * (2^exp)) = (1 / sqrt(mant)) * (2^(-exp/2))
-    ac_int<AC_MAX(E1, 2), true> e2 = - (e1 >> 1);
+    // following this, we first find (1 / sqrt(mant))
     ac_inverse_sqrt_pwl<q_mode_temp> (m1, output2);
-
-    output2_mant = (input.e % 2 == 0) ? (ac_fixed <W_2 + 1, I_2 + 1, true, q2>)output2 : (ac_fixed <W_2 + 1, I_2 + 1, true, q2>)(output2*inverseroot2);
-    // The mantissa without normalization will be either the inverse square root of the original mantissa, or that inverse square root multiplied by 1/sqrt(2),
+    // The output mantissa without normalization will be either the inverse square root of the original mantissa, or that inverse square root multiplied by 1/sqrt(2),
     // depending upon whether the input exponent is even or not.
-    // These two values are passed to an ac_float constructor that takes care of normalization.
-    ac_float <W2, I2, E2, q2> output_temp(output2_mant, e2, true);
+    output2_mant = (input.exp() % 2 == 0) ? (ac_fixed <W_2 + 1, I_2 + 1, true, q2>)output2 : (ac_fixed <W_2 + 1, I_2 + 1, true, q2>)(output2*inverseroot2);
+
+    // Pass (1 / sqrt(mant)) and (2^(-exp/2)) to an ac_float constructor that takes care of normalization.
+    ac_float <W2, I2, E2, q2> output_temp(output2_mant, -(input.exp() >> 1), true);
 
     // If input is zero, set output to max possible value.
-    if (input.m == 0) { output_temp.template set_val<AC_VAL_MAX>(); }
+    if (m1 == 0) { output_temp.template set_val<AC_VAL_MAX>(); }
 
     output = output_temp;
 
 #if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
+    cout << "input       = " << input << endl;
     cout << "m1          = " << m1 << endl;
-    cout << "e1          = " << e1 << endl;
-    cout << "e2          = " << e2 << endl;
     cout << "output2     = " << output2 << endl;
     cout << "output_temp = " << output_temp << endl;
     cout << "output      = " << output << endl;

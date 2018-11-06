@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -45,10 +45,11 @@ using namespace ac_math;
 
 // ==============================================================================
 // Test Design
-//   This simple function allows executing the ac_sqrt_pwl() function
+//   These simple functions allow executing the ac_sqrt_pwl() function
 //   using multiple data types at the same time. Template parameters are
 //   used to configure the bit-widths of the types.
 
+// Test Design for real and complex fixed point values.
 template <int Wfi, int Ifi, int outWfi, int outIfi>
 void test_ac_sqrt_pwl_fixed(
   const  ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP>   &in1,
@@ -61,19 +62,24 @@ void test_ac_sqrt_pwl_fixed(
   out2 = ac_sqrt_pwl<ac_complex<ac_fixed<outWfi + 1, outIfi + 1, true, AC_TRN, AC_WRAP> > >(in2);
 }
 
-// ==============================================================================
-// Test Design
-//   This simple function allows executing the ac_sqrt_pwl() function
-//   using the float datatype. Template parameters are
-//   used to configure the bit-widths of the types.
-
-template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
-void test_ac_sqrt_pwl_float(
-  const ac_float<Wfl, Ifl, Efl, AC_TRN>     &in3,
-  ac_float<outWfl, outIfl, outEfl, AC_TRN>  &out3
+// Test Design for real fixed point values.
+template <int Wfi, int Ifi, int outWfi, int outIfi>
+void test_ac_sqrt_pwl_real_fixed(
+  const  ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP>   &in1,
+  ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP>   &out1
 )
 {
-  out3 = ac_sqrt_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in3);
+  out1 = ac_sqrt_pwl<ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> >(in1);
+}
+
+// Test Design for real floating point values.
+template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
+void test_ac_sqrt_pwl_float(
+  const ac_float<Wfl, Ifl, Efl, AC_TRN>     &in1,
+  ac_float<outWfl, outIfl, outEfl, AC_TRN>  &out1
+)
+{
+  out1 = ac_sqrt_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
 }
 
 // ==============================================================================
@@ -234,6 +240,7 @@ void monotonicity_check(
 //   piece-wise linear square root model with the computed square root using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
+//   Number of iterations per run = 2^(2*Wfi).
 
 template <int Wfi, int Ifi, int outWfi, int outIfi>
 int test_driver_fixed(
@@ -318,14 +325,88 @@ int test_driver_fixed(
   return 0;
 }
 
+// =================================================================================
+// Function: test_driver_real_fixed()
+// Description: A specialized case of the above function which only tests real
+//   ac_fixed values, allowing the user to test larger bitwidths than the one
+//   which tests both real and complex values. Number of iterations per run = 2^Wfi.
+
+template <int Wfi, int Ifi, int outWfi, int outIfi>
+int test_driver_real_fixed(
+  double &cumulative_max_error_fixed,
+  const double allowed_error_fixed,
+  const double threshold,
+  bool details = false
+)
+{
+  bool passed = true;
+  bool check_monotonic = true;
+  double max_error_fixed = 0.0; // reset for this run
+
+  ac_fixed<   Wfi,        Ifi, false, AC_TRN, AC_WRAP>   input_fixed;
+  ac_fixed<outWfi,     outIfi, false, AC_TRN, AC_WRAP>   output_fixed;
+
+  double lower_limit_fixed, upper_limit_fixed, step_fixed;
+
+  // set ranges and step size for fixed point testbench
+  step_fixed        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
+  lower_limit_fixed = input_fixed.template set_val<AC_VAL_MIN>().to_double();
+  upper_limit_fixed = input_fixed.template set_val<AC_VAL_MAX>().to_double();
+
+  cout << "TEST: ac_sqrt_pwl() INPUTS: ";
+  cout.width(38);
+  cout << left << input_fixed.type_name();
+  cout << "OUTPUTS: ";
+  cout.width(38);
+  cout << left << output_fixed.type_name();
+  cout << "RESULT: ";
+
+  // Dump the test details
+  if (details) {
+    cout << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit_fixed = " << lower_limit_fixed << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit_fixed = " << upper_limit_fixed << endl; // LCOV_EXCL_LINE
+    cout << "    step_fixed        = " << step_fixed << endl; // LCOV_EXCL_LINE
+  }
+
+  double old_real_output;
+  double actual_value_fixed;
+
+  bool compare = false;
+  // Fix the real part of the input at 0, and iterate through all possible values of imaginary part based on its type.
+  for (double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
+    input_fixed = i;
+
+    // Pass all inputs at one go
+    test_ac_sqrt_pwl_real_fixed(input_fixed, output_fixed);
+
+    double this_error_fixed = err_calc(input_fixed, actual_value_fixed, output_fixed, allowed_error_fixed, threshold);
+
+    if (check_monotonic) { monotonicity_check(old_real_output, actual_value_fixed, compare, input_fixed, output_fixed); }
+    if (this_error_fixed > max_error_fixed) {max_error_fixed = this_error_fixed;}
+  }
+
+  passed = (max_error_fixed < allowed_error_fixed);
+
+  if (passed) { printf("PASSED , max error (%f)\n", max_error_fixed); }
+  else        { printf("FAILED , max error (%f)\n", max_error_fixed); } // LCOV_EXCL_LINE
+
+  if (max_error_fixed>cumulative_max_error_fixed) { cumulative_max_error_fixed = max_error_fixed; }
+
+  return 0;
+}
+
+
 // ==============================================================================
 // Function: test_driver_float()
 // Description: A templatized function that can be configured for certain bit-
-//   widths of AC datatypes. It uses the type information to iterate through a
-//   range of valid values on that type in order to compare the precision of the
-//   piece-wise linear sqrt model with the computed sqrt using a
+//   widths of real ac_float datatypes. It uses the type information to iterate 
+//   through a range of valid values on that type in order to compare the 
+//   precision of the piece-wise linear sqrt model with the computed sqrt using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
+//   Number of iterations per run = 2^Wfl
 
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 int test_driver_float(
@@ -339,7 +420,8 @@ int test_driver_float(
   bool check_monotonic = true;
   double max_error_float = 0.0; // reset for this run
 
-  ac_float<   Wfl,    Ifl,    Efl, AC_TRN>   input_float;
+  typedef ac_float<Wfl, Ifl, Efl, AC_TRN> T_in;
+  T_in input_float;
   ac_float<outWfl, outIfl, outEfl, AC_TRN>   output_float;
 
   double lower_limit_mantissa, upper_limit_mantissa, step_mantissa;
@@ -394,18 +476,16 @@ int test_driver_float(
   }
 
   for (int i = 0; i < exp_arr_size; i++) {
-    // Extract a value to be tested for the exponent part.
-    input_float.e = sample_exponent_array[i];
     bool compare = false;
 
-    // For that particular exponent value, go through every possible value that can be represented by the mantissa.
+    // For a particular exponent value, go through every possible value that can be represented by the mantissa.
     for (double mant_i = lower_limit_mantissa; mant_i <= upper_limit_mantissa; mant_i += step_mantissa) {
-      input_float.m = mant_i;
+      // Normalize the mantissa by using a parameterized ac_float constructor.
+      T_in input_float_norm(ac_fixed<Wfl, Ifl, true>(mant_i), sample_exponent_array[i]);
+      input_float = input_float_norm;
       test_ac_sqrt_pwl_float(input_float, output_float);
       double actual_value_float     = output_float.to_double();
       double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
-
-      if (check_monotonic) { monotonicity_check(old_real_output, actual_value_float, compare, input_float.m, output_float.m); }
 
       if (this_error_float > max_error_float) {max_error_float = this_error_float;}
     }
@@ -446,22 +526,39 @@ int main(int argc, char *argv[])
   test_driver_fixed<  9,  4, 60, 30>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, allowed_error_complex, threshold);
   test_driver_fixed<  9,  2, 64, 32>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, allowed_error_complex, threshold);
 
+  // template <int Wfi, int Ifi, int outWfi, int outIfi>
+  test_driver_real_fixed< 21,  8, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  7, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  6, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  3, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  2, 60, 30>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  1, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  0, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21, -1, 60, 30>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21, -2, 63, 33>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21, -3, 60, 30>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 11, 20, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 11, 21, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 11, 22, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+
   // template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
-  test_driver_float< 23,  0, 8, 23,  0, 20>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  8,-12, 3, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float< 10,  5, 3, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float< 11,  4, 2, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  9,  2, 3, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  8,  2, 4, 60, 30, 11>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  7,  2, 5, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  8,  3, 4, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  6,  3, 5, 60, 30, 11>(max_error_float, allowed_error_float, threshold);
-  test_driver_float< 10,  5, 8, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  9,  3, 1, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  5,  3, 3, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  5, -2, 3, 60, 30, 11>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  4,  2, 4, 60, 30, 10>(max_error_float, allowed_error_float, threshold);
-  test_driver_float<  3,  1, 3, 64, 32, 10>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21,  9, 8, 21,  9,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21,  8, 8, 21,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21,  0, 8, 21,  0,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 20,  0, 8, 20,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21,  1, 8, 21,  1,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21,  2, 8, 21,  2,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21,  3, 8, 21,  3,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 19,  1, 8, 18,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 19,  2, 8, 18,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 19,  3, 8, 18,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21, -1, 8, 21, -1,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21, -2, 8, 21, -2,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21, -3, 8, 21, -3,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 21, -3, 8, 21, -3,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 19, -1, 8, 18, -8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 19, -2, 8, 18, -8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_float< 19, -3, 8, 18, -8,  8>(max_error_float, allowed_error_float, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all data type / bit-width variations:" << endl;

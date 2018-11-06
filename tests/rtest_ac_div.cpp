@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -632,8 +632,10 @@ int test_driver_float(
   bool passed;
   double max_error_float = 0.0; // reset for this run
 
-  ac_float<numW, numI, numE, AC_TRN> real_num;
-  ac_float<denW, denI, denE, AC_TRN> real_den;
+  typedef ac_float<numW, numI, numE, AC_TRN> num_type;
+  num_type real_num;
+  typedef ac_float<denW, denI, denE, AC_TRN> den_type;
+  den_type real_den;
   ac_float<quoW, quoI, quoE, AC_TRN> real_quo;
 
   cout << "TEST: ac_div() INPUTS: ";
@@ -725,18 +727,20 @@ int test_driver_float(
 
   double this_error_float;
 
-  for (int i = 0; i < exp_arr_size_num; i++) {
-    real_num.e = sample_exponent_array_num[i];
-    for (int j = 0; j < exp_arr_size_den; j++) {
-      real_den.e = sample_exponent_array_den[j];
+  for (int i_out = 0; i_out < exp_arr_size_num; i_out++) {
+    for (int j_out = 0; j_out < exp_arr_size_den; j_out++) {
       //Iterate through all possible combinations of mantissa values stored in the arrays above.
       //The denominator will be the negative of the corresponding unsigned value for that iteration. 
       //The numerator will have the same value as the corresponding unsigned value.
       for (int i = 0; i <= numW - 1; i++) {
-        real_num.m = us_real_num_m_arr[i];
+        // Normalize numerator mantissa
+        num_type real_num_norm(us_real_num_m_arr[i], sample_exponent_array_num[i_out]);
+        real_num = real_num_norm;
         for (int j = 0; j <= denW - 1; j++) {
-          real_den.m = -us_real_den_m_arr[j];
-          if(real_den.m == 0) { continue; }
+          // Normalize denominator mantissa
+          den_type real_den_norm(us_real_den_m_arr[j], sample_exponent_array_den[j_out]);
+          real_den = real_den_norm;
+          if(real_den.mantissa() == 0) { continue; }
           test_ac_div_float(real_num, real_den, real_quo);
           //Calculate error for real values.
           this_error_float = err_calc(real_num, real_den, real_quo, allowed_error_float, threshold);

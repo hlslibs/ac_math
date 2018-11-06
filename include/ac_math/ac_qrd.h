@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -65,6 +65,9 @@
 // Computation of Q : To avoid matrix multiplication involved in computation of Q alongside storage of previous Q in every iteration, Q is computed in systolic manner, similar to R.
 // First input matrix is concatenated with a identity matrix, to get a higher order matrix, which is then modified using givens rotation in a systolic manner. The larger matrix is then subdivided into
 // R and output of Givens rotation on identity matrix which is Q (as Final_Q = Q1. Q2. Q3....is nothing but performing Givens rotation successively in identity matrix).
+//
+// Revision History:
+//
 //----------------------------------------------------------------------------------------------------------------
 
 #ifndef _INCLUDED_AC_QRD_H_

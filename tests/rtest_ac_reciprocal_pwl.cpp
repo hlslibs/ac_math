@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -62,17 +62,37 @@ void test_ac_reciprocal_pwl_fixed(
   out2 = ac_reciprocal_pwl<ac_complex<ac_fixed<outWfi, outIfi, true, AC_TRN, AC_WRAP> > >(in2);
 }
 
+// Test Design for real fixed point values.
+template <int Wfi, int Ifi, int outWfi, int outIfi>
+void test_ac_reciprocal_pwl_real_fixed(
+  const  ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP>   &in1,
+  ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP>   &out1
+)
+{
+  out1 = ac_reciprocal_pwl<ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> >(in1);
+}
+
 // Test Design for real and complex floating point values.
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 void test_ac_reciprocal_pwl_float(
-  const ac_float<Wfl, Ifl, Efl, AC_TRN>   &in3,
-  ac_float<outWfl, outIfl, outEfl, AC_TRN>   &out3,
-  const ac_complex<ac_float<Wfl, Ifl, Efl, AC_TRN> > &in4,
-  ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > &out4
+  const ac_float<Wfl, Ifl, Efl, AC_TRN>   &in1,
+  ac_float<outWfl, outIfl, outEfl, AC_TRN>   &out1,
+  const ac_complex<ac_float<Wfl, Ifl, Efl, AC_TRN> > &in2,
+  ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > &out2
 )
 {
-  out3 = ac_reciprocal_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in3);
-  out4 = ac_reciprocal_pwl<ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > >(in4);
+  out1 = ac_reciprocal_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
+  out2 = ac_reciprocal_pwl<ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > >(in2);
+}
+
+// Test Design for real and complex floating point values.
+template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
+void test_ac_reciprocal_pwl_real_float(
+  const ac_float<Wfl, Ifl, Efl, AC_TRN>   &in1,
+  ac_float<outWfl, outIfl, outEfl, AC_TRN>   &out1
+)
+{
+  out1 = ac_reciprocal_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
 }
 
 // ==============================================================================
@@ -240,6 +260,7 @@ void monotonicity_check(
 // Function: test_driver_fixed()
 // Description: test_driver function for ac_fixed and ac_complex<ac_fixed> inputs
 //   and outputs.
+//   Number of iterations per run: 2^(2*Wfi)
 
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 int test_driver_fixed(
@@ -317,10 +338,84 @@ int test_driver_fixed(
   return 0;
 }
 
+// =================================================================================
+// Function: test_driver_real_fixed()
+// Description: A specialized case of the above function which only tests real
+//   ac_fixed values, reducing the number of iterations and allowing the user to
+//   test larger bitwidths than test_driver_fixed. 
+//   Number of iterations per run = 2^Wfi.
+
+template <int Wfi, int Ifi, int outWfi, int outIfi>
+int test_driver_real_fixed(
+  double &cumulative_max_error_fixed,
+  const double allowed_error_fixed,
+  const double threshold,
+  bool details = false
+)
+{
+  bool passed = true;
+  bool check_monotonic = true;
+  double max_error_fixed = 0.0; // reset for this run
+
+  ac_fixed<   Wfi,        Ifi, false, AC_TRN, AC_WRAP>   input_fixed;
+  ac_fixed<outWfi,     outIfi, false, AC_TRN, AC_WRAP>   output_fixed;
+
+  double lower_limit_fixed, upper_limit_fixed, step_fixed;
+
+  // set ranges and step size for fixed point testbench
+  step_fixed        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
+  lower_limit_fixed = input_fixed.template set_val<AC_VAL_MIN>().to_double();
+  upper_limit_fixed = input_fixed.template set_val<AC_VAL_MAX>().to_double();
+
+  cout << "TEST: ac_reciprocal_pwl() INPUTS: ";
+  cout.width(38);
+  cout << left << input_fixed.type_name();
+  cout << "OUTPUTS: ";
+  cout.width(38);
+  cout << left << output_fixed.type_name();
+  cout << "RESULT: ";
+
+  // Dump the test details
+  if (details) {
+    cout << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit_fixed = " << lower_limit_fixed << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit_fixed = " << upper_limit_fixed << endl; // LCOV_EXCL_LINE
+    cout << "    step_fixed        = " << step_fixed << endl; // LCOV_EXCL_LINE
+  }
+
+  double old_real_output;
+  double actual_value_fixed;
+
+  bool compare = false;
+  // Fix the real part of the input at 0, and iterate through all possible values of imaginary part based on its type.
+  for (double i = lower_limit_fixed; i <= upper_limit_fixed; i += step_fixed) {
+    input_fixed = i;
+
+    // Pass all inputs at one go
+    test_ac_reciprocal_pwl_real_fixed(input_fixed, output_fixed);
+
+    double this_error_fixed = err_calc(input_fixed, actual_value_fixed, output_fixed, allowed_error_fixed, threshold);
+
+    if (check_monotonic) { monotonicity_check(old_real_output, actual_value_fixed, compare, input_fixed, output_fixed); }
+    if (this_error_fixed > max_error_fixed) {max_error_fixed = this_error_fixed;}
+  }
+
+  passed = (max_error_fixed < allowed_error_fixed);
+
+  if (passed) { printf("PASSED , max error (%f)\n", max_error_fixed); }
+  else        { printf("FAILED , max error (%f)\n", max_error_fixed); } // LCOV_EXCL_LINE
+
+  if (max_error_fixed>cumulative_max_error_fixed) { cumulative_max_error_fixed = max_error_fixed; }
+
+  return 0;
+}
+
 // ==============================================================================
 // Function: test_driver_float()
 // Description: test_driver function for ac_float and ac_complex<ac_float> inputs
 //   and outputs.
+//   Number of iterations per run: 2^(2*Wfl)
 
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 int test_driver_float(
@@ -335,10 +430,113 @@ int test_driver_float(
   double max_error_float = 0.0; // reset for this run
   double max_error_cmplx_float = 0.0; // reset for this run
 
-  ac_float<   Wfl,    Ifl,    Efl, AC_TRN>   input_float;
+  typedef ac_float<   Wfl,    Ifl,    Efl, AC_TRN> T_in;
+  T_in input_float;
   ac_float<outWfl, outIfl, outEfl, AC_TRN>   output_float;
   ac_complex<ac_float<   Wfl,    Ifl,    Efl, AC_TRN> > cmplx_input_float;
   ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > cmplx_output_float;
+
+  double lower_limit_mantissa, upper_limit_mantissa, step_mantissa;
+  double actual_value_float;
+
+  // Declare an ac_fixed variable of same type as mantissa
+  typedef ac_fixed<Wfl, Ifl, true> T_mant;
+  T_mant sample_mantissa;
+
+  lower_limit_mantissa = sample_mantissa.template set_val<AC_VAL_MIN>().to_double();
+  upper_limit_mantissa = sample_mantissa.template set_val<AC_VAL_MAX>().to_double();
+  step_mantissa        = sample_mantissa.template set_val<AC_VAL_QUANTUM>().to_double();
+
+  string empty_str = "";
+
+  cout << "TEST: ac_reciprocal_pwl() AC_FLOAT INPUT: ";
+  cout.width(38);
+  cout << left << input_float.type_name();
+  cout << "AC_FLOAT OUTPUT: ";
+  cout.width(38);
+  cout << left << output_float.type_name();
+  cout << "RESULT: ";
+
+  // Dump the test details
+  if (details) {
+    cout << endl << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout         << "    lower_limit_mantissa = " << lower_limit_mantissa << endl; // LCOV_EXCL_LINE
+    cout         << "    upper_limit_mantissa = " << upper_limit_mantissa << endl; // LCOV_EXCL_LINE
+    cout         << "    step_mantissa        = " << step_mantissa << endl; // LCOV_EXCL_LINE
+  }
+
+  // Declare arrays to store all values of exponent to be tested.
+  const int exp_arr_size = 2*(Efl - 1) + 3;
+  ac_int<Efl, true> sample_exponent;
+  ac_int<Efl, true> sample_exponent_array[exp_arr_size];
+
+  // The first element of the array is the minimum exponent value, the middle element is a zero exponent, and
+  // the last element is the maximum possible value.
+  sample_exponent_array[0].template set_val<AC_VAL_MIN>();
+  sample_exponent_array[Efl] = 0;
+  sample_exponent_array[exp_arr_size - 1].template set_val<AC_VAL_MAX>();
+
+  // All the other elements are set to values that correspond to a one-hot encoding scheme, in which only one
+  // bit of the absolute value of the exponent is set to one. Both negative and positive values are encoded this way.
+  for (int i = (Efl - 2); i >= 0; i--) {
+    sample_exponent = 0;
+    sample_exponent[i] = 1;
+    sample_exponent_array[Efl + i + 1] = sample_exponent;
+    sample_exponent_array[Efl - i - 1] = -sample_exponent;
+  }
+
+  for (int i = 0; i < exp_arr_size; i++) {
+    for (double j = lower_limit_mantissa; j <= upper_limit_mantissa; j += step_mantissa) {
+      for (double k = lower_limit_mantissa; k <= upper_limit_mantissa; k += step_mantissa) {
+        // Normalize real and imaginary mantissas before passing it to testing function.
+        T_in input_float_real((T_mant)j, sample_exponent_array[i]);
+        T_in input_float_imag((T_mant)k, sample_exponent_array[i]);
+        input_float = input_float_real;
+        cmplx_input_float.r() = input_float_real;
+        cmplx_input_float.i() = input_float_imag;
+        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
+
+        double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
+        double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
+
+        if (this_error_float > max_error_float) {max_error_float = this_error_float;}
+        if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
+      }
+    }
+  }
+
+  passed = (max_error_float < allowed_error_float) && (max_error_cmplx_float < allowed_error_float);
+
+  if (passed) { printf("PASSED , max err (%f) (%f complex)\n", max_error_float, max_error_cmplx_float); }
+  else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_float, max_error_cmplx_float); } // LCOV_EXCL_LINE
+
+  if (max_error_float>cumulative_max_error_float) { cumulative_max_error_float = max_error_float; }
+  if (max_error_cmplx_float>cumulative_max_error_cmplx_float) { cumulative_max_error_cmplx_float = max_error_cmplx_float; }
+
+  return 0;
+}
+
+// =================================================================================
+// Function: test_driver_real_float()
+// Description: A specialized case of the above function which only tests real
+//   ac_float values, reducing the number of iterations allowing the user to test 
+//   larger bitwidths than test_driver_float().
+//   Number of iterations per run = 2^Wfl.
+
+template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
+int test_driver_real_float(
+  double &cumulative_max_error_float,
+  const double allowed_error_float,
+  const double threshold,
+  bool details = false
+)
+{
+  bool passed = true;
+  double max_error_float = 0.0; // reset for this run
+
+  typedef ac_float<   Wfl,    Ifl,    Efl, AC_TRN> T_in;
+  T_in input_float;
+  ac_float<outWfl, outIfl, outEfl, AC_TRN>   output_float;
 
   double lower_limit_mantissa, upper_limit_mantissa, step_mantissa;
   double actual_value_float;
@@ -389,34 +587,24 @@ int test_driver_float(
   }
 
   for (int i = 0; i < exp_arr_size; i++) {
-    // Extract a value to be tested for the exponent part.
-    input_float.e = sample_exponent_array[i];
-    cmplx_input_float.r().e = sample_exponent_array[i];
-    cmplx_input_float.i().e = sample_exponent_array[i];
+    for (double j = lower_limit_mantissa; j <= upper_limit_mantissa; j += step_mantissa) {
+      // Normalize the mantissa by using a parameterized ac_float constructor.
+      T_in input_float_norm(ac_fixed<Wfl, Ifl, true>(j), sample_exponent_array[i]);
+      input_float = input_float_norm;
+      test_ac_reciprocal_pwl_real_float(input_float, output_float);
 
-    for (double i = lower_limit_mantissa; i <= upper_limit_mantissa; i += step_mantissa) {
-      for (double j = lower_limit_mantissa; j <= upper_limit_mantissa; j += step_mantissa) {
-        cmplx_input_float.r().m = i;
-        cmplx_input_float.i().m = j;
-        input_float.m = i;
-        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
+      double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
 
-        double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
-        double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
-
-        if (this_error_float > max_error_float) {max_error_float = this_error_float;}
-        if (this_error_complex > max_error_cmplx_float) {max_error_cmplx_float = this_error_complex;}
-      }
+      if (this_error_float > max_error_float) {max_error_float = this_error_float;}
     }
   }
 
-  passed = (max_error_float < allowed_error_float) && (max_error_cmplx_float < allowed_error_float);
+  passed = (max_error_float < allowed_error_float);
 
-  if (passed) { printf("PASSED , max err (%f) (%f complex)\n", max_error_float, max_error_cmplx_float); }
-  else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_float, max_error_cmplx_float); } // LCOV_EXCL_LINE
+  if (passed) { printf("PASSED , max err (%f)\n", max_error_float); }
+  else        { printf("FAILED , max err (%f)\n", max_error_float); } // LCOV_EXCL_LINE
 
   if (max_error_float>cumulative_max_error_float) { cumulative_max_error_float = max_error_float; }
-  if (max_error_cmplx_float>cumulative_max_error_cmplx_float) { cumulative_max_error_cmplx_float = max_error_cmplx_float; }
 
   return 0;
 }
@@ -445,6 +633,17 @@ int main(int argc, char *argv[])
   test_driver_fixed<  9,  4,  true, 60, 30,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
   test_driver_fixed<  9,  2, false, 64, 32, false>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
 
+  // template <int Wfi, int Ifi, int outWfi, int outIfi>
+  test_driver_real_fixed< 21,  8, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  7, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  2, 60, 30>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  1, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21,  0, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21, -1, 60, 30>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 21, -2, 63, 33>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 11, 20, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+  test_driver_real_fixed< 11, 21, 64, 32>(max_error_fixed, allowed_error_fixed, threshold);
+
   // template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
   test_driver_float<  5,  3, 3, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float<  5,  1, 8, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
@@ -455,6 +654,18 @@ int main(int argc, char *argv[])
   test_driver_float<  5,  5, 1, 60, 30, 11>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float< 10,  5, 4, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
   test_driver_float<  5,  3, 5, 64, 32, 10>(max_error_float, cmplx_max_error_float, allowed_error_float, threshold);
+
+  // template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
+  test_driver_real_float< 21,  9, 8, 21,  9,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21,  8, 8, 21,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21,  0, 8, 21,  0,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21,  0, 8, 21, -8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21,  1, 8, 21,  1,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21,  2, 8, 21,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21, -1, 8, 21, -1,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21, -2, 8, 21,  8,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21, 11, 8, 21, -1,  8>(max_error_float, allowed_error_float, threshold);
+  test_driver_real_float< 21, 12, 8, 21,  8,  8>(max_error_float, allowed_error_float, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all data type / bit-width variations:" << endl;

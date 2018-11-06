@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -77,6 +77,9 @@
 //    which 0.26 lies. In this case it would be the third octant. The
 //    (MSB-3 : LSB) of the scaled input helps in determining the index to the
 //    lookup table.
+//
+// Revision History:
+//
 //***************************************************************************
 
 #ifndef _INCLUDED_AC_SINCOS_LUT_H_

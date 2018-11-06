@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -62,6 +62,8 @@
 //    functions provided in the mgc_ac_math library, using an optional template parameter.
 //    Please refer to the documentation for ac_chol_d.h which computes the Cholesky decomposition
 //    and documentation for this file for more details.
+//
+// Revision History:
 //
 //*******************************************************************************************
 

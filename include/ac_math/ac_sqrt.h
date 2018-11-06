@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Fri Oct 26 12:34:31 PDT 2018                        *
+ *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.1                                               *
+ *  Release Build   : 3.1.2                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -81,6 +81,9 @@
 //
 //    This header file also uses the ac_shift_right() and ac_shift_left() functions from
 //    the ac_shift header file.
+//
+// Revision History:
+//    3.1.0  - Fixed lines that could cause OVL violations.
 //
 //*****************************************************************************************
 
