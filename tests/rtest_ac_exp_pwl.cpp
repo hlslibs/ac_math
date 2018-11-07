@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
+ *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.1.2                                               *
  *                                                                        *
@@ -208,6 +208,17 @@ int main(int argc, char *argv[])
   test_driver<  1,  5, false, 61, 33>(max_error_exp, allowed_error, threshold);
   test_driver< 16,  4, false, 64, 32>(max_error_exp, allowed_error, threshold);
   test_driver< 16,  0, false, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 18,  3,  true, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 19,  2,  true, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 20,  5,  true, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 21, -4,  true, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 20,  5,  true, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 20,  5,  true, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 16,  4, false, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 19,  2, false, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 21, -2, false, 60, 30>(max_error_exp, allowed_error, threshold);
+  test_driver< 18,  4, false, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 20,  0, false, 64, 32>(max_error_exp, allowed_error, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;

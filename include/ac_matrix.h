@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
+ *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.1.2                                               *
  *                                                                        *
@@ -389,7 +389,7 @@ T determinant(ac_matrix<T,M,M> &m);
 template <class T, unsigned M>
 T determinant(ac_matrix<T,M,M> &m)
 {
-  //ac_assert(false); // not yet implemented
+  AC_ASSERT(false, "Built-in determinant(ac_matrix<>) not supported for greater than 3x3 matrices");
   T det = 1.0;
   return det;
 }

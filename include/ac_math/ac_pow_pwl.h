@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
+ *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.1.2                                               *
  *                                                                        *
@@ -272,7 +272,7 @@ namespace ac_math
   };
 
   //n_f_b = minimum no of fractional bits used in storing the result of multiplication by log2(e)
-  template<int n_f_b = 9, ac_q_mode pwl_Q = AC_TRN,
+  template<int n_f_b = 11, ac_q_mode pwl_Q = AC_TRN,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
   void ac_exp_pwl(
@@ -301,7 +301,7 @@ namespace ac_math
 
 //=============================================================================
 // Version that allows the return of values.
-  template<class T_out, int n_f_b = 9, ac_q_mode pwl_Q = AC_TRN, class T_in>
+  template<class T_out, int n_f_b = 11, ac_q_mode pwl_Q = AC_TRN, class T_in>
   T_out ac_exp_pwl(
     const T_in &input
   )

@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.1                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 12:41:09 PST 2018                        *
+ *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.1.2                                               *
  *                                                                        *
@@ -37,6 +37,9 @@
 // To compile standalone and run:
 //   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_matarix.cpp -o design
 //   ./design
+
+// Revision History:
+//    3.1.2 - Added test coverage for transpose() member function
 
 #include <ac_fixed.h>
 #include <ac_complex.h>
@@ -347,6 +350,148 @@ int main(int argc, char *argv[])
   TEST_FUNC_AUTO(pwisemult,*,     cACTYPE,4,5,     cACTYPE,4,5,     5,100,    5,200,   cACTYPEmultACTYPE, 4,5,    false)
 
   TEST_MATMULT_AUTO(ref2,  cACTYPE,4,5,   cACTYPE,5,4,       1,1,      1,1,      cACTYPEmultACTYPE,4,4,     false)
+
+  ac_matrix<int,5,7> matA;
+  ac_matrix<int,5,7> matB;
+  ac_matrix<int,5,7> matC;
+  ac_matrix<int,2,3> matD;
+  ac_matrix<int,5,3> matD2;
+
+  // Test Constructor-from-scalar
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << " CTOR(scalar) RESULT: ";
+  bool ctor1flag = true;
+  ac_matrix<int,4,3> matCtor1(724);
+  for (int r=0;r<3;r++) {
+    for (int c=0;c<4;c++) {
+      if (matCtor1(c,r) != 724) { ctor1flag = false; }
+    }
+  }
+  if (ctor1flag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                    { cout << "PASSED" << endl; }
+
+  // Test Constructor-from-other
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << " CTOR(matrix) RESULT: ";
+  bool ctor2flag = true;
+  reset_matrix(matA,5,0,1);
+  ac_matrix<int,5,7> matE(matA);
+  if (matE != matA) { ctor2flag = false; }
+  if (ctor2flag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                    { cout << "PASSED" << endl; }
+
+  // Test operator=()
+  matA = 62456;
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".operator=() RESULT: ";
+  bool opassign_flag = true;
+  for (int r=0;r<7;r++) {
+    for (int c=0; c<5; c++) {
+      if (matA(c,r) != 62456) { opassign_flag = false; }
+    }
+  }
+  if (opassign_flag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                         { cout << "PASSED" << endl; }
+
+  // Testing operator!=()
+  reset_matrix(matA,5,2,3);
+  reset_matrix(matB,5,2,3);
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".operator!=() RESULT: ";
+  bool opneqflag = true;
+  if (matA != matB) { opneqflag = false; }
+  if (opneqflag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                    { cout << "PASSED" << endl; }
+
+  // Testing operator==()
+  matB(4,2) = 765431;
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".operator==() RESULT: ";
+  bool opeqflag = true;
+  if (matA == matB) { opeqflag = false; }
+  if (opeqflag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                   { cout << "PASSED" << endl; }
+
+  // Testing operator==() with wrong-sized matrix
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".operator==(" << matD.type_name() << ") RESULT: ";
+  bool opeqbad = true;
+  if (matA == matD) { opeqbad = false; }
+  if (opeqbad == false)  { cout << "FAILED" << endl; fail_count++; }
+  else                   { cout << "PASSED" << endl; }
+
+  // Testing operator==() with wrong-sized matrix
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".operator==(" << matD2.type_name() << ") RESULT: ";
+  bool opeqbad1 = true;
+  if (matA == matD2) { opeqbad = false; }
+  if (opeqbad1 == false)  { cout << "FAILED" << endl; fail_count++; }
+  else                   { cout << "PASSED" << endl; }
+
+  // Test method sum()
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".sum() RESULT: ";
+  bool sumflag = true;
+  reset_matrix(matA,5,2,3);
+  int sumall = matA.sum();
+  if (sumall != 1435) { sumflag = false; }
+  if (sumflag == false)  { cout << "FAILED" << endl; fail_count++; }
+  else                   { cout << "PASSED" << endl; }
+
+  // Test method scale()
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".scale() RESULT: ";
+  bool scaleflag = true;
+  reset_matrix(matA,7,0,1);
+  reset_matrix(matB,7,0,3);
+  matC = matA.scale(3);
+  if (matB != matC) { scaleflag = false; }
+  if (scaleflag == false)  { cout << "FAILED" << endl; fail_count++; }
+  else                     { cout << "PASSED" << endl; }
+
+  // Test operator() (submatrix)
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".operator()<2,3>(2,2) RESULT: ";
+  reset_matrix(matA,7,10,1);
+  matD = matA.operator()<2,3>(2,2);
+  bool submatflag = true;
+  for (int g=0;g<3;g++) {
+    if (matD(0,g) != 26+g) { submatflag = false; }
+    if (matD(1,g) != 33+g) { submatflag = false; }
+  }
+  if (submatflag == false)  { cout << "FAILED" << endl; fail_count++; }
+  else                      { cout << "PASSED" << endl; }
+
+  // Test transpose
+  bool transpose_flag = true;
+  ac_matrix<int,3,4> orig;
+  cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".transpose() RESULT: ";
+  for (int row=0;row<4;row++) {
+    for (int col=0;col<3;col++) {
+      orig(col,row) = col*100+row;
+    }
+  }
+  ac_matrix<int,4,3> transposed = orig.transpose();
+  // check transposed
+  for (int row=0;row<4;row++) {
+    for (int col=0;col<3;col++) {
+      if (orig(col,row) != transposed(row,col)) { transpose_flag = false; }
+    }
+  }
+  if (transpose_flag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                         { cout << "PASSED" << endl; }
+
+  // Test determinant() function for 2x2 ac_matrix
+  ac_matrix<int,2,2> matF;
+  cout << "Testing: determinant(" << std::left << setw(fw) << matF.type_name() << ") RESULT: ";
+  bool detflag = true;
+  reset_matrix(matF,2,2,3);
+  int det = determinant(matF);
+  if (det != -18) { detflag = false; }
+  if (detflag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                   { cout << "PASSED" << endl; }
+
+  // Test determinant() function for 3x3 ac_matrix
+  ac_matrix<int,3,3> matG;
+  cout << "Testing: determinant(" << std::left << setw(fw) << matG.type_name() << ") RESULT: ";
+  bool detflag1 = true;
+  reset_matrix(matG,3,2,3);
+  matG(0,0) = 10;
+  int det2 = determinant(matG);
+  if (det2 != -216) { detflag1 = false; }
+  if (detflag1 == false) { cout << "FAILED" << endl; fail_count++; }
+  else                   { cout << "PASSED" << endl; }
+  
   if (fail_count) {
     cout << "    Error: One or more unit tests failed" << endl;
   } else {
