@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -194,6 +194,8 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_exp_pwl() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
+  test_driver<  9,  3,  true, 64, 32>(max_error_exp, allowed_error, threshold);
+  test_driver< 10,  2, false, 64, 32>(max_error_exp, allowed_error, threshold);
   test_driver< 12,  3,  true, 64, 32>(max_error_exp, allowed_error, threshold);
   test_driver<  4,  2,  true, 64, 32>(max_error_exp, allowed_error, threshold);
   test_driver<  3,  5,  true, 64, 32>(max_error_exp, allowed_error, threshold);

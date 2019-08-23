@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -85,7 +85,8 @@
 //    with a type that is not implemented will result in a compile error.
 //
 // Revision History:
-//    2.0.10 - Implemented code change to use an XW + 1 bit adder instead of an XW + 2 bit option.
+//    3.1.0  - bug51400 - Modified code to generate a smaller adder during synthesis.
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //*****************************************************************************************
 

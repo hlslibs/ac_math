@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -100,12 +100,14 @@ int test_driver(
   // set ranges and step size for testbench
   ac_fixed<Wfi, Ifi, false> lower_limit;
   // If output is unsigned, make sure that the input is always greater than or equal to 1
-  // by setting the lower_limit of the testbench to 1. This is because input values lesser
-  // than 1 correspond to a negative output, which can't be stored in unsigned variables. 
-  // Also, keep in mind that the output can only ever be negative if the
-  // input word-width is greater than the integer width.
-  if(outSfi || (Wfi <= Ifi)) { lower_limit = input.template set_val<AC_VAL_MIN>(); }
-  else                       { lower_limit = 1.0; }
+  // by setting the lower_limit of the testbench to 1 or AC_VAL_QUANTUM, whichever is
+  // greater. This is because input values lesser than 1 correspond to a negative output,
+  // which can't be stored in unsigned variables.
+  if(outSfi) { lower_limit = input.template set_val<AC_VAL_MIN>(); }
+  else {
+    input.template set_val<AC_VAL_QUANTUM>();
+    lower_limit = AC_MAX(1.0, input);
+  }
   ac_fixed<Wfi, Ifi, false> upper_limit = input.template set_val<AC_VAL_MAX>();
   ac_fixed<Wfi, Ifi, false> step        = input.template set_val<AC_VAL_QUANTUM>();
 
@@ -212,12 +214,20 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_log_pwl() - Allowed error " << allowed_error << endl;
 
   //template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
-  test_driver<20, 12, 64, 32, true>(max_error_log, allowed_error);
-  test_driver<20,  8, 64, 32, true>(max_error_log, allowed_error);
-  test_driver<20, 30, 64, 32, true>(max_error_log, allowed_error);
-  test_driver<20, 20, 64, 32, true>(max_error_log, allowed_error);
-  test_driver<20, -2, 64, 32, true>(max_error_log, allowed_error);
-  test_driver<20, -3, 64, 32, true>(max_error_log, allowed_error);
+  test_driver<10,  4, 64, 32,  true>(max_error_log, allowed_error);
+  test_driver< 9,  3, 64, 32,  true>(max_error_log, allowed_error);
+
+  test_driver<20, 12, 64, 32,  true>(max_error_log, allowed_error);
+  test_driver<20,  8, 64, 32,  true>(max_error_log, allowed_error);
+  test_driver<20, 30, 64, 32,  true>(max_error_log, allowed_error);
+  test_driver<20, 20, 64, 32,  true>(max_error_log, allowed_error);
+  test_driver<20, -2, 64, 32,  true>(max_error_log, allowed_error);
+  test_driver<20, -3, 64, 32,  true>(max_error_log, allowed_error);
+
+  test_driver<20, 12, 64, 32, false>(max_error_log, allowed_error);
+  test_driver<20,  8, 64, 32, false>(max_error_log, allowed_error);
+  test_driver<20, 30, 64, 32, false>(max_error_log, allowed_error);
+  test_driver<20, 20, 64, 32, false>(max_error_log, allowed_error);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;

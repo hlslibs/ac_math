@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -756,6 +756,10 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_chol_d(), for scalar and complex datatypes - allowed_error_pwl = " << allowed_error_pwl << ", allowed_error_accurate = " << allowed_error_accurate << endl;
 
   // template <unsigned M, unsigned N, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+  test_driver_pwl< 7,  7, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver_pwl< 8,  8, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver_pwl< 9,  9, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver_pwl<10, 10, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
   test_driver_pwl<10, 10, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
   // test_driver_pwl<10, 11, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl); // (corner case, will fail)
   test_driver_pwl<10, 12, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
@@ -773,6 +777,9 @@ int main(int argc, char *argv[])
   test_driver_pwl<13, 15, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
   test_driver_pwl<13, 16, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
 
+  test_driver_accurate< 7,  7, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver_accurate< 8,  8, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver_accurate< 9,  9, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
   test_driver_accurate<10, 10, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
   test_driver_accurate<10, 11, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
   test_driver_accurate<10, 12, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -73,6 +73,7 @@
 //    with a type that is not implemented will result in a compile error.
 //
 // Revision History:
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //*****************************************************************************************
 
@@ -470,7 +471,18 @@ namespace ac_math
       ac_fixed<ZW+1+OFW+1,OFW+1,true> offset;
       offset = ln2_function<ZW+1>();
       offset *= expret;
-      z = offset + zc;
+      // The intermediate variable in this case has to account for the fact that
+      // for inputs of unity, the magnitude of "zc" can slightly exceed that for
+      // "offset", with "zc" being negative. Hence, the addition of "zc" and "offset"
+      // results in a slightly negative value, which is enough to cause a highly
+      // undesirable output if the output type is unsigned.
+      // To take that into account, the intermediate variable storing the addition result
+      // is of a saturating type if the output type is unsigned, in order to saturate when
+      // encountering negative values.
+      const ac_o_mode z_inter_o_mode = ZS ? AC_WRAP : AC_SAT;
+      ac_fixed<ZW,ZI,ZS,ZQ,z_inter_o_mode> z_inter;
+      z_inter = offset + zc;
+      z = z_inter;
     }
     if (BASE == AcLogRR::BASE_2) {
       ac_fixed<ZW+2,2,true> zc;

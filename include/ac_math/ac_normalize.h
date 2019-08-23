@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -77,6 +77,7 @@
 //    with a type that is not implemented will result in a compile error.
 //
 // Revision History:
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //    Niramay Sanghvi : Aug 18 2017 : Used OR logic instead of comparison.
 //    Niramay Sanghvi : Aug 10 2017 : Added support for signed ac_complex<ac_fixed>.
 //    Niramay Sanghvi : Aug 07 2017 : Added support for unsigned ac_complex<ac_fixed>.

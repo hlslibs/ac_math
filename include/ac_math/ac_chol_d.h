@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -52,6 +52,7 @@
 //    functions from the ac_math header files.
 //
 // Revision History:
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //    Niramay Sanghvi : Nov 24 2017 : Used friend function to handle ac_matrix inputs/outputs.
 //    Niramay Sanghvi : Nov 12 2017 : Added overloaded functions to handle standard C arrays.
 //    Niramay Sanghvi : Oct 02 2017 : Incorporated the use of the inverse_sqrt PWL function.
@@ -146,6 +147,14 @@ using namespace std;
 
 namespace ac_math
 {
+  template<class T_out, int W1>
+  T_out ind_conv(const ac_int<W1, false> &i, const ac_int<W1, false> &j)
+  {
+    // Modified index = (i*(i + 1)/2) + j
+    T_out index = ((i*(i + 1))>>1) + j;
+    return index;
+  }
+
   template<bool use_pwl = false,
            int delta_w = 0, int delta_i = 0, ac_q_mode int_Q = AC_RND, ac_o_mode int_O = AC_SAT,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
@@ -160,7 +169,16 @@ namespace ac_math
     bool pos_def = true;
 
     typedef ac_fixed<outW, outI, outS, outQ, outO> T_out;
-    T_out L_int[M][M];
+    // The number of non-zero elements in a square lower triangular matrix is (M*(M + 1)/2).
+    // Hence, the array for storing the results of intermediate calculations should also be of that size.
+    // The size of the resulting array is roughly half of what it would've been if the area was 2D square (M^2)
+    // In order to map the indexing operations from a square matrix to this lower triangular matrix, the
+    // intermediate matrix is one-dimensional with the above size, and any indexing operation for location
+    // (i, j) is modified for the 1D array access by using the formula in the ind_conv() function.
+    static const int L_INT_SIZE = (M*(M + 1))/2;
+    typedef ac_int<ac::nbits<M>::val, false> index_type;
+    typedef ac_int<ac::nbits<L_INT_SIZE - 1>::val, false> t_1D;
+    T_out L_int_1D[L_INT_SIZE];
     // Define type for the intermediate variables
     // Add an extra bit to W and I for intermediate variable type if the output is unsigned, and make sure that i_s_t is signed.
     typedef class ac_fixed<outW + delta_w, outI + delta_i, true, int_Q, int_O> i_s_t;
@@ -169,12 +187,15 @@ namespace ac_math
     typedef ac_fixed<i_s_t::width, i_s_t::i_width, false, i_s_t::q_mode, i_s_t::o_mode> i_s_t_u;
 
     ARRAY_AC_FIXED_L_COL:
-    for (unsigned j = 0; j < M; j++) {
+    for (index_type j = 0; j < M; j++) {
       i_s_t sum_Ajj_Ljk_sq;
       sum_Ajj_Ljk_sq = A[j][j];
       ARRAY_AC_FIXED_LJJ_K:
-      for (unsigned k = 0; k < M; k++) {
-        sum_Ajj_Ljk_sq -= (k < j) ? L_int[j][k] * L_int[j][k] : 0;
+      for (index_type k = 0; k < M; k++) {
+        // Break statement is used to avoid incorrect accesses to L_int_1D.
+        if (k == j) { break; }
+        t_1D act_ind = ind_conv<t_1D>(j, k);
+        sum_Ajj_Ljk_sq -= L_int_1D[act_ind] * L_int_1D[act_ind];
       }
 
       // Use a macro to activate the AC_ASSERT
@@ -191,13 +212,13 @@ namespace ac_math
       if (use_pwl) {
         // Use the PWL functions
         ac_math::ac_sqrt_pwl((i_s_t_u) sum_Ajj_Ljk_sq, int_Ljj);
-        L_int[j][j] = int_Ljj;
+        L_int_1D[ind_conv<t_1D>(j, j)] = int_Ljj;
         // Store inverse of diagonal element in separate variable (i.e. "recip_Ljj") for later calculations.
         ac_math::ac_inverse_sqrt_pwl((i_s_t_u) sum_Ajj_Ljk_sq, recip_Ljj);
       } else {
         // Use accurate math functions.
         ac_math::ac_sqrt((i_s_t_u)sum_Ajj_Ljk_sq, int_Ljj);
-        L_int[j][j] = int_Ljj;
+        L_int_1D[ind_conv<t_1D>(j, j)] = int_Ljj;
         // Make sure that every variable to be passed to the div function has the same sign.
         static const ac_fixed<1, 1, false> unity = 1;
         // Store inverse of diagonal element in separate variable (i.e. "recip_Ljj") for later calculations.
@@ -212,35 +233,32 @@ namespace ac_math
 
       // Initializing non-diagonal elements.
       ARRAY_AC_FIXED_L_ROW:
-      for (unsigned i = 0; i < M; i++) {
+      for (index_type i = M - 1; i > 0; i--) {
         i_s_t sum_Aij_Lik_Ljk;
         sum_Aij_Lik_Ljk = A[i][j];
         ARRAY_AC_FIXED_LIJ_K:
-        for (unsigned k = 0; k < M; k++) {
-          sum_Aij_Lik_Ljk -= (k < j) ? L_int[i][k] * L_int[j][k] : 0;
+        for (index_type k = 0; k < M; k++) {
+          // Break statement is used to avoid incorrect accesses to L_int_1D.
+          if(k == j) { break; }
+          sum_Aij_Lik_Ljk -= L_int_1D[ind_conv<t_1D>(i, k)] * L_int_1D[ind_conv<t_1D>(j, k)];
+          //sum_Aij_Lik_Ljk -= L_int[i][k] * L_int[j][k];
         }
-        // Keep diagonal elements as they are
-        // Initialize non-diagonal elements above diagonal to 0
-        // Initialize non-diagonal elements below diagonal to appropriate calculated value.
-        if (i != j) { L_int[i][j] = (i > j) ? (T_out)(recip_Ljj * sum_Aij_Lik_Ljk) : 0; }
+        // Break statement is used to avoid incorrect accesses to L_int_1D.
+        if(i == j) { break; }
+        L_int_1D[ind_conv<t_1D>(i, j)] = (T_out)(recip_Ljj * sum_Aij_Lik_Ljk);
       }
     }
 
-    if (!pos_def) {
-      // This functionality is provided in case the input matrix is not positive definite, and the AC_ASSERT
-      // did not kick in, for whatever reason. In such a case, the output matrix should be set to zero.
-      ARRAY_AC_FIXED_SET_OUTPUT_ZERO_ROW:
-      for (unsigned i = 0; i < M; i++) {
-        ARRAY_AC_FIXED_SET_OUTPUT_ZERO_COL:
-        for (unsigned j = 0; j < M; j++) { L[i][j] = 0; }
-      }
-    } else {
-      // If the array is positive definite, copy over the contents of the intermediate array to the final
-      // output array.
-      ARRAY_AC_FIXED_COPY_INT_ROW:
-      for (unsigned i = 0; i < M; i++) {
-        ARRAY_AC_FIXED_COPY_INT_COL:
-        for (unsigned j = 0; j < M; j++) { L[i][j] = L_int[i][j]; }
+    ARRAY_AC_FIXED_OUTPUT_COPY_ROW:
+    for (index_type i = 0; i < M; i++) {
+      ARRAY_AC_FIXED_SET_OUTPUT_COPY_COL:
+      for (index_type j = 0; j < M; j++) {
+        // If L is not positive definite, all elements should be initialized to zero.
+        if(j > i || !pos_def) { L[i][j] = 0; }
+        // If L is positive definite, only initialize elements above the diagonal to zero.
+        else {
+          L[i][j] = L_int_1D[ind_conv<t_1D>(i, j)];
+        }
       }
     }
   }
@@ -313,9 +331,17 @@ namespace ac_math
     // Make this go false if the input matrix is not positive definite (checking is done later)
     bool pos_def = true;
 
-    ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > zero_complex(0, 0);
     typedef ac_fixed<outW, outI, outS, outQ, outO> T_out;
-    ac_complex<T_out> L_int[M][M];
+    // The number of non-zero elements in a square lower triangular matrix is (M*(M + 1)/2).
+    // Hence, the array for storing the results of intermediate calculations should also be of that size.
+    // The size of the resulting array is roughly half of what it would've been if the area was 2D square (M^2)
+    // In order to map the indexing operations from a square matrix to this lower triangular matrix, the
+    // intermediate matrix is one-dimensional with the above size, and any indexing operation for location
+    // (i, j) is modified for the 1D array access by using the formula in the ind_conv() function.
+    static const int L_INT_SIZE = (M*(M + 1))/2;
+    typedef ac_int<ac::nbits<M>::val, false> index_type;
+    typedef ac_int<ac::nbits<L_INT_SIZE - 1>::val, false> t_1D;
+    ac_complex<T_out> L_int_1D[L_INT_SIZE];
     // Define type for the intermediate variables
     // Add an extra bit to W and I for intermediate variable type if the output is unsigned, and make sure that i_s_t is signed.
     typedef ac_fixed<outW + delta_w, outI + delta_i, true, int_Q, int_O> i_s_t;
@@ -323,12 +349,14 @@ namespace ac_math
     typedef ac_fixed<i_s_t::width, i_s_t::i_width, false, i_s_t::q_mode, i_s_t::o_mode> i_s_t_u;
 
     ARRAY_AC_COMP_AC_FIXED_L_COL:
-    for (unsigned j = 0; j < M; j++) {
+    for (index_type j = 0; j < M; j++) {
       i_s_t sum_Ajj_Ljk_sq;
       sum_Ajj_Ljk_sq = A[j][j].r();
       ARRAY_AC_COMP_AC_FIXED_LJJ_K:
-      for (unsigned k = 0; k < M; k++) {
-        sum_Ajj_Ljk_sq -= (k < j) ? L_int[j][k].mag_sqr() : 0;
+      for (index_type k = 0; k < M; k++) {
+        // Break statement is used to avoid incorrect accesses to L_int_1D.
+        if (k == j) { break; }
+        sum_Ajj_Ljk_sq -= L_int_1D[ind_conv<t_1D>(j, k)].mag_sqr();
       }
 
       // Use a macro to activate the AC_ASSERT
@@ -350,16 +378,18 @@ namespace ac_math
         // Initialize diagonal elements. Since the diagonal elements are real, initialize the imaginary part to 0.
         // Only bother with the real part, as the diagonal elements of the decomposed matrix are always real.
         ac_math::ac_sqrt_pwl((i_s_t_u) sum_Ajj_Ljk_sq, int_Ljj);
-        L_int[j][j].r() = int_Ljj;
-        L_int[j][j].i() = 0;
+        t_1D act_ind = ind_conv<t_1D>(j, j);
+        L_int_1D[act_ind].r() = int_Ljj;
+        L_int_1D[act_ind].i() = 0;
         // Store inverse of real part of diagonal element in separate variable (i.e. "recip_Ljj") for later calculations.
         ac_math::ac_inverse_sqrt_pwl((i_s_t_u) sum_Ajj_Ljk_sq, recip_Ljj);
       } else {
         // Use accurate math functions.
         // Only bother with the real part, as the diagonal elements of the decomposed matrix are always real.
         ac_math::ac_sqrt((i_s_t_u)sum_Ajj_Ljk_sq, int_Ljj);
-        L_int[j][j].r() = int_Ljj;
-        L_int[j][j].i() = 0;
+        t_1D act_ind = ind_conv<t_1D>(j, j);
+        L_int_1D[act_ind].r() = int_Ljj;
+        L_int_1D[act_ind].i() = 0;
         // Make sure that every variable to be passed to the div function has the same sign.
         static const ac_fixed<1, 1, false> unity = 1;
         // Store inverse of diagonal element in separate variable (i.e. "recip_Ljj") for later calculations.
@@ -375,43 +405,35 @@ namespace ac_math
 
       // Initializing non-diagonal elements.
       ARRAY_AC_COMP_AC_FIXED_L_ROW:
-      for (unsigned i = 0; i < M; i++) {
+      for (index_type i = M - 1; i > 0; i--) {
         ac_complex<i_s_t> sum_Aij_Lik_Ljk;
         sum_Aij_Lik_Ljk = A[i][j];
         ARRAY_AC_COMP_AC_FIXED_LIJ_K:
-        for (unsigned k = 0; k < M; k++) {
-          sum_Aij_Lik_Ljk -= (k < j) ? L_int[i][k] * L_int[j][k].conj() : 0;
+        for (index_type k = 0; k < M; k++) {
+          // Break statement is used to avoid incorrect accesses to L_int_1D.
+          if (k == j) { break; }
+          sum_Aij_Lik_Ljk -= L_int_1D[ind_conv<t_1D>(i, k)] * L_int_1D[ind_conv<t_1D>(j, k)].conj();
+          //sum_Aij_Lik_Ljk -= L_int[i][k] * L_int[j][k].conj();
         }
-        // Keep diagonal elements as they are
-        // Initialize non-diagonal elements above diagonal to 0
-        // Initialize non-diagonal elements below diagonal to appropriate calculated value.
-        if (i != j) {
-          L_int[i][j].r() = (i > j) ? (T_out)(recip_Ljj * sum_Aij_Lik_Ljk.r()) : 0;
-          L_int[i][j].i() = (i > j) ? (T_out)(recip_Ljj * sum_Aij_Lik_Ljk.i()) : 0;
-        }
+        // Break statement is used to avoid incorrect accesses to L_int_1D.
+        if(i == j) { break; }
+        t_1D act_ind = ind_conv<t_1D>(i, j);
+        L_int_1D[act_ind].r() = (T_out)(recip_Ljj * sum_Aij_Lik_Ljk.r());
+        L_int_1D[act_ind].i() = (T_out)(recip_Ljj * sum_Aij_Lik_Ljk.i());
       }
     }
 
-    if (!pos_def) {
-      // This functionality is provided in case the input matrix is not positive definite, and the AC_ASSERT
-      // did not kick in, for whatever reason. In such a case, the output matrix should be set to zero.
-      ARRAY_AC_COMP_AC_FIXED_SET_OUTPUT_ZERO_ROW:
-      for (unsigned i = 0; i < M; i++) {
-        ARRAY_AC_COMP_AC_FIXED_SET_OUTPUT_ZERO_COL:
-        for (unsigned j = 0; j < M; j++) {
-          L[i][j].r() = 0;
-          L[i][j].i() = 0;
-        }
-      }
-    } else {
-      // If the array is positive definite, copy over the contents of the intermediate array to the final
-      // output array.
-      ARRAY_AC_COMP_AC_FIXED_COPY_INT_ROW:
-      for (unsigned i = 0; i < M; i++) {
-        ARRAY_AC_COMP_AC_FIXED_COPY_INT_COL:
-        for (unsigned j = 0; j < M; j++) { L[i][j] = L_int[i][j]; }
+    ARRAY_AC_COMP_AC_FIXED_SET_OUTPUT_COPY_ROW:
+    for (index_type i = 0; i < M; i++) {
+      ARRAY_AC_COMP_AC_FIXED_SET_OUTPUT_COPY_COL:
+      for (index_type j = 0; j < M; j++) {
+        // If input matrix is not positive definite, all elements should be initialized to zero.
+        // If input matrix is positive definite, only initialize elements above the diagonal to zero.
+        if(j > i || !pos_def) { L[i][j] = 0; }
+        else { L[i][j] = L_int_1D[ind_conv<t_1D>(i, j)]; }
       }
     }
+
   }
 } // namespace ac_math
 

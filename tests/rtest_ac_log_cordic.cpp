@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -99,7 +99,16 @@ int test_driver(
   T_out log_out;
 
   // set ranges and step size for testbench
-  ac_fixed<Wfi, Ifi, false> lower_limit = input.template set_val<AC_VAL_MIN>();
+  ac_fixed<Wfi, Ifi, false> lower_limit;
+  // If output is unsigned, make sure that the input is always greater than or equal to 1
+  // by setting the lower_limit of the testbench to 1 or AC_VAL_QUANTUM, whichever is
+  // greater. This is because input values lesser than 1 correspond to a negative output,
+  // which can't be stored in unsigned variables.
+  if(outSfi) { lower_limit = input.template set_val<AC_VAL_MIN>(); }
+  else {
+    input.template set_val<AC_VAL_QUANTUM>();
+    lower_limit = AC_MAX(1.0, input);
+  }
   ac_fixed<Wfi, Ifi, false> upper_limit = input.template set_val<AC_VAL_MAX>();
   ac_fixed<Wfi, Ifi, false> step        = input.template set_val<AC_VAL_QUANTUM>();
 
@@ -179,22 +188,33 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_log_cordic() - Allowed error " << allowed_error << endl;
 
   //template <int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
-  test_driver<16, -5, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16, -4, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16, -3, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16, -2, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16, -1, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  0, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  1, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  2, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  3, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  4, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  5, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  6, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  7, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  8, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver<16,  9, 40, 12, true>(max_error_log, allowed_error, threshold);
-  test_driver< 8, 12, 40, 12, true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  1, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  2, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  3, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  4, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  5, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  6, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  7, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  8, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver<16,  9, 40, 12, false>(max_error_log, allowed_error, threshold);
+  test_driver< 8, 12, 40, 12, false>(max_error_log, allowed_error, threshold);
+
+  test_driver<16, -5, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -4, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -3, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -2, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16, -1, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  0, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  1, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  2, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  3, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  4, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  5, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  6, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  7, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  8, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver<16,  9, 40, 12,  true>(max_error_log, allowed_error, threshold);
+  test_driver< 8, 12, 40, 12,  true>(max_error_log, allowed_error, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;

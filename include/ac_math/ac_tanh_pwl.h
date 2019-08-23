@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -72,7 +72,8 @@
 //    result in a compile-time error.
 //
 // Revision History:
-//    2.0.10 - Made changes to comments and formatting for tanh pwl function.
+//    3.1.0  - The file was renamed from ac_hyperbolic_tan_pwl.h to ac_tanh_pwl.h
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //*************************************************************************************************
 
 #ifndef _INCLUDED_AC_TANH_PWL_H_

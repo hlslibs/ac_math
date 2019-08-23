@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -158,6 +158,7 @@ namespace ac_math
 
     // Initialization for PWL LUT
     const unsigned n_segments_lut = 4;
+    const int int_bits = ac::nbits<n_segments_lut - 1>::val;
     // The number of fractional bits for the LUT values is chosen by first finding the maximum absolute error over the domain of the PWL
     // when double-precision values are used for LUT values. This error will correspond to a number of fractional bits that are always
     // guaranteed to be error-free, for fixed-point PWL outputs.
@@ -166,8 +167,15 @@ namespace ac_math
     // The number of fractional bits hereafter used to store the LUT values is nbits + 2.
     // For this particular PWL implementation, the number of fractional bits is 9.
     // Initializing the LUT arrays
-    static const ac_fixed<10, 0, false> m_lut[n_segments_lut] = {.189453125, .224609375, 0.2666015625, .3173828125};
-    static const ac_fixed<11, 1, false> c_lut[n_segments_lut] = {.998046875, 1.1875, 1.412109375, 1.6787109375};
+    const int n_frac_bits = 10;
+    // The intermediate values for the scaled input will have the number of fractional bits set to n_frac_bits or the number of fractional bits in the
+    // input minus 2, whichever is lower. The subtraction of 2 is done in order to take the scaling-related left-shift by 2 into account.
+    // This value for the number of fractional bits will changed if the PWL implementation changes; the value provided by default works with an 4-segment
+    // PWL that covers the domain of [0, 1)
+    // In order to ensure that the intermediate variables always have a length >= 1 and thereby prevent a compile-time error, AC_MAX is used.
+    const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W - I - 2));
+    static const ac_fixed<n_frac_bits, 0, false> m_lut[n_segments_lut] = {.189453125, .224609375, 0.2666015625, .3173828125};
+    static const ac_fixed<n_frac_bits + 1, 1, false> c_lut[n_segments_lut] = {.998046875, 1.1875, 1.412109375, 1.6787109375};
 
     // End of code outputted by ac_pow_pwl_lutgen.cpp
 
@@ -176,13 +184,13 @@ namespace ac_math
     // with a different number of segments/domain should be scaled according to the formula: x_in_sc = (input_frac_part - x_min_lut) * sc_constant_lut
     // where sc_constant_lut = n_segments_lut / (x_max_lut - x_min_lut)
     // (x_min_lut and and x_max_lut are the lower and upper limits of the domain)
-    ac_fixed<12, 2, false> x_in_sc = ((ac_fixed<14, 2, false>)input_frac_part) << 2;
-    ac_fixed<12 - 2, 0, false> x_in_sc_frac;
+    ac_fixed<sc_input_frac_bits + int_bits, int_bits, false> x_in_sc = ((ac_fixed<sc_input_frac_bits + int_bits + 2, int_bits, false>)input_frac_part) << 2;
+    ac_fixed<sc_input_frac_bits, 0, false> x_in_sc_frac;
     // Slice out the fractional part from the scaled input, store it in another variable.
-    x_in_sc_frac.set_slc(0, x_in_sc.template slc<12 - 2>(0));
+    x_in_sc_frac.set_slc(0, x_in_sc.template slc<sc_input_frac_bits>(0));
     // The integer part of the scaled input is the index of the LUT table
-    ac_int<2, false> index = x_in_sc.to_int();
-    typedef ac_fixed<21, 1, false, pwl_Q> output_pwl_type;
+    ac_int<int_bits, false> index = x_in_sc.to_int();
+    typedef ac_fixed<sc_input_frac_bits + n_frac_bits + 1, 1, false, pwl_Q> output_pwl_type;
     output_pwl_type output_pwl = m_lut[index] * x_in_sc_frac + c_lut[index];
 
     // Shift left by the integer part of the input to cancel out the previous normalization.

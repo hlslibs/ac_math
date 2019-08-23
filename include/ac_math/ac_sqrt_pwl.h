@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.1                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -80,7 +80,10 @@
 //    function from ac_shift.h
 //
 // Revision History:
-//    2.0.10 - bug51145
+//    3.1.2  - Improved bitwidth calculations for PWL. Removed direct access to ac_float
+//             data members. Fixed bug in output near normalized 1.
+//    3.1.0  - bug51145 - Improved ac_float outputting.
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //
 // *****************************************************************************************
 
@@ -170,24 +173,30 @@ namespace ac_math
     // End of code outputted by ac_sqrt_pwl_lutgen.cpp
 
     const int int_bits = ac::nbits<n_segments_lut - 1>::val;
+    // The intermediate values for the scaled input will have the number of fractional bits set to n_frac_bits or the bitwidth in the
+    // input minus 3, whichever is lower. The subtraction of 3 is done in order to take the scaling-related left-shift by 3 into account.
+    // This value for the number of fractional bits will change if the PWL implementation changes; the value provided by default works with an 4-segment
+    // PWL that covers the domain of [0.5, 1)
+    // In order to ensure that the intermediate variables always have a length >= 1 and thereby prevent a compile-time error, AC_MAX is used.
+    const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W - 3));
     // input_sc is scaled value of input, which lies in the range of [0, 4)
     // Scaled input is computed from the normalized input value
     // Note that this equation is optimized for a domain of [0.5, 1) and 4 segments. Any other PWL implementation
     // with a different number of segments/domain should be scaled according to the formula: x_in_sc = (normalized_input - x_min_lut) * sc_constant_lut
     // where sc_constant_lut = n_segments_lut / (x_max_lut - x_min_lut)
     // (x_min_lut and and x_max_lut are the lower and upper limits of the domain)
-    ac_fixed<int_bits + n_frac_bits, int_bits, false> input_sc = ((ac_fixed<int_bits + n_frac_bits + 3, int_bits, false>)(normalized_input - x_min_lut)) << 3;
+    ac_fixed<int_bits + sc_input_frac_bits, int_bits, false> input_sc = ((ac_fixed<int_bits + sc_input_frac_bits + 3, int_bits, false>)(normalized_input - x_min_lut)) << 3;
     // Take out the fractional bits of the scaled input
-    ac_fixed<n_frac_bits, 0, false> input_sc_frac;
-    input_sc_frac.set_slc(0, input_sc.template slc<n_frac_bits>(0));
+    ac_fixed<sc_input_frac_bits, 0, false> input_sc_frac;
+    input_sc_frac.set_slc(0, input_sc.template slc<sc_input_frac_bits>(0));
     // index is taken as integer part of scaled value and used for selection of m and c values
     ac_int <int_bits, false> index = input_sc.to_int();
-    // All the variables declared hereafter use (2*n_frac_bits - 1) fractional bits. This is because, as explained earlier, only 11 fractional bits
+    // All the variables declared hereafter use (sc_input_frac_bits + n_frac_bits - 1) fractional bits. This is because, as explained earlier, only 11 fractional bits
     // are needed earlier for storing slope values. For any other implementation with a different number of segments/domain, the user is advised to consider
-    // using 2*n_frac_bitsr of fractional bits.
+    // using (sc_input_frac_bits + n_frac_bits) fractional bits.
 
     // normalized output provides square root of normalized value
-    ac_fixed <2*n_frac_bits, 1, false, pwlQ> normalized_output = m[index]*input_sc_frac + c[index];
+    ac_fixed <sc_input_frac_bits + n_frac_bits, 1, false, pwlQ> normalized_output = m[index]*input_sc_frac + c[index];
 
     // store the initial exponent value in temporary variable
     normalized_exp_temp1 = normalized_exp;
@@ -197,7 +206,7 @@ namespace ac_math
     normalized_exp = normalized_exp >> 1;
     // The precision given below will ensure that there is no precision lost in the assignment to m1, hence rounding for the variable is switched off by default.
     // However, if the user uses less fractional bits and turn rounding on instead, they are welcome to do so by giving a different value for pwlQ.
-    ac_fixed <2*n_frac_bits, 1, false, pwlQ> m1 = (normalized_exp_temp1 % 2 == 0) ? normalized_output : normalized_output_temp;
+    ac_fixed <2*n_frac_bits, 1, false, pwlQ> m1 = (normalized_exp_temp1 % 2 == 0) ? (ac_fixed <2*n_frac_bits, 1, false, pwlQ>)normalized_output : normalized_output_temp;
 
     // exponent and normalized output are combined to get the final ac_fixed value, which is written at memory location of output
     ac_math::ac_shift_left (m1, normalized_exp, output_temp);
