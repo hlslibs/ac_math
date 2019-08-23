@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 10:38:50 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -224,24 +224,34 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_tan_pwl() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, int outWfi, int outIfi>
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 50   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 55   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 60   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 65   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 70   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 75   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 80   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 81   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 82   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 83   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 84   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 85   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 86   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 87   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 88   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 89   );
-  test_driver<22,  4, 64, 20>(max_error_tan, allowed_error, threshold, 89.18);
+  test_driver< 8,  2, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
+  test_driver< 9,  1, 64, 20>(max_error_tan, allowed_error, threshold, 50   );
+  test_driver<10,  3, 64, 20>(max_error_tan, allowed_error, threshold, 55   );
+  test_driver< 8,  2, 64, 20>(max_error_tan, allowed_error, threshold, 75   );
+
+  test_driver<23,  5, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
+  test_driver<23,  5, 64, 20>(max_error_tan, allowed_error, threshold, 50   );
+  test_driver<23,  5, 64, 20>(max_error_tan, allowed_error, threshold, 55   );
+  test_driver<23,  5, 64, 20>(max_error_tan, allowed_error, threshold, 75   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 50   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 55   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 60   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 65   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 70   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 75   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 80   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 81   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 82   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 83   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 84   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 85   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 86   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 87   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 88   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 89   );
+  test_driver<25,  2, 64, 20>(max_error_tan, allowed_error, threshold, 89.18);
+
   test_driver<22, -2, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
   test_driver<22, -3, 64, 20>(max_error_tan, allowed_error, threshold, 45   );
 

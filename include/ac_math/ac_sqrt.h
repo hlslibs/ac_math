@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 10:38:50 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -84,6 +84,7 @@
 //
 // Revision History:
 //    3.1.0  - Fixed lines that could cause OVL violations.
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //*****************************************************************************************
 

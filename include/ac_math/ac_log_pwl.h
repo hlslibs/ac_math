@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 10:38:50 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -81,6 +81,8 @@
 //    This file uses the normalization function from ac_normalize.h
 //
 // Revision History:
+//    3.1.2  - Improved bitwidth calculations for ac_fixed.
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //***********************************************************************************
 
@@ -155,6 +157,12 @@ namespace ac_math
     // For this particular PWL implementation, the number of fractional bits is 11.
     const int n_frac_bits = 11;
     const int int_bits = ac::nbits<n_segments_lut - 1>::val;
+    // The intermediate values for the scaled input will have the number of fractional bits set to n_frac_bits or the bitwidth of the
+    // input minus 4, whichever is lower. The subtraction of 4 is done in order to take the scaling-related left-shift by 4 into account.
+    // This value for the number of fractional bits will changed if the PWL implementation changes; the value provided by default works with an 8-segment
+    // PWL that covers the domain of [0.5, 1)
+    // In order to ensure that the intermediate variables always have a length >= 1 and thereby prevent a compile-time error, AC_MAX is used.
+    const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W1 - 4));
     // Store values for slope and intercept of line segments.
     static const ac_fixed <n_frac_bits, 0, false> m[n_segments_lut] = {0.169921875, 0.1513671875, 0.13720703125, 0.125, 0.115234375, 0.1064453125, 0.099609375, 0.09326171875};
     static const ac_fixed <n_frac_bits + 1, 1, true> c[n_segments_lut] = {-.99853515625, -.82861328125, -.67724609375, -.53955078125, -.41455078125, -.298828125, -.1923828125, -.0927734375};
@@ -166,10 +174,10 @@ namespace ac_math
     // with a different number of segments/domain should be scaled according to the formula: x_in_sc = (input_normalized - x_min_lut) * sc_constant_lut
     // where sc_constant_lut = n_segments_lut / (x_max_lut - x_min_lut)
     // (x_min_lut and and x_max_lut are the lower and upper limits of the domain)
-    ac_fixed <n_frac_bits + int_bits, int_bits, false> input_sc = ((ac_fixed<n_frac_bits + int_bits + 4, int_bits, false>)(input_normalized - x_min_lut)) << 4;
+    ac_fixed <sc_input_frac_bits + int_bits, int_bits, false> input_sc = ((ac_fixed<sc_input_frac_bits + int_bits + 4, int_bits, false>)(input_normalized - x_min_lut)) << 4;
     // Take out the fractional bits of the scaled input
-    ac_fixed<n_frac_bits, 0, false> input_sc_frac;
-    input_sc_frac.set_slc(0, input_sc.template slc<n_frac_bits>(0));
+    ac_fixed<sc_input_frac_bits, 0, false> input_sc_frac;
+    input_sc_frac.set_slc(0, input_sc.template slc<sc_input_frac_bits>(0));
     // Integer part of scaled input is index
     ac_int <int_bits, false> index = input_sc.to_int();
     ac_fixed <W2, I2, S2, q_mode_out, o_mode_out> result_min;
@@ -178,7 +186,7 @@ namespace ac_math
     // computation of the pwl output
     // The precision given below will ensure that there is no precision lost in the assignment to t, hence rounding for the variable is switched off by default.
     // However, if the user uses less fractional bits and turn rounding on instead, they are welcome to do so by changing giving a different value for q_mode_temp.
-    ac_fixed <2 * n_frac_bits + 1, 1, true, q_mode_temp> t = m[index]*input_sc_frac + c[index];
+    ac_fixed <sc_input_frac_bits + n_frac_bits + 1, 1, true, q_mode_temp> t = m[index]*input_sc_frac + c[index];
     // Add the exponent to get the final function output
     ac_fixed <W2, I2, S2, q_mode_out, o_mode_out> t2 = t + exp;
     // assignment to the final output

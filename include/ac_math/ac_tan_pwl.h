@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 10:38:50 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -75,6 +75,8 @@
 //    This file uses the ac_reciprocal_pwl() function from ac_reciprocal_pwl.h
 //
 // Revision History:
+//    3.1.2  - Improved bitwidth calculations for PWL.
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //******************************************************************************************
 
@@ -146,15 +148,19 @@ namespace ac_math
     // If the input equals or exceeds pi/4, we halve it and use the formula tan(2*x) = 2*tan(x) / (1 - tan(x)^2) to get the tan value.
     // You will only need to add an extra fractional bit if the number of integer bits is greater than or equal to zero, because only then
     // will the input have a chance of exceeding pi/4, and only then will halving be required.
-    const int n_f_b_int = W - I + int(I >= 0);
-    const int I_int = AC_MIN(I, 0);
+
+    // The intermediate variable for the input can have a maximum of 20 fractional bits. This maximum is chosen empirically, to limit the
+    // area used while also making sure that the error values are the same, up to 3 decimal places, as they would be if we were to not use the
+    // 20-bit maximum.
+    const int n_f_b_int = AC_MIN(19, W - I) + int(I >= 0);
+    const int I_int = AC_MIN(I, 1);
     const int W_int = I_int + n_f_b_int;
     ac_fixed<W_int, I_int, false, Q, O> input_int;
     bool input_exceeds_pi_by_4;
-    // Keep in mind that the input will only exceed pi/4 if the number of integer bits is greater than or equal to zero.
+    // Keep in mind that the input can only exceed pi/4 if the number of integer bits is greater than or equal to zero.
     if (I >= 0) { input_exceeds_pi_by_4 = (input >= x_max_lut) ? true : false; }
 
-    if ((I >= 0) && input_exceeds_pi_by_4) { input_int = (ac_fixed<W + 1, I, false, Q, O>)input >> 1; }
+    if ((I >= 0) && input_exceeds_pi_by_4) { input_int = (ac_fixed<W_int + 1, I_int, false, Q, O>)input >> 1; }
     else { input_int = input; }
 
     const int int_bits = ac::nbits<n_segments_lut - 1>::val;

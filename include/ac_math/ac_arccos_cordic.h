@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 10:38:50 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -30,7 +30,7 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
-//*****************************************************************************************
+//***********************************************************************************************************************************
 // File: ac_arccos_cordic.h
 //
 // Description:
@@ -70,9 +70,10 @@
 //    #endif
 //
 // Revision History:
-//    2.0.10 - Used different names for the class, function and variable (which were same before) in both the files 
+//    3.1.0  - Used names for the class, function and variable (which were same before) which are different from ac_arcsin_cordic.h
+//    2.0.10 - Official open-source release as part of the ac_math library.
 //
-//*****************************************************************************************
+//***********************************************************************************************************************************
 
 #ifndef _INCLUDED_AC_ARCCOS_CORDIC_H_
 #define _INCLUDED_AC_ARCCOS_CORDIC_H_

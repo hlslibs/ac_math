@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.1                                                 *
+ *  Software Version: 3.2                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov  6 17:35:53 PST 2018                        *
+ *  Release Date    : Fri Aug 23 10:38:50 PDT 2019                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.1.2                                               *
+ *  Release Build   : 3.2.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -191,21 +191,23 @@ int main(int argc, char *argv[])
   cout << "Testing function: ac_pow2_pwl() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
-  test_driver< 12,  3,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver<  8,  3,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 10,  3, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 20,  3,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  4,  2,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  3,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  4, -2,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  3,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  2,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
-  test_driver< 16,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
-  test_driver< 12,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 18,  5,  true, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 18,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  4,  2, false, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  4, -2, false, 60, 30>(max_error_pow2, allowed_error, threshold);
   test_driver<  3,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
   test_driver<  1,  5, false, 61, 33>(max_error_pow2, allowed_error, threshold);
   test_driver<  2,  5, false, 64, 32>(max_error_pow2, allowed_error, threshold);
-  test_driver< 16,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
-  test_driver< 16,  0, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 18,  4, false, 64, 32>(max_error_pow2, allowed_error, threshold);
+  test_driver< 20,  0, false, 64, 32>(max_error_pow2, allowed_error, threshold);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all bit-width variations:" << endl;
