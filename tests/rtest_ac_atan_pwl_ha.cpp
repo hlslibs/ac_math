@@ -32,41 +32,41 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_atan_pwl() function using a variety of data types and bit-
+// ac_atan_pwl_ha() function using a variety of data types and bit-
 // widths.
 
 // To compile satandalone and run:
-//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_atan_pwl.cpp -o design
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_atan_pwl_ha.cpp -o design
 //   ./design
 
 // Include the AC Math function that is exercised with this testbench
-#include <ac_math/ac_atan_pwl.h>
+#include <ac_math/ac_atan_pwl_ha.h>
 using namespace ac_math;
 
 // ==============================================================================
 // Test Designs
-//   This simple function allow executing the ac_atan_pwl() function.
+//   This simple function allow executing the ac_atan_pwl_ha() function.
 //   Template parameters are used to configure the bit-widths of the
 //   inputs and outputs.
 
 // Test design for real fixed point values.
 template <int Wfi, int Ifi, int outWfi, int outIfi>
-void test_ac_atan_pwl_fixed(
+void test_ac_atan_pwl_ha(
   const ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP> &in,
   ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> &atan_out
 )
 {
-  atan_out = ac_atan_pwl<ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> >(in);
+  atan_out = ac_atan_pwl_ha<ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> >(in);
 }
 
 // Test Design for real floating point values.
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
-void test_ac_atan_pwl_float(
+void test_ac_atan_pwl_ha_float(
   const ac_float<Wfl, Ifl, Efl, AC_TRN>    &in1,
   ac_float<outWfl, outIfl, outEfl, AC_TRN> &out1
 )
 {
-  out1 = ac_atan_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
+  out1 = ac_atan_pwl_ha<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
 }
 
 // ------------------------------------------------------------------------------
@@ -86,22 +86,18 @@ double abs_double(double x)
 #include <iostream>
 using namespace std;
 
-// ==============================================================================
-// Functions: test_driver functions
-// Description: Templatized functions that can be configured for certain bit-
-//   widths of AC datatypes. They use the type information to iterate through a
-//   range of valid values on that type in order to compare the precision of the
-//   piece-wise linear arctangent model with the computed arctangent using a C++
-//   math library with the standard C++ double type. The maximum error for each
-//   type is accumulated in variables defined in the calling function.
-
 // ===============================================================================
 // Function: test_driver_fixed()
-// Description: test_driver function for ac_fixed inputs and outputs.
+// Description: A templatized function that can be configured for certain bit-
+//   widths of ac_fixed inputs. It uses the type information to iterate through a
+//   range of valid values on that type in order to compare the precision of the
+//   piecewise linear atan model with the computed arctangent using a
+//   standard C double type. The maximum error for each type is accumulated
+//   in variables defined in the calling function.
 
 template <int Wfi, int Ifi, int outWfi, int outIfi>
 int test_driver_fixed(
-  double &cumulative_max_error_fixed,
+  double &cumulative_max_error_atan,
   const double allowed_error,
   bool details = false
 )
@@ -116,7 +112,7 @@ int test_driver_fixed(
   double upper_limit = input.template set_val<AC_VAL_MAX>().to_double();
   double step        = input.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  cout << "TEST: ac_atan_pwl() INPUT: ";
+  cout << "TEST: ac_atan_pwl_ha() INPUT: ";
   cout.width(38);
   cout << left << input.type_name();
   cout << "OUTPUT: ";
@@ -150,7 +146,7 @@ int test_driver_fixed(
     double expected_atan = ((T_out)atan(input.to_double())).to_double();
 
     // call DUT with fixed-pt value
-    test_ac_atan_pwl_fixed(input, atan_out);
+    test_ac_atan_pwl_ha(input, atan_out);
 
     double actual_atan = atan_out.to_double();
     double this_error_atan;
@@ -198,7 +194,7 @@ int test_driver_fixed(
     if (this_error_atan > max_atan_error) { max_atan_error = this_error_atan; }
   }
 
-  if (max_atan_error > cumulative_max_error_fixed) { cumulative_max_error_fixed = max_atan_error; }
+  if (max_atan_error > cumulative_max_error_atan) { cumulative_max_error_atan = max_atan_error; }
 
   passed = (max_atan_error < allowed_error);
 
@@ -208,9 +204,14 @@ int test_driver_fixed(
   return 0;
 }
 
-// ===============================================================================
+// =================================================================================
 // Function: test_driver_float()
-// Description: test_driver function for ac_float inputs and outputs.
+// Description: A templatized function that can be configured for certain bit-
+//   widths of ac_float inputs. It uses the type information to iterate through a
+//   range of valid values on that type in order to compare the precision of the
+//   piecewise linear atan model with the computed arctangent using a
+//   standard C double type. The maximum error for each type is accumulated
+//   in variables defined in the calling function.
 
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 int test_driver_float(
@@ -234,7 +235,7 @@ int test_driver_float(
   ac_int<Wfl - 2, false> upper_limit_it = sample_mantissa_slc.template set_val<AC_VAL_MAX>().to_double();
   ac_int<Wfl - 2, false> step_it = 1; // Since sample_mantissa_slc is an integer.
 
-  cout << "TEST: ac_atan_pwl() INPUT: ";
+  cout << "TEST: ac_atan_pwl_ha() INPUT: ";
   cout.width(38);
   cout << left << T_in::type_name();
   cout << "OUTPUT: ";
@@ -292,7 +293,7 @@ int test_driver_float(
         assert(false);
       }
       T_out output_float;
-      test_ac_atan_pwl_float(input_float, output_float);
+      test_ac_atan_pwl_ha_float(input_float, output_float);
       double actual_float = output_float.to_double();
       double expected_float = T_out(atan(input_float.to_double())).to_double();
       double this_error_float = abs_double(expected_float - actual_float)*100;
@@ -326,28 +327,28 @@ int test_driver_float(
 
 int main(int argc, char *argv[])
 {
-  double max_error_fixed = 0.0;
+  double max_error_atan = 0.0;
   double allowed_error = 1.0;
 
   double max_error_float = 0.0;
 
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_atan_pwl() - Allowed error " << allowed_error << endl;
+  cout << "Testing function: ac_atan_pwl_ha() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, int outWfi, int outIfi>
-  test_driver_fixed<5,  2, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed<7,  3, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed<10,  5, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed<20,  6, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed<20, -6, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed<22,  8, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed<20,  0, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed< 8, 12, 33,  1>(max_error_fixed, allowed_error);
-  test_driver_fixed<20,  6, 42, 10>(max_error_fixed, allowed_error);
-  test_driver_fixed<20, -6, 42, 10>(max_error_fixed, allowed_error);
-  test_driver_fixed<22,  8, 42, 10>(max_error_fixed, allowed_error);
-  test_driver_fixed<20,  0, 42, 10>(max_error_fixed, allowed_error);
-  test_driver_fixed< 8, 12, 42, 10>(max_error_fixed, allowed_error);
+  test_driver_fixed<5,  2, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed<7,  3, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed<10,  5, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed<20,  6, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed<20, -6, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed<22,  8, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed<20,  0, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed< 8, 12, 33,  1>(max_error_atan, allowed_error);
+  test_driver_fixed<20,  6, 42, 10>(max_error_atan, allowed_error);
+  test_driver_fixed<20, -6, 42, 10>(max_error_atan, allowed_error);
+  test_driver_fixed<22,  8, 42, 10>(max_error_atan, allowed_error);
+  test_driver_fixed<20,  0, 42, 10>(max_error_atan, allowed_error);
+  test_driver_fixed< 8, 12, 42, 10>(max_error_atan, allowed_error);
 
   test_driver_float<18, 12, 10, 32,  1, 15>(max_error_float, allowed_error);
   test_driver_float<18,  4, 10, 32,  1, 15>(max_error_float, allowed_error);
@@ -373,20 +374,20 @@ int main(int argc, char *argv[])
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all data type / bit-width variations:" << endl;
-  cout << "    max_error_fixed = " << max_error_fixed << endl;
+  cout << "    max_error_atan  = " << max_error_atan << endl;
   cout << "    max_error_float = " << max_error_float << endl;
 
-  bool test_fail = (max_error_fixed > allowed_error) || (max_error_float > allowed_error);
+  bool test_fail = (max_error_atan > allowed_error) || (max_error_float > allowed_error);
 
   // If error limits on any test value have been crossed, the test has failed
   // Notify the user that the test was a failure if that is the case.
   if (test_fail) {
-    cout << "  ac_atan_pwl - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
+    cout << "  ac_atan_pwl_ha - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
     cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
     return (-1); // LCOV_EXCL_LINE
   }
 
-  cout << "  ac_atan_pwl - PASSED" << endl;
+  cout << "  ac_atan_pwl_ha - PASSED" << endl;
   cout << "=============================================================================" << endl;
   return (0);
 }

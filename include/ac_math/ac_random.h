@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -209,6 +209,7 @@ void ac_random_ac_s<T,SIZE,SMALL>::operator()(T &v)
 {
   const ac_int<6> ac_16 = 16;
   ac_int<16> rv = rand();
+  v = 0;
   v.set_slc(0, rv);
   for (int i = 16; i < SIZE; i += 16) {
     v <<= ac_16;

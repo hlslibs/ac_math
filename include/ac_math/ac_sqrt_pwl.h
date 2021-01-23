@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -40,6 +40,8 @@
 // Description: Provides piece-wise linear implementations of the
 //  square root function for the AC (tm) Datatypes: ac_fixed, ac_float,
 //  ac_complex<ac_fixed> and ac_complex<ac_float>.
+//  The ac_fixed version must be provided with unsigned input/output types,
+//  while the ac_complex<ac_fixed> version must have signed real/imaginary parts.
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
@@ -52,7 +54,7 @@
 //
 //    #pragma hls_design top
 //    void project(
-//      const input_type &input,
+//      const input_type input,
 //      output_type &output
 //    )
 //    {
@@ -80,6 +82,12 @@
 //    function from ac_shift.h
 //
 // Revision History:
+//    3.3.0  - [CAT-25797] Added CDesignChecker fixes/waivers for code check violations in ac_math PWL and Linear Algebra IPs.
+//             Waivers added for CNS and CCC violations.
+//             Fixes added for FXD, STF and MXS violations.
+//               - FXD violations fixed by changing integer literals to floating point literals or typecasting to ac_fixed values.
+//               - STF violations fixed by using "const" instead of "static const" parameters. LUT generator files also print out "const" LUTs instead of "static const" LUTs.
+//               - MXS violations fixed by typecasting unsigned variables to int.
 //    3.1.2  - Improved bitwidth calculations for PWL. Removed direct access to ac_float
 //             data members. Fixed bug in output near normalized 1.
 //    3.1.0  - bug51145 - Improved ac_float outputting.
@@ -89,6 +97,10 @@
 
 #ifndef _INCLUDED_AC_SQRT_PWL_H_
 #define _INCLUDED_AC_SQRT_PWL_H_
+
+#if !(__cplusplus >= 201103L)
+#error Please use C++11 or a later standard for compilation.
+#endif
 
 #include <ac_int.h>
 // Include headers for data types supported by these implementations
@@ -102,7 +114,6 @@
 
 #if !defined(__SYNTHESIS__) && defined(AC_SQRT_PWL_H_DEBUG)
 #include <iostream>
-using namespace std;
 #endif
 
 //=========================================================================
@@ -128,105 +139,83 @@ using namespace std;
 
 namespace ac_math
 {
+  // Only unsigned inputs/outputs are accepted.
   template <ac_q_mode pwlQ = AC_TRN, int W, int I, ac_q_mode Q, ac_o_mode O, int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
-  void ac_sqrt_pwl (const ac_fixed <W, I, false, Q, O> input, ac_fixed <outW, outI, false, outQ, outO> &output)
+  void ac_sqrt_pwl(const ac_fixed <W, I, false, Q, O> input, ac_fixed <outW, outI, false, outQ, outO> &output, const bool call_normalize = true)
   {
-    // n_segments_lut are the number of pwl segments (4 segments are used in this implementation)
-    static const unsigned n_segments_lut = 4;
     // Temporary variable to store output
     ac_fixed <outW, outI, false, outQ, outO> output_temp;
 
     // Declaring square root of 2 as constant
-    static const ac_fixed <13, 1, false> root2 = 1.414306640625;
+    const ac_fixed <13, 1, false> root2 = 1.414306640625;
 
     // normalized_input is basically output of the normalization function
     ac_fixed <W, 0, false, Q, O> normalized_input;
-    // Temporary variables to store exponents
-    int normalized_exp, normalized_exp_temp1;
-    // Call to normalization function
-    normalized_exp = ac_math::ac_normalize (input, normalized_input);
+    int normalized_exp;
+
+    // If call_normalize is set to true, the design does not assume that the input is already normalized and performs normalization by calling ac_normalize().
+    // If call_normalize is set to false, the design assumes that the input is already normalized and does not call ac_normalize, thereby saving on hardware.
+#pragma hls_waive CNS
+    if (call_normalize) {
+      normalized_exp = ac_math::ac_normalize(input, normalized_input);
+    } else {
+      normalized_exp = I;
+      normalized_input.set_slc(0, input.template slc<W>(0));
+    }
 
     // Start of code outputted by ac_sqrt_pwl_lutgen.cpp
-    // Note that the LUT generator file also outputs values for x_max_lut (upper limit of PWL domain) and sc_constant_lut (scaling factor used to scale the input from
-    // 0 to n_segments_lut). However, these values aren't explicitly considered in the header file because it has been optimized to work with an 4-segment PWL model that
-    // covers the domain of [0.5, 1). For other PWL implementations, the user will probably have to take these values into account explicitly. Guidelines for doing so
-    // are given in the comments.
-    // In addition, some of the slope values here are modified slightly in order to ensure monotonicity of the PWL function as the input crosses segment boundaries.
-    // The user might want to take care to ensure that for their own PWL versions.
 
-    // Piece-wise linear implemenation
-    static const ac_fixed <1, 0, false> x_min_lut = 0.5;
-    // The number of fractional bits for the LUT values is chosen by first finding the maximum absolute error over the domain of the PWL
-    // when double-precision values are used for LUT values. This error will correspond to a number of fractional bits that are always
-    // guaranteed to be error-free, for fixed-point PWL outputs.
-    // This number of fractional bits is found out by the formula:
-    // nbits = abs(ceil(log2(abs_error_max)).
-    // The number of fractional bits hereafter used to store the LUT values is nbits + 2.
-    // For this particular PWL implementation, the number of fractional bits is 12.
-    const int n_frac_bits = 12;
-    // The slope values had to be slightly modified in order to maintain montonicity between adjacent segments. As a result of the modification,
-    // the 12th fractional bit is always zero. Hence, only 11 fractional bits are used for storage of slope values. For any other implementation
-    // with a different number of segments and/or domain, this might not hold true.
-    static const ac_fixed <n_frac_bits - 1, 0, false> m[n_segments_lut] = {.08349609375, .0751953125, .0693359375, .064453125};
-    static const ac_fixed <n_frac_bits, 0, false> c[n_segments_lut] = {.707763671875, .791259765625, .866455078125, .935791015625};
+    const unsigned n_segments_lut = 4; // Number of PWL segments.
+    const int n_frac_bits = 12; // Number of fractional bits
+    // Since scaling constant is a positive power-of-two, multiplication with it is the same as left-shifting by 3.
+    // Accordingly, the scaled normalized input will have 3 less fractional bits than the normalized input, provided that this
+    // number of fractional bits is lesser than n_frac_bits. If not, the number of fractional bits in the scaled input is set to n_frac_bits.
+    const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W - 3));
+    // Slope and intercept LUT values.
+    const ac_fixed<-2 + n_frac_bits, -2, false> m_lut[n_segments_lut] = {.08349609375, .0751953125, .0693359375, .064453125};
+    const ac_fixed<1 + n_frac_bits, 1, false> c_lut[n_segments_lut] = {.707763671875, .791259765625, .866455078125, .935791015625};
+    const ac_fixed<0 + n_frac_bits, 0, false> x_min_lut = .5; // Minimum limit of PWL domain
+    const ac_fixed<4 + n_frac_bits, 4, false> sc_constant_lut = 8.0; // Scaling constant
 
     // End of code outputted by ac_sqrt_pwl_lutgen.cpp
 
     const int int_bits = ac::nbits<n_segments_lut - 1>::val;
-    // The intermediate values for the scaled input will have the number of fractional bits set to n_frac_bits or the bitwidth in the
-    // input minus 3, whichever is lower. The subtraction of 3 is done in order to take the scaling-related left-shift by 3 into account.
-    // This value for the number of fractional bits will change if the PWL implementation changes; the value provided by default works with an 4-segment
-    // PWL that covers the domain of [0.5, 1)
-    // In order to ensure that the intermediate variables always have a length >= 1 and thereby prevent a compile-time error, AC_MAX is used.
-    const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W - 3));
-    // input_sc is scaled value of input, which lies in the range of [0, 4)
-    // Scaled input is computed from the normalized input value
-    // Note that this equation is optimized for a domain of [0.5, 1) and 4 segments. Any other PWL implementation
-    // with a different number of segments/domain should be scaled according to the formula: x_in_sc = (normalized_input - x_min_lut) * sc_constant_lut
-    // where sc_constant_lut = n_segments_lut / (x_max_lut - x_min_lut)
-    // (x_min_lut and and x_max_lut are the lower and upper limits of the domain)
-    ac_fixed<int_bits + sc_input_frac_bits, int_bits, false> input_sc = ((ac_fixed<int_bits + sc_input_frac_bits + 3, int_bits, false>)(normalized_input - x_min_lut)) << 3;
+    // Scale input to the range [0, n_segments_lut)
+    ac_fixed<int_bits + sc_input_frac_bits, int_bits, false> input_sc = (normalized_input - x_min_lut)*sc_constant_lut;
     // Take out the fractional bits of the scaled input
     ac_fixed<sc_input_frac_bits, 0, false> input_sc_frac;
     input_sc_frac.set_slc(0, input_sc.template slc<sc_input_frac_bits>(0));
     // index is taken as integer part of scaled value and used for selection of m and c values
     ac_int <int_bits, false> index = input_sc.to_int();
-    // All the variables declared hereafter use (sc_input_frac_bits + n_frac_bits - 1) fractional bits. This is because, as explained earlier, only 11 fractional bits
-    // are needed earlier for storing slope values. For any other implementation with a different number of segments/domain, the user is advised to consider
-    // using (sc_input_frac_bits + n_frac_bits) fractional bits.
 
     // normalized output provides square root of normalized value
-    ac_fixed <sc_input_frac_bits + n_frac_bits, 1, false, pwlQ> normalized_output = m[index]*input_sc_frac + c[index];
+    ac_fixed <sc_input_frac_bits + n_frac_bits + 1, 1, false, pwlQ> normalized_output = m_lut[index]*input_sc_frac + c_lut[index];
 
-    // store the initial exponent value in temporary variable
-    normalized_exp_temp1 = normalized_exp;
     // Handling of odd exponents
-    ac_fixed <2*n_frac_bits, 1, false, pwlQ> normalized_output_temp = normalized_output * root2;
-    // Right shift the exponent by 1 to divide by 2
-    normalized_exp = normalized_exp >> 1;
+    ac_fixed <sc_input_frac_bits + n_frac_bits + 1, 1, false, pwlQ> normalized_output_temp = normalized_output * root2;
     // The precision given below will ensure that there is no precision lost in the assignment to m1, hence rounding for the variable is switched off by default.
     // However, if the user uses less fractional bits and turn rounding on instead, they are welcome to do so by giving a different value for pwlQ.
-    ac_fixed <2*n_frac_bits, 1, false, pwlQ> m1 = (normalized_exp_temp1 % 2 == 0) ? (ac_fixed <2*n_frac_bits, 1, false, pwlQ>)normalized_output : normalized_output_temp;
+#pragma hls_waive CNS
+    ac_fixed <sc_input_frac_bits + n_frac_bits + 1, 1, false, pwlQ> m1 = (normalized_exp % 2 == 0) ? normalized_output : normalized_output_temp;
 
     // exponent and normalized output are combined to get the final ac_fixed value, which is written at memory location of output
-    ac_math::ac_shift_left (m1, normalized_exp, output_temp);
-    output = (input == 0) ? 0 : output_temp;
+    ac_math::ac_shift_left(m1, normalized_exp >> 1, output_temp);
+    output = (input == 0) ? 0.0 : output_temp;
 
 #if !defined(__SYNTHESIS__) && defined(AC_SQRT_PWL_H_DEBUG)
-    cout << "W = " << W << endl;
-    cout << "I = " << I << endl;
-    cout << "outW = " << outW << endl;
-    cout << "outI = " << outI << endl;
-    cout << "input to normalization function = " << input << endl;
-    cout << "output (fractional of normalization function = " << normalized_input << endl;
-    cout << "input_sc = " << input_sc << endl;
-    cout << "index of element chosen from ROM = " << index << endl;
-    cout << "normalized_output = " << normalized_output << endl;
-    cout << "normalized_output_temp = " << normalized_output_temp << endl;
-    cout << "normalized_exp_temp1 = " << normalized_exp_temp1 << endl;
-    cout << "m1 = " << m1 << endl;
-    cout << "normalized_exp = " << normalized_exp << endl;
-    cout << "final output" << output << endl;
+    std::cout << "W = " << W << std::endl;
+    std::cout << "I = " << I << std::endl;
+    std::cout << "outW = " << outW << std::endl;
+    std::cout << "outI = " << outI << std::endl;
+    std::cout << "input to normalization function = " << input << std::endl;
+    std::cout << "output (fractional of normalization function = " << normalized_input << std::endl;
+    std::cout << "input_sc = " << input_sc << std::endl;
+    std::cout << "index of element chosen from ROM = " << index << std::endl;
+    std::cout << "normalized_output = " << normalized_output << std::endl;
+    std::cout << "normalized_output_temp = " << normalized_output_temp << std::endl;
+    std::cout << "m1 = " << m1 << std::endl;
+    std::cout << "normalized_exp = " << normalized_exp << std::endl;
+    std::cout << "final output = " << output << std::endl;
 #endif
   }
 
@@ -274,7 +263,7 @@ namespace ac_math
 //
 //    #pragma hls_design top
 //    void project(
-//      const input_type &input,
+//      const input_type input,
 //      output_type &output
 //    )
 //    {
@@ -298,7 +287,14 @@ namespace ac_math
   template <ac_q_mode pwlQ = AC_TRN, int W, int I, int E, ac_q_mode Q, int outW, int outI, int outE, ac_q_mode outQ>
   void ac_sqrt_pwl (const ac_float <W, I, E, Q> input, ac_float <outW, outI, outE, outQ> &output)
   {
-    static const ac_fixed <16, 1, false> root2 = 1.414215087890625;
+    // Use a macro to activate the AC_ASSERT
+    // If AC_ASSERT is activated, the program will stop running as soon as a negative input
+    // is encountered.
+#ifdef ASSERT_ON_INVALID_INPUT
+    AC_ASSERT(input >= 0, "Negative input not supported.");
+#endif
+
+    const ac_fixed <16, 1, false> root2 = 1.414215087890625;
 
     // mantissa and exponent are separately considered
     ac_fixed <W - 1, I - 1, false, Q> mantissa = input.mantissa();
@@ -308,8 +304,8 @@ namespace ac_math
     // declaring variable to store square root of mantissa
     ac_fixed <W1, I1, false> m2;
 
-    // call to ac_fixed implementation to get square root of mantissa
-    ac_sqrt_pwl<pwlQ>(mantissa, m2);
+    const bool call_normalize = false; // ac_float input -> Mantissa is already normalized and fixed point function doesn't have to call ac_normalize.
+    ac_sqrt_pwl<pwlQ>(mantissa, m2, call_normalize); // Call the ac_fixed implementation to get square root of mantissa
 
     // Multiplication by root 2 for odd exponent
     // Note that an extra bit does not need to be added to the word and integer widths for the product, for odd integer widths at the input. This is because the addition of the
@@ -328,20 +324,88 @@ namespace ac_math
     output = output_temp;
 
 #if !defined(__SYNTHESIS__) && defined(AC_SQRT_PWL_FL_H_DEBUG)
-    cout << "input = " << input << endl;
-    cout << "W = " << W << endl;
-    cout << "I = " << I << endl;
-    cout << "W1 = " << W1 << endl;
-    cout << "I1 = " << I1 << endl;
-    cout << "m2.type_name() = " << m2.type_name() << endl;
-    cout << "output of call to ac_fixed version of sqrt_pwl = " << m2 << endl;
-    cout << "m3.type_name() = " << m3.type_name() << endl;
-    cout << "m3 = " << m3 << endl;
-    cout << "output_temp.m = " << output_temp.m << endl;
-    cout << "output_temp.e = " << output_temp.e << endl;
-    cout << "final output = " << output << endl;
+    std::cout << "input = " << input << std::endl;
+    std::cout << "W = " << W << std::endl;
+    std::cout << "I = " << I << std::endl;
+    std::cout << "W1 = " << W1 << std::endl;
+    std::cout << "I1 = " << I1 << std::endl;
+    std::cout << "m2.type_name() : " << m2.type_name() << std::endl;
+    std::cout << "output of call to ac_fixed version of sqrt_pwl = " << m2 << std::endl;
+    std::cout << "m3.type_name() : " << m3.type_name() << std::endl;
+    std::cout << "m3 = " << m3 << std::endl;
+    std::cout << "output_temp.m = " << output_temp.m << std::endl;
+    std::cout << "output_temp.e = " << output_temp.e << std::endl;
+    std::cout << "final output = " << output << std::endl;
 #endif
   }
+
+// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the square root header,
+// so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
+#ifdef __AC_STD_FLOAT_H
+//=================================================================================
+// Function: ac_sqrt_pwl (for ac_ieee_float, returns sqrt(input) )
+//
+// Description:
+//    Calculation of square root of real inputs, passed as ac_ieee_float
+//    variables.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_sqrt_pwl.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_sqrt_pwl.h>
+//    using namespace ac_math;
+//
+//    typedef ac_ieee_float<binary32> input_type;
+//    typedef ac_ieee_float<binary32> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type input,
+//      output_type &output
+//    )
+//    {
+//      ac_sqrt_pwl(input,output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(1.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+// Notes:
+//    The ac_ieee_float version of ac_sqrt_pwl relies on the ac_float version to
+//    perform the actual PWL computation, which in turn relies on the ac_fixed
+//    implementation.
+//
+//---------------------------------------------------------------------------------
+
+  template<ac_q_mode pwl_Q = AC_TRN, ac_ieee_float_format Format, ac_ieee_float_format outFormat>
+  void ac_sqrt_pwl(const ac_ieee_float<Format> input, ac_ieee_float<outFormat> &output)
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int outW = T_out::width;
+    const int outE = T_out::e_width;
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_sqrt_pwl<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
+    output = output_temp;
+
+#if !defined(__SYNTHESIS__) && defined(AC_SQRT_PWL_H_DEBUG)
+    std::cout << "input.to_ac_float().type_name() : " << input.to_ac_float().type_name() << std::endl;
+    std::cout << "output_ac_fl.type_name() : " << output_ac_fl.type_name() << std::endl;
+#endif 
+  }
+#endif
 
 //=====================================================================================
 // Function: ac_sqrt_pwl (for ac_complex <ac_fixed>)
@@ -362,12 +426,12 @@ namespace ac_math
 //    #include <ac_math/ac_sqrt_pwl.h>
 //    using namespace ac_math;
 //
-//    typedef ac_complex<ac_fixed<16, 10, 8, AC_RND> > input_type;
-//    typedef ac_complex<ac_fixed<18, 20, 9, AC_RND> > output_type;
+//    typedef ac_complex<ac_fixed<16, 8, true, AC_RND, AC_SAT> > input_type;
+//    typedef ac_complex<ac_fixed<18, 8, true, AC_RND, AC_SAT> > output_type;
 //
 //    #pragma hls_design top
 //    void project(
-//      const input_type &input,
+//      const input_type input,
 //      output_type &output
 //    )
 //    {
@@ -388,6 +452,7 @@ namespace ac_math
 //
 //-------------------------------------------------------------------------------------
 
+  // Real/imaginary part of input and output must be signed.
   template <ac_q_mode pwlQ = AC_TRN, int W, int I, ac_q_mode Q, ac_o_mode O, int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
   void ac_sqrt_pwl (const ac_complex <ac_fixed <W, I, true, Q, O> > input,  ac_complex <ac_fixed <outW, outI, true, outQ, outO> > &output)
   {
@@ -408,7 +473,8 @@ namespace ac_math
     // Since the output of the PWL function is not exact, temp_real and temp_imag can possibly go negative.
     // Since negative inputs aren't supported for the real sqrt function, we must ensure that such a thing
     // never happens. To do so, we use a type that supports saturation, as shown below. By doing
-    // so, we can ensure that the temporary variables saturate at 0 instead of going negative.
+    // so, we can ensure that the temporary variables saturate at 0 instead of wrapping around to
+    // undesirable values.
     ac_fixed <t_W, t_I, false, AC_TRN, AC_SAT> temp_real = sqrt_mod + input.r();
     ac_fixed <t_W, t_I, false, AC_TRN, AC_SAT> temp_imag = sqrt_mod - input.r();
     ac_fixed <t_W, t_I - 1, false> sqr_real = ((ac_fixed <t_W + 1, t_I, false>)temp_real) >> 1; // calculating square of the output's real part
@@ -420,20 +486,20 @@ namespace ac_math
     output.i() = (input.i() < 0) ? -y : (ac_fixed <W2 + 1, I2 + 1, true>)y; // if imaginary part is less than zero, assign output value as negative otherwise positive
 
 #if !defined(__SYNTHESIS__) && defined(AC_SQRT_PWL_H_DEBUG)
-    cout << "initial input = " << input << endl;
-    cout << "W1 = " << W1 << endl;
-    cout << "I1 = " << I1 << endl;
-    cout << "Value of square root of mag_sqr = " << sqrt_mod << endl;
-    cout << "Type of square root of mag_sqr = " << sqrt_mod.type_name() << endl;
-    cout << "Result of addition = " << temp_real << endl;
-    cout << "Result of subtraction = " << temp_imag << endl;
-    cout << "Type of sqr_real and sqr_imag = " << sqr_real.type_name() << endl;
-    cout << "Result of square of output real part = " << sqr_real << endl;
-    cout << "Result of square of output imaginary part = " << sqr_imag << endl;
-    cout << "Type of real and imaginary part of answer = " << x.type_name() << endl;
-    cout << "Absolute value of real part = " << x << endl;
-    cout << "Absolute value of imaginary part = " << y << endl;
-    cout << "Final value of square root of complex number = " << output << endl;
+    std::cout << "initial input = " << input << std::endl;
+    std::cout << "W1 = " << W1 << std::endl;
+    std::cout << "I1 = " << I1 << std::endl;
+    std::cout << "Value of square root of mag_sqr = " << sqrt_mod << std::endl;
+    std::cout << "Type of square root of mag_sqr = " << sqrt_mod.type_name() << std::endl;
+    std::cout << "Result of addition = " << temp_real << std::endl;
+    std::cout << "Result of subtraction = " << temp_imag << std::endl;
+    std::cout << "Type of sqr_real and sqr_imag = " << sqr_real.type_name() << std::endl;
+    std::cout << "Result of square of output real part = " << sqr_real << std::endl;
+    std::cout << "Result of square of output imaginary part = " << sqr_imag << std::endl;
+    std::cout << "Type of real and imaginary part of answer = " << x.type_name() << std::endl;
+    std::cout << "Absolute value of real part = " << x << std::endl;
+    std::cout << "Absolute value of imaginary part = " << y << std::endl;
+    std::cout << "Final value of square root of complex number = " << output << std::endl;
 #endif
   }
 
@@ -441,7 +507,7 @@ namespace ac_math
 // Version that allows returning of values
   template<class T_out, ac_q_mode pwlQ = AC_TRN, class T_in>
   T_out ac_sqrt_pwl(
-    const T_in &input
+    const T_in input
   )
   {
     // Initializing the final output value that is to be returned

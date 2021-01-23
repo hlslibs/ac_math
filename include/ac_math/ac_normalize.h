@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -94,7 +94,6 @@
 
 #if !defined(__SYNTHESIS__)
 #include <iostream>
-using namespace std;
 #endif
 
 //=========================================================================
@@ -146,11 +145,11 @@ namespace ac_math
     int expret = input != 0 ? I - int(S) - leading_1 : 0;
 
 #if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
-    cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "input to normalize = " << input << endl;
-    cout << "leading_1          = " << leading_1 << endl;
-    cout << "normalized_fixed   = " << normalized_fixed << endl;
-    cout << "expret             = " << expret << endl;
+    std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+    std::cout << "input to normalize = " << input << std::endl;
+    std::cout << "leading_1          = " << leading_1 << std::endl;
+    std::cout << "normalized_fixed   = " << normalized_fixed << std::endl;
+    std::cout << "expret             = " << expret << std::endl;
 #endif
 
     return expret;
@@ -249,11 +248,11 @@ namespace ac_math
     int expret = input != 0 ? I - int(S) - leading_1 : 0;
 
 #if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
-    cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "input to normalize = " << input << endl;
-    cout << "leading_1          = " << leading_1 << endl;
-    cout << "normalized_complex = " << normalized_complex << endl;
-    cout << "expret             = " << expret << endl;
+    std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+    std::cout << "input to normalize = " << input << std::endl;
+    std::cout << "leading_1          = " << leading_1 << std::endl;
+    std::cout << "normalized_complex = " << normalized_complex << std::endl;
+    std::cout << "expret             = " << expret << std::endl;
 #endif
 
     return expret;

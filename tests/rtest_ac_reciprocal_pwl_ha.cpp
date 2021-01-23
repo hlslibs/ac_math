@@ -32,67 +32,67 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_reciprocal_pwl() function using a variety of data types and bit-
+// ac_reciprocal_pwl_ha() function using a variety of data types and bit-
 // widths.
 
 // To compile standalone and run:
-//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_reciprocal_pwl.cpp -o design
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_reciprocal_pwl_ha.cpp -o design
 //   ./design
 
 // Include the AC Math function that is exercised with this testbench
-#include <ac_math/ac_reciprocal_pwl.h>
+#include <ac_math/ac_reciprocal_pwl_ha.h>
 using namespace ac_math;
 
 // ==============================================================================
 // Test Designs
-//   These simple functions allow executing the ac_reciprocal_pwl() function
+//   These simple functions allow executing the ac_reciprocal_pwl_ha() function
 //   using multiple data types at the same time. Template parameters are
 //   used to configure the bit-widths of the types.
 
 // Test Design for real and complex fixed point values.
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-void test_ac_reciprocal_pwl_fixed(
+void test_ac_reciprocal_pwl_ha_fixed(
   const ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>   &in1,
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>   &out1,
   const ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > &in2,
   ac_complex<ac_fixed<outWfi, outIfi, true, AC_TRN, AC_WRAP> > &out2
 )
 {
-  out1 = ac_reciprocal_pwl<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >(in1);
-  out2 = ac_reciprocal_pwl<ac_complex<ac_fixed<outWfi, outIfi, true, AC_TRN, AC_WRAP> > >(in2);
+  out1 = ac_reciprocal_pwl_ha<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >(in1);
+  out2 = ac_reciprocal_pwl_ha<ac_complex<ac_fixed<outWfi, outIfi, true, AC_TRN, AC_WRAP> > >(in2);
 }
 
 // Test Design for real fixed point values.
 template <int Wfi, int Ifi, int outWfi, int outIfi>
-void test_ac_reciprocal_pwl_real_fixed(
+void test_ac_reciprocal_pwl_ha_real_fixed(
   const  ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP>   &in1,
   ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP>   &out1
 )
 {
-  out1 = ac_reciprocal_pwl<ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> >(in1);
+  out1 = ac_reciprocal_pwl_ha<ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> >(in1);
 }
 
 // Test Design for real and complex floating point values.
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
-void test_ac_reciprocal_pwl_float(
+void test_ac_reciprocal_pwl_ha_float(
   const ac_float<Wfl, Ifl, Efl, AC_TRN>   &in1,
   ac_float<outWfl, outIfl, outEfl, AC_TRN>   &out1,
   const ac_complex<ac_float<Wfl, Ifl, Efl, AC_TRN> > &in2,
   ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > &out2
 )
 {
-  out1 = ac_reciprocal_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
-  out2 = ac_reciprocal_pwl<ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > >(in2);
+  out1 = ac_reciprocal_pwl_ha<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
+  out2 = ac_reciprocal_pwl_ha<ac_complex<ac_float<outWfl, outIfl, outEfl, AC_TRN> > >(in2);
 }
 
 // Test Design for real and complex floating point values.
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
-void test_ac_reciprocal_pwl_real_float(
+void test_ac_reciprocal_pwl_ha_real_float(
   const ac_float<Wfl, Ifl, Efl, AC_TRN>   &in1,
   ac_float<outWfl, outIfl, outEfl, AC_TRN>   &out1
 )
 {
-  out1 = ac_reciprocal_pwl<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
+  out1 = ac_reciprocal_pwl_ha<ac_float<outWfl, outIfl, outEfl, AC_TRN> >(in1);
 }
 
 // ==============================================================================
@@ -288,7 +288,7 @@ int test_driver_fixed(
   upper_limit_fixed   = input_fixed.template set_val<AC_VAL_MAX>().to_double();
   step_fixed          = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  cout << "TEST: ac_reciprocal_pwl() INPUT: ";
+  cout << "TEST: ac_reciprocal_pwl_ha() INPUT: ";
   cout.width(38);
   cout << left << input_fixed.type_name();
   cout << "        OUTPUTS: ";
@@ -316,7 +316,7 @@ int test_driver_fixed(
       cmplx_input_fixed.r() = i;
       cmplx_input_fixed.i() = j;
       input_fixed = j;
-      test_ac_reciprocal_pwl_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
+      test_ac_reciprocal_pwl_ha_fixed(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed);
 
       double this_error_fixed = err_calc(input_fixed, actual_value_fixed, output_fixed, allowed_error_fixed, threshold);
       double this_error_complex = cmplx_err_calc(cmplx_input_fixed, cmplx_output_fixed, allowed_error_fixed, threshold);
@@ -367,7 +367,7 @@ int test_driver_real_fixed(
   lower_limit_fixed = input_fixed.template set_val<AC_VAL_MIN>().to_double();
   upper_limit_fixed = input_fixed.template set_val<AC_VAL_MAX>().to_double();
 
-  cout << "TEST: ac_reciprocal_pwl() INPUTS: ";
+  cout << "TEST: ac_reciprocal_pwl_ha() INPUTS: ";
   cout.width(38);
   cout << left << input_fixed.type_name();
   cout << "OUTPUTS: ";
@@ -393,7 +393,7 @@ int test_driver_real_fixed(
     input_fixed = i;
 
     // Pass all inputs at one go
-    test_ac_reciprocal_pwl_real_fixed(input_fixed, output_fixed);
+    test_ac_reciprocal_pwl_ha_real_fixed(input_fixed, output_fixed);
 
     double this_error_fixed = err_calc(input_fixed, actual_value_fixed, output_fixed, allowed_error_fixed, threshold);
 
@@ -449,7 +449,7 @@ int test_driver_float(
 
   string empty_str = "";
 
-  cout << "TEST: ac_reciprocal_pwl() AC_FLOAT INPUT: ";
+  cout << "TEST: ac_reciprocal_pwl_ha() AC_FLOAT INPUT: ";
   cout.width(38);
   cout << left << input_float.type_name();
   cout << "AC_FLOAT OUTPUT: ";
@@ -494,7 +494,7 @@ int test_driver_float(
         input_float = input_float_real;
         cmplx_input_float.r() = input_float_real;
         cmplx_input_float.i() = input_float_imag;
-        test_ac_reciprocal_pwl_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
+        test_ac_reciprocal_pwl_ha_float(input_float, output_float, cmplx_input_float, cmplx_output_float);
 
         double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
         double this_error_complex = cmplx_err_calc(cmplx_input_float, cmplx_output_float, allowed_error_float, threshold);
@@ -577,7 +577,7 @@ int test_driver_real_float(
 
   string empty_str = "";
 
-  cout << "TEST: ac_reciprocal_pwl() AC_FLOAT INPUT: ";
+  cout << "TEST: ac_reciprocal_pwl_ha() AC_FLOAT INPUT: ";
   cout.width(38);
   cout << left << T_in::type_name();
   cout << "AC_FLOAT OUTPUT: ";
@@ -606,7 +606,7 @@ int test_driver_real_float(
         assert(false);
       }
       T_out output_float;
-      test_ac_reciprocal_pwl_real_float(input_float, output_float);
+      test_ac_reciprocal_pwl_ha_real_float(input_float, output_float);
       double actual_value_float;
       double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
       if (this_error_float > max_error_float) { max_error_float = this_error_float; }
@@ -617,7 +617,7 @@ int test_driver_real_float(
         cout << "input_mant_neg was not normalized correctly." << endl;
         assert(false);
       }
-      test_ac_reciprocal_pwl_real_float(input_float_neg, output_float);
+      test_ac_reciprocal_pwl_ha_real_float(input_float_neg, output_float);
       double actual_value_float_neg;
       double this_error_float_neg = err_calc(input_float_neg, actual_value_float_neg, output_float, allowed_error_float, threshold);
       if (this_error_float_neg > max_error_float) { max_error_float = this_error_float_neg; }
@@ -642,7 +642,7 @@ int main(int argc, char *argv[])
   double allowed_error_float = 0.5;
   const double threshold = 0.005;
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_reciprocal_pwl() - Allowed error " << allowed_error_fixed << " (fixed pt), " << allowed_error_float << " (float pt)" << endl;
+  cout << "Testing function: ac_reciprocal_pwl_ha() - Allowed error " << allowed_error_fixed << " (fixed pt), " << allowed_error_float << " (float pt)" << endl;
 
   // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
   test_driver_fixed< 10,  3,  true, 64, 32,  true>(max_error_fixed, cmplx_max_error_fixed, allowed_error_fixed, threshold);
@@ -704,14 +704,12 @@ int main(int argc, char *argv[])
 
   // Notify the user whether or not the test was a failure.
   if (test_fail) {
-    cout << "  ac_reciprocal_pwl - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
+    cout << "  ac_reciprocal_pwl_ha - FAILED - Error tolerance(s) exceeded" << endl; // LCOV_EXCL_LINE
     cout << "=============================================================================" << endl; // LCOV_EXCL_LINE
     return -1; // LCOV_EXCL_LINE
   } else {
-    cout << "  ac_reciprocal_pwl - PASSED" << endl;
+    cout << "  ac_reciprocal_pwl_ha - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }
   return 0;
 }
-
-

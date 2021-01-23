@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -257,17 +257,15 @@ int test_driver_fixed(
   double max_error_fixed = 0.0; // reset for this run
   double max_error_cmplx_fixed = 0.0; // reset for this run
 
-  ac_fixed<   Wfi,        Ifi, false, AC_TRN, AC_WRAP>   input_fixed;
-  ac_fixed<outWfi,     outIfi, false, AC_TRN, AC_WRAP>   output_fixed;
+  ac_fixed<   Wfi,    Ifi, false, AC_TRN, AC_WRAP>   input_fixed;
+  ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP>   output_fixed;
   ac_complex<ac_fixed<   Wfi + 1,    Ifi + 1,  true, AC_TRN, AC_WRAP> > cmplx_input_fixed;
   ac_complex<ac_fixed<outWfi + 1, outIfi + 1,  true, AC_TRN, AC_WRAP> > cmplx_output_fixed;
 
-  double lower_limit_complex, upper_limit_complex, step_fixed;
-
   // set ranges and step size for fixed point testbench
-  step_fixed          = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
-  lower_limit_complex = cmplx_input_fixed.r().template set_val<AC_VAL_MIN>().to_double();
-  upper_limit_complex = cmplx_input_fixed.r().template set_val<AC_VAL_MAX>().to_double();
+  double step_fixed          = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
+  double lower_limit_complex = cmplx_input_fixed.r().template set_val<AC_VAL_MIN>().to_double();
+  double upper_limit_complex = cmplx_input_fixed.r().template set_val<AC_VAL_MAX>().to_double();
 
   cout << "TEST: ac_sqrt_pwl() INPUTS: ";
   cout.width(38);
@@ -343,15 +341,13 @@ int test_driver_real_fixed(
   bool check_monotonic = true;
   double max_error_fixed = 0.0; // reset for this run
 
-  ac_fixed<   Wfi,        Ifi, false, AC_TRN, AC_WRAP>   input_fixed;
-  ac_fixed<outWfi,     outIfi, false, AC_TRN, AC_WRAP>   output_fixed;
-
-  double lower_limit_fixed, upper_limit_fixed, step_fixed;
+  ac_fixed<   Wfi,    Ifi, false, AC_TRN, AC_WRAP> input_fixed;
+  ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> output_fixed;
 
   // set ranges and step size for fixed point testbench
-  step_fixed        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
-  lower_limit_fixed = input_fixed.template set_val<AC_VAL_MIN>().to_double();
-  upper_limit_fixed = input_fixed.template set_val<AC_VAL_MAX>().to_double();
+  double step_fixed        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
+  double lower_limit_fixed = input_fixed.template set_val<AC_VAL_MIN>().to_double();
+  double upper_limit_fixed = input_fixed.template set_val<AC_VAL_MAX>().to_double();
 
   cout << "TEST: ac_sqrt_pwl() INPUTS: ";
   cout.width(38);
@@ -397,16 +393,14 @@ int test_driver_real_fixed(
   return 0;
 }
 
-
 // ==============================================================================
 // Function: test_driver_float()
 // Description: A templatized function that can be configured for certain bit-
-//   widths of real ac_float datatypes. It uses the type information to iterate 
-//   through a range of valid values on that type in order to compare the 
+//   widths of real ac_float datatypes. It uses the type information to iterate
+//   through a range of valid values on that type in order to compare the
 //   precision of the piece-wise linear sqrt model with the computed sqrt using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
-//   Number of iterations per run = 2^Wfl
 
 template <int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 int test_driver_float(
@@ -417,33 +411,30 @@ int test_driver_float(
 )
 {
   bool passed = true;
-  bool check_monotonic = true;
   double max_error_float = 0.0; // reset for this run
 
   typedef ac_float<Wfl, Ifl, Efl, AC_TRN> T_in;
-  T_in input_float;
-  ac_float<outWfl, outIfl, outEfl, AC_TRN>   output_float;
+  typedef ac_float<outWfl, outIfl, outEfl, AC_TRN> T_out;
 
-  double lower_limit_mantissa, upper_limit_mantissa, step_mantissa;
-  double old_real_output;
-
-  // Declare an ac_fixed variable of same type as mantissa
-  ac_fixed<Wfl, Ifl, true> sample_mantissa;
-
-  lower_limit_mantissa = 0;
-  upper_limit_mantissa = sample_mantissa.template set_val<AC_VAL_MAX>().to_double();
-  step_mantissa        = sample_mantissa.template set_val<AC_VAL_QUANTUM>().to_double();
+  // Since ac_float values are normalized, the bit adjacent to the sign bit in the mantissa
+  // will always be set to 1. We will hence cycle through all the bit patterns that correspond to the last (Wfl - 2)
+  // bits in the mantissa.
+  ac_int<Wfl - 2, false> sample_mantissa_slc;
+  // Set the lower limit, upper limit and step size of the test iterations.
+  ac_int<Wfl - 2, false> lower_limit_it = 0;
+  ac_int<Wfl - 2, false> upper_limit_it = sample_mantissa_slc.template set_val<AC_VAL_MAX>().to_double();
+  ac_int<Wfl - 2, false> step_it = 1; // Since sample_mantissa_slc is an integer.
 
   string empty_str = "";
 
   cout << "TEST: ac_sqrt_pwl() INPUT:  ";
   cout.width(38);
-  cout << left << input_float.type_name();
+  cout << left << T_in::type_name();
   cout.width(50);
   cout << left << empty_str;
   cout << "OUTPUT:  ";
   cout.width(38);
-  cout << left << output_float.type_name();
+  cout << left << T_out::type_name();
   cout << "RESULT: ";
 
   // Declare arrays to store all values of exponent to be tested.
@@ -468,32 +459,46 @@ int test_driver_float(
 
   // Dump the test details
   if (details) {
-    cout << endl << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
-    cout         << "    lower_limit_mantissa = " << lower_limit_mantissa << endl; // LCOV_EXCL_LINE
-    cout         << "    upper_limit_mantissa = " << upper_limit_mantissa << endl; // LCOV_EXCL_LINE
-    cout         << "    step_mantissa        = " << step_mantissa << endl; // LCOV_EXCL_LINE
+    cout << endl << "  Ranges for testing iterations:" << endl; // LCOV_EXCL_LINE
+    cout         << "    lower_limit_it       = " << lower_limit_it << endl; // LCOV_EXCL_LINE
+    cout         << "    upper_limit_it       = " << upper_limit_it << endl; // LCOV_EXCL_LINE
+    cout         << "    step_it              = " << step_it << endl; // LCOV_EXCL_LINE
     cout         << "    allowed_error_float  = " << allowed_error_float << endl; // LCOV_EXCL_LINE
   }
 
   for (int i = 0; i < exp_arr_size; i++) {
-    bool compare = false;
-
     // For a particular exponent value, go through every possible value that can be represented by the mantissa.
-    for (double mant_i = lower_limit_mantissa; mant_i <= upper_limit_mantissa; mant_i += step_mantissa) {
-      // Normalize the mantissa by using a parameterized ac_float constructor.
-      T_in input_float_norm(ac_fixed<Wfl, Ifl, true>(mant_i), sample_exponent_array[i]);
-      input_float = input_float_norm;
+    // The iteration variable has a bitwidth that is 1 higher (bitwidth = Wfl - 1) than the slice of the mantissa
+    // we'll be changing from one iteration to the other (bitwidth of slice = Wfl - 2), to ensure that the loop variable
+    // doesn't overflow.
+    for (ac_int<Wfl - 1, false> mant_i = lower_limit_it; mant_i <= upper_limit_it; mant_i += step_it) {
+      ac_fixed<Wfl, Ifl, true> input_mant;
+      input_mant[Wfl - 1] = 0;
+      // Set the bit adjacent to the sign bit to 1 to ensure a normalized mantissa
+      input_mant[Wfl - 2] = 1;
+      // Set the remaining bits to the bit pattern stored in the last (Wfl - 2) bits in mant_i.
+      input_mant.template set_slc(0, mant_i.template slc<Wfl - 2>(0));
+      // Use a parameterized ac_float constructor to set the mantissa and exponent of the temporary floating point input.
+      T_in input_float(input_mant, sample_exponent_array[i], true);
+      // Make sure that input_mant was normalized and that the mantissa and exponent values haven't changed after calling the constructor.
+      if (input_float.mantissa() != input_mant || input_float.exp() != sample_exponent_array[i]) {
+        cout << "input_mant was not normalized correctly." << endl;
+        assert(false);
+      }
+      T_out output_float;
       test_ac_sqrt_pwl_float(input_float, output_float);
-      double actual_value_float     = output_float.to_double();
+      double actual_value_float = output_float.to_double();
       double this_error_float = err_calc(input_float, actual_value_float, output_float, allowed_error_float, threshold);
 
       if (this_error_float > max_error_float) {max_error_float = this_error_float;}
     }
   }
+  passed = (max_error_float < allowed_error_float);
+
   if (passed) { printf("PASSED , max error (%f) \n", max_error_float); }
   else        { printf("FAILED , max error (%f) \n", max_error_float); } // LCOV_EXCL_LINE
 
-  if (max_error_float>cumulative_max_error_float) { cumulative_max_error_float = max_error_float; }
+  if (max_error_float > cumulative_max_error_float) { cumulative_max_error_float = max_error_float; }
 
   return 0;
 }

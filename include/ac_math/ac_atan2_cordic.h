@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -66,12 +66,13 @@
 //      input_type y =  0.5;
 //      input_type x = -0.5;
 //      output_type atan2_output;
-//      CCS_DESIGN(project)(input, atan2_output);
+//      CCS_DESIGN(project)(y, x, atan2_output);
 //      CCS_RETURN (0);
 //    }
 //    #endif
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
 //    2.0.10 - Fix coverage holes
 //
 //*****************************************************************************************
@@ -171,8 +172,9 @@ namespace ac_math
 
   static table_t atan_2mi(int i)
   {
+  #pragma hls_waive CNS
     if (i >= TE)
-    { return 0; }
+    { return 0.0; }
     return atan_pow2_table[i];
   }
 
@@ -202,7 +204,7 @@ namespace ac_math
     const int ICW = (N_I + LOG_N_I);
 
     typedef ac_fixed<ICW+4,3,true> fx_a;
-    fx_a acc_a = 0;
+    fx_a acc_a = 0.0;
     bool x_neg = x < 0;
 
     const int XYI = AC_MAX(YI, XI) + 2;
@@ -218,7 +220,7 @@ namespace ac_math
       ac_fixed<ICW,0,false> d_a = atan_2mi(i);
       fx_xy_2 x_2mi = x1 >> i;  // x1 * pow(2, -i)
       fx_xy y_2mi = y1 >> i;  // y1 * pow(2, -i)
-      if (y1 < 0) {
+             if (y1 < 0) {
         x1 -= y_2mi;
         y1 += x_2mi;
         acc_a -= d_a;
@@ -227,6 +229,7 @@ namespace ac_math
         y1 -= x_2mi;
         acc_a += d_a;
       }
+
     }
     if (!y)
     { acc_a = x_neg ? fx_a(M_PI) : fx_a(0); }

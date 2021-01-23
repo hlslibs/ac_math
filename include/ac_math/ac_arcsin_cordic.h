@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -70,6 +70,7 @@
 //    #endif
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
 //    3.1.0  - Used names for the class, function and variable (which were same before) which are different from ac_arccos_cordic.h
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //
@@ -237,8 +238,10 @@ namespace ac_math
   {
     MgcAcIarcsinAssert< ZW <= 128 >::test();
     // Assume no more than 130 entries.
+   	  #pragma hls_waive CNS
+	
     if (i > 129)
-    { return 0; }
+    { return 0.0; }
     return x2_asin_pi_pow2_table[i];
   }
 
@@ -269,23 +272,29 @@ namespace ac_math
     } else {
       abs_t = t;
     }
-    dp_t x = 1;
-    dp_t y = 0;
+    dp_t x = 1.0;
+    dp_t y = 0.0;
     dp_t tn = abs_t;
-    dp_theta_t theta = 0;
+    dp_theta_t theta = 0.0;
 
     for (int i = 0; i < N_I; i++) {
       bool sel = (y <= tn && x >= 0) || (y > tn && x < 0);
+   	  #pragma hls_waive CNS
       if (P_F > 20) {
         // Exhaustively tested cases for P_F <= 20 pass error criteria without
         // this check.
         sel = sel && (theta <= 0.5);
       }
+	  #pragma hls_waive ISE
       dp_t x_d = y >> (i - 1);
+  	  #pragma hls_waive ISE
       dp_t y_d = x >> (i - 1);
       dp_theta_t theta_d = x2_asin_pi_2mi<P_F>(i);
+   	  #pragma hls_waive ISE
       dp_t tn_d = tn >> (2*i);
+   	  #pragma hls_waive ISE
       x -= x >> (2*i);
+   	  #pragma hls_waive ISE  
       y -= y >> (2*i);
       if (sel) {
         x -= x_d;

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -274,12 +274,15 @@ public: // Matrix math functions
   // Description: matrix multiplication
   //    result[M][Q] = this[M][N] X op2[N][Q]
   // Return: matrix sized MxQ
+  // Note that the return type for the matrix elements is sized to prevent loss of data
+  // (i.e. if the input matrices are each 4bits unsigned, the result is 11bits (4b time 4b -> 8b, 3 sums of 8b -> 11 b)
   template <typename T2, unsigned Q>
-  ac_matrix<typename ac::rt_2T<T,T2>::mult, M, Q> operator*(const ac_matrix<T2,N,Q> &op2 ) const {
-    ac_matrix<typename ac::rt_2T<T,T2>::mult, M, Q> result;
+  ac_matrix<typename ac::rt_2T<T,T2>::mult::rt_unary::template set<N-1>::sum, M, Q> operator*(const ac_matrix<T2,N,Q> &op2 ) const {
+    typedef typename T::template rt_T<T2>::mult Tprod; // allow bit growth for T*T2 product
+    ac_matrix<typename ac::rt_2T<T,T2>::mult::rt_unary::template set<N-1>::sum, M, Q> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < Q; j++ ) {
-        T tsum = 0;
+        typename Tprod::rt_unary::template set<N-1>::sum tsum = 0; // allow for bit growth from N-1 additions of T*T2 types
         for ( unsigned k = 0; k < N; k++ ) {
           tsum += (*this)(i,k) * op2(k,j);
         }
@@ -419,7 +422,6 @@ T determinant(ac_matrix<T,2,2> &m)
 template <class T, unsigned M, unsigned N>
 std::ostream &operator<<(std::ostream &os, const ac_matrix<T,M,N> &m )
 {
-  char buf[20];
   // column header
   os << "   " ;
   for ( unsigned j = 0; j < N; j++ ) {

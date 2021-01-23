@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -86,11 +86,6 @@
 #include <ac_math/ac_reciprocal_pwl.h>
 #include <ac_math/ac_chol_d.h>
 
-#ifndef __SYNTHESIS__
-#include <iostream>
-using namespace std;
-#endif
-
 //==============================================================================
 // Function: ac_cholinv (for ac_fixed using native C-style arrays)
 //
@@ -164,10 +159,12 @@ namespace ac_math
     // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
     for (unsigned i = 0; i < M; i++) {
+#pragma hls_waive CNS
       if (use_pwl2) {
         ac_math::ac_reciprocal_pwl(L[i][i], recip_L);
       } else {
-        static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1;
+        static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
+#pragma hls_waive DBZ
         ac_math::ac_div(unity, L[i][i], recip_L);
       }
       // Diagonal elements of Linv are reciprocal of L matrix
@@ -175,17 +172,19 @@ namespace ac_math
       L_Linv_ROW:
       for (unsigned j = 0; j < M; j++) {
         if (j>=i+1) {
-          sum = 0;
+          sum = 0.0;
           L_COL_Linv_ROW:
           for (unsigned k = 0; k < M; k++) {
-            sum += (k<j &k>=i)?L[j][k] * Linv[k][i]:0;
+            sum += ((k<j) & (k>=i))?L[j][k] * Linv[k][i]:0.0;
             if (k>=j)
             { break; }
           }
+#pragma hls_waive CNS
           if (use_pwl2) {
             ac_math::ac_reciprocal_pwl(L[j][j], recip_L);
           } else {
-            static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1;
+            static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
+#pragma hls_waive DBZ
             ac_math::ac_div(unity, L[j][j], recip_L);
           }
           Linv[j][i] = -(sum * recip_L);
@@ -198,10 +197,10 @@ namespace ac_math
     for (unsigned i=0; i<M; i++)
       Linv_ROW:
       for (unsigned j=0; j<M; j++) {
-        sum = 0;
+        sum = 0.0;
         Linv_Linvtrans_COL:
         for (unsigned k=0; k<M; k++) {
-          sum += (k<j | k<i)?0:Linv[k][i]*Linv[k][j];
+          sum += ((k<j) | (k<i))?0.0:Linv[k][i]*Linv[k][j];
         }
         Ainv[i][j] = sum;
       }
@@ -278,12 +277,14 @@ namespace ac_math
     // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
     for (unsigned i = 0; i < M; i++) {
+#pragma hls_waive CNS
       if (use_pwl2) {
         ac_math::ac_reciprocal_pwl(L[i][i], recip_L);
       } else {
-        static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1;
+        static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
+#pragma hls_waive DBZ ABR
         ac_math::ac_div(unity, L[i][i].r(), recip_L.r());
-        recip_L.i() = 0;
+        recip_L.i() = 0.0;
       }
       // Diagonal elements of Linv are reciprocal of L matrix
       Linv[i][i] = recip_L;
@@ -293,16 +294,18 @@ namespace ac_math
           sum = 0;
           L_COL_Linv_ROW:
           for (unsigned k = 0; k < M; k++) {
-            sum += (k<j &k>=i)?L[j][k] * Linv[k][i]:0;
+            sum += ((k<j) & (k>=i))?L[j][k] * Linv[k][i]:0;
             if (k>=j)
             { break; }
           }
+#pragma hls_waive CNS
           if (use_pwl2) {
             ac_math::ac_reciprocal_pwl(L[j][j], recip_L);
           } else {
-            static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1;
+            static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
+#pragma hls_waive DBZ ABR
             ac_math::ac_div(unity, L[j][j].r(), recip_L.r());
-            recip_L.i() = 0;
+            recip_L.i() = 0.0;
           }
           Linv[j][i] = -(sum * recip_L);
         }
@@ -316,7 +319,7 @@ namespace ac_math
         sum = 0;
         Linv_Linvtrans_COL:
         for (unsigned k=0; k<M; k++) {
-          sum += (k<j | k<i)?0:Linv[k][i].conj()*Linv[k][j];
+          sum += ((k<j) | (k<i))?0:Linv[k][i].conj()*Linv[k][j];
         }
         Ainv[i][j] = sum;
       }

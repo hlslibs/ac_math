@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -109,6 +109,13 @@
 //    #endif
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
+//    3.3.0  - [CAT-25797] Added CDesignChecker fixes/waivers for code check violations in ac_math PWL and Linear Algebra IPs.
+//             Waivers added for CNS and CCC violations.
+//             Fixes added for FXD, STF and MXS violations.
+//               - FXD violations fixed by changing integer literals to floating point literals or typecasting to ac_fixed values.
+//               - STF violations fixed by using "const" instead of "static const" parameters. LUT generator files also print out "const" LUTs instead of "static const" LUTs.
+//               - MXS violations fixed by typecasting unsigned variables to int.
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //*****************************************************************************************
@@ -125,6 +132,7 @@
 #include <ac_fixed.h>
 #include <ac_float.h>
 #include <ac_complex.h>
+
 
 // Include header file for ac_shift functions
 #include <ac_math/ac_shift.h>
@@ -231,6 +239,7 @@ namespace ac_math
     ac_int<DW,false> uD = neg_divisor ? (ac_int<DW,false>) -divisor : (ac_int<DW,false>) divisor;
     ac_int<QW,false> uQ;
     ac_int<DW,false> uR;
+#pragma hls_waive DBZ
     ac_div(uN, uD, uQ, uR);
     ac_int<QW,true> quotient_temp = neg_dividend == neg_divisor ? (ac_int<QW,true>) uQ : (ac_int<QW,true>) -uQ;
 
@@ -305,9 +314,10 @@ namespace ac_math
 
     ac_fixed<QW,QI,false,QQ,QO> quotient_temp;
 
+#pragma hls_waive CNS
     if (ZI-1 < -QF) {
       // MSB of result is smaller than LSB of requested output
-      quotient_temp = 0;
+      quotient_temp = ac_fixed<QW,QI,false,QQ,QO>(0); // Typecast to ac_fixed type in order to avoid FXD violations in CDesignChecker.
       return !! dividend;
     }
     // max is to used to avoid compilation problems with non pos bitwidth
@@ -337,6 +347,8 @@ namespace ac_math
     bool rem = (R != 0) || ((N >> ZW) != 0);
 
     ac_fixed<ZW+1,ZW,false> Q_fx = (ac_fixed<ZW+1,ZW,false>)Q;
+
+#pragma hls_waive CNS
     if (QQ == AC_RND_ZERO || QQ == AC_RND_MIN_INF || QQ == AC_RND_CONV || QQ == AC_RND_CONV_ODD)
     { Q_fx[0] = rem; }
 
@@ -388,6 +400,7 @@ namespace ac_math
     ac_fixed<DW,DI,false> uD = neg_D ? (ac_fixed<DW,DI,false>) -D : (ac_fixed<DW,DI,false>) D;
 
     bool has_rem;
+	#pragma hls_waive CNS
     if ( QQ == AC_RND_ZERO || QQ == AC_RND_INF ||
          QQ == AC_RND_CONV || QQ == AC_RND_CONV_ODD || QQ == AC_TRN_ZERO ) {
       ac_fixed<ZW,ZI,false,QQ> uQ;
@@ -402,13 +415,15 @@ namespace ac_math
       const int RBIT = (QQ == AC_TRN) ? 0 : 1;
       ac_fixed<ZW+RBIT,ZI,false> uQ;
       ac_fixed<ZW+RBIT+2,ZI+1,true> Q;
+#pragma hls_waive DBZ
       has_rem = ac_div(uN, uD, uQ);
       if (neg_N == neg_D) {
         Q = uQ;
+		#pragma hls_waive CNS
         if (QQ == AC_RND_MIN_INF)
         { Q[0] = has_rem ? 1 : 0; }
       } else {
-        ac_fixed<ZW+RBIT,ZI,false> lsb = 0;
+        ac_fixed<ZW+RBIT,ZI,false> lsb = 0.0;
         lsb[0] = has_rem && QQ != AC_RND_MIN_INF ? 1 : 0;
         Q = -(uQ + lsb);
       }
@@ -455,6 +470,7 @@ namespace ac_math
     const int STW = STI+(QW-QI);
     const int STE = AC_MAX(NE,DE)+1;
     ac_fixed<STW,STI,true> tm;
+#pragma hls_waive DBZ
     bool has_rem = ac_div(dividend.m, divisor.m, tm);
     ac_int<STE,true> te = dividend.exp()-divisor.exp();
     ac_float<STW,STI,STE> qt(tm, te, true);
@@ -508,7 +524,9 @@ namespace ac_math
     typedef typename ac_complex<DT>::rt_unary::neg DCT;
     DCT D_conj(D.r(),-D.i());
     typename ac_complex<QT>::template rt_T<DCT>::mult prod = X*D_conj;
+#pragma hls_waive DBZ
     bool has_rem = ac_div(prod.r(), s, Q._r);
+#pragma hls_waive DBZ
     has_rem |= ac_div(prod.i(), s, Q._i);
 
     // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate the real
@@ -529,30 +547,3 @@ namespace ac_math
 }
 
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

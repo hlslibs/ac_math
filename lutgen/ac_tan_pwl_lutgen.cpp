@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -46,20 +46,19 @@
 #include<iostream>
 using namespace std;
 
-
-//Define the number of points in your LUT.
-const unsigned npoints = 9;
-const unsigned nsegments = npoints - 1;
-const double x_min = 0;
-const double x_max = M_PI / 4;
-const double prop_constant = nsegments/(x_max - x_min);
-double m[nsegments];
-double c[nsegments];
-
 #include "helper_functions.h"
 
 int main()
 {
+//Define the number of points in your LUT.
+  const unsigned npoints = 9;
+  const unsigned nsegments = npoints - 1;
+  const double x_min = 0;
+  const double x_max = M_PI / 4;
+  const double prop_constant = nsegments/(x_max - x_min);
+  double m[nsegments];
+  double c[nsegments];
+
   FILE *fp;
 
   //The output ROM values will be printed to a file in c++ syntax.
@@ -81,8 +80,6 @@ int main()
 
   //Find slope and intercept for each segment.
   for (int i = 0; i < npoints; i++) {
-    //Replace this line with whichever function you want, e.g.
-    //"y[i] = sin(x_val_inc)"
     y[i] = tan(x_val_inc);
     x[i] = x_val_inc;
     x_sc[i] = (x_val_inc - x_min)*prop_constant;
@@ -94,9 +91,7 @@ int main()
     m[i] = y[i + 1] - y[i];
     c[i] = y[i];
     double x_mid = 0.5*(x[i + 1] + x[i]);
-    //Insert your function as the last term here, e.g.
-    //double max_diff = (m[i] * x_mid + c[i] - sin(x_mid));
-    double max_diff = (pwl_new(x_mid) - tan(x_mid));
+    double max_diff = (pwl_new(x_mid, m, c, prop_constant, x_min, nsegments) - tan(x_mid));
     c[i] = c[i] - 0.5*(max_diff);
     //cout << "max_diff = " << max_diff << endl;
   }
@@ -105,24 +100,20 @@ int main()
 
   //Correct slopes and intercepts in order for monotonicity to
   //be maintained.
-  for (int i = 1; i < npoints - 1; i++) {
+  for (int i = 1; i < nsegments; i++) {
     y1_new = m[i - 1] + c[i - 1];
     y2_new = m[i] + c[i];
     m[i] = y2_new - y1_new;
     c[i] = y1_new;
   }
 
-  //double increment = (x_max - x_min) / 65536;
-
   //Use a negative power of two as an increment.
   double increment = 1.0 / 65536.0;
   double abs_error, abs_error_max = 0, rel_error_max = 0, input_error_max;
 
   for (double input_tb = x_min; input_tb < x_max; input_tb += increment) {
-    //Insert your function here,
-    //e.g. double actual = sin(input_tb);
     double expected = tan(input_tb);
-    double actual = pwl_new(input_tb);
+    double actual = pwl_new(input_tb, m, c, prop_constant, x_min, nsegments);
     double rel_error = abs( (expected - actual) / expected) * 100;
     if (rel_error > rel_error_max) { rel_error_max = rel_error; }
     abs_error = abs(expected - actual);
@@ -156,8 +147,8 @@ int main()
   double m_max_val, c_max_val;
   bool is_neg_m, is_neg_c;
 
-  is_neg_m = is_neg_max_array(m, m_max_val);
-  is_neg_c = is_neg_max_array(c, c_max_val);
+  is_neg_m = is_neg_max_array(m, nsegments, m_max_val);
+  is_neg_c = is_neg_max_array(c, nsegments, c_max_val);
 
   string is_neg_m_s = is_neg_m ? "true" : "false";
   string is_neg_c_s = is_neg_c ? "true" : "false";
@@ -174,11 +165,11 @@ int main()
   std::ofstream outfile(filename);
   outfile << "const unsigned n_segments_lut = " << nsegments << ";" <<endl;
   outfile << "const int n_frac_bits = " << nfrac_bits << ";" << endl;
-  outfile << "static const ac_fixed<" << m_int_bits << " + n_frac_bits, " << m_int_bits << ", " << is_neg_m_s << "> m_lut[n_segments_lut] = " << mstr << ";" << endl;
-  outfile << "static const ac_fixed<" << c_int_bits << " + n_frac_bits, " << c_int_bits << ", " << is_neg_c_s << "> c_lut[n_segments_lut] = " << cstr << ";" << endl;
-  outfile << "static const ac_fixed<" << x_min_int_bits << " + n_frac_bits, " << x_min_int_bits << ", " << is_neg_x_min_s << "> x_min_lut = " << o_ac_f(x_min, nfrac_bits) << ";" << endl;
-  outfile << "static const ac_fixed<" << x_max_int_bits << " + n_frac_bits, " << x_max_int_bits << ", " << is_neg_x_max_s << "> x_max_lut = " << o_ac_f(x_max, nfrac_bits) << ";" << endl;
-  outfile << "static const ac_fixed<" << p_c_int_bits << " + n_frac_bits, " << p_c_int_bits << ", false> sc_constant_lut = " << o_ac_f(prop_constant, nfrac_bits) << ";" << endl;
+  outfile << "const ac_fixed<" << m_int_bits << " + n_frac_bits, " << m_int_bits << ", " << is_neg_m_s << "> m_lut[n_segments_lut] = " << mstr << ";" << endl;
+  outfile << "const ac_fixed<" << c_int_bits << " + n_frac_bits, " << c_int_bits << ", " << is_neg_c_s << "> c_lut[n_segments_lut] = " << cstr << ";" << endl;
+  outfile << "const ac_fixed<" << x_min_int_bits << " + n_frac_bits, " << x_min_int_bits << ", " << is_neg_x_min_s << "> x_min_lut = " << o_ac_f(x_min, nfrac_bits) << ";" << endl;
+  outfile << "const ac_fixed<" << x_max_int_bits << " + n_frac_bits, " << x_max_int_bits << ", " << is_neg_x_max_s << "> x_max_lut = " << o_ac_f(x_max, nfrac_bits) << ";" << endl;
+  outfile << "const ac_fixed<" << p_c_int_bits << " + n_frac_bits, " << p_c_int_bits << ", false> sc_constant_lut = " << o_ac_f(prop_constant, nfrac_bits) << ";" << endl;
   outfile.close();
 
   cout << endl;
@@ -191,5 +182,3 @@ int main()
 
   return 0;
 }
-  int p_c_int_bits = ceil(log2(make_non_zero(prop_constant))) + 1;
-

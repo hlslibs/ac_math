@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -87,7 +87,6 @@
 #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
 #include <string.h>
 #include <iostream>
-using namespace std;
 #endif
 
 #include <ac_int.h>
@@ -495,11 +494,11 @@ namespace ac_math
 
 #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
     string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
-    cout << base_string << endl;
-    cout << "x = " << x << endl;
-    cout << "x_norm = " << x_norm << endl;
-    cout << "expret = " << expret << endl;
-    cout << "z = " << z << endl;
+    std::cout << base_string << std::endl;
+    std::cout << "x = " << x << std::endl;
+    std::cout << "x_norm = " << x_norm << std::endl;
+    std::cout << "expret = " << expret << std::endl;
+    std::cout << "z = " << z << std::endl;
 #endif
 
   }
@@ -580,17 +579,17 @@ namespace ac_math
     z = zs;
 
 #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
-    cout << "x = " << x << endl;
-    cout << "q_int = " << q_int << endl;
-    cout << "q = " << q << endl;
-    cout << "m = " << m << endl;
-    cout << "zc = " << zc << endl;
-    cout << "zs = " << zs << endl;
-    cout << "x*inv_ln2 = " << x *inv_ln2 << endl;
-    cout << "q_int.type_name() = " << q_int.type_name() << endl;
-    cout << "q.type_name() = " << q.type_name() << endl;
-    cout << "zc.type_name() = " << zc.type_name() << endl;
-    cout << "zs.type_name() = " << zs.type_name() << endl;
+    std::cout << "x = " << x << std::endl;
+    std::cout << "q_int = " << q_int << std::endl;
+    std::cout << "q = " << q << std::endl;
+    std::cout << "m = " << m << std::endl;
+    std::cout << "zc = " << zc << std::endl;
+    std::cout << "zs = " << zs << std::endl;
+    std::cout << "x*inv_ln2 = " << x *inv_ln2 << std::endl;
+    std::cout << "q_int.type_name() = " << q_int.type_name() << std::endl;
+    std::cout << "q.type_name() = " << q.type_name() << std::endl;
+    std::cout << "zc.type_name() = " << zc.type_name() << std::endl;
+    std::cout << "zs.type_name() = " << zs.type_name() << std::endl;
 #endif
 
   }
@@ -697,7 +696,7 @@ namespace ac_math
     z = zc_shift;
 
 #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
-    cout << "zc_shift.type_name() = " << zc_shift.type_name() << endl;
+    std::cout << "zc_shift.type_name() = " << zc_shift.type_name() << std::endl;
 #endif
   }
 

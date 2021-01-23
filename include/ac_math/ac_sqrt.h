@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -83,6 +83,7 @@
 //    the ac_shift header file.
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
 //    3.1.0  - Fixed lines that could cause OVL violations.
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //
@@ -140,7 +141,7 @@ namespace ac_math
       r <<= 1;
 
       mask_d = (mask_d << 2) | 0x3;
-      d = mask_d & (d << 2) | ((z >> z_shift) & 0x3 );
+      d = (mask_d & (d << 2)) | ((z >> z_shift) & 0x3 );
 
       ac_int<RW+2, false> t = (ac_int<RW+2, false>)(d - (( ((ac_int<RW+1, false>)r) << 1) | 0x1));
       if ( !t[RW+1] ) { // since t is unsigned, look at MSB
@@ -174,9 +175,11 @@ namespace ac_math
     const int OF = (OW-OI) + RBIT;
 
     const int RI = (XI+1)/2;
+	#pragma hls_waive CNS
+
     if (RI-1 < -OF) {
       // MSB of result is smaller than LSB of requested output
-      sqrt = 0;
+      sqrt = 0.0;
       return;
     }
 
@@ -207,7 +210,7 @@ namespace ac_math
       r <<= 1;
 
       mask_d = (mask_d << 2) | 0x3;
-      d = mask_d & (d << 2) | ((z >> z_shift) & 0x3 );
+      d = (mask_d & (d << 2)) | ((z >> z_shift) & 0x3 );
 
       ac_int<RW+2,false> t = (ac_int<RW+2, false>)(d - (( ((ac_int<RW+1,false>)r) << 1) | 0x1));
       if ( !t[RW+1] ) { // since t is unsigned, look at MSB
@@ -218,6 +221,8 @@ namespace ac_math
     }
 
     ac_fixed<RW+1,RW,false> r2 = (ac_fixed<RW+1,RW,false>) r;
+	#pragma hls_waive CNS
+
     if (OQ == AC_RND_ZERO || OQ == AC_RND_MIN_INF || OQ == AC_RND_CONV ||  OQ == AC_RND_CONV_ODD) {
       bool rem = (d != 0) || ((z >> 2*RW) != 0);
       if (ZF < (XW-XI)) {

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -92,7 +92,6 @@
 
 #if !defined(__SYNTHESIS__)
 #include <iostream>
-using namespace std;
 #endif
 
 //============================================================================
@@ -123,8 +122,8 @@ namespace ac_math
     static bool flag = true;
     if (flag && T_in::width-T_in::i_width > 12) {
 #ifndef __SYNTHESIS__
-      cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-      cout << "Warning: The output will not be accurate" << endl;
+      std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+      std::cout << "Warning: The output will not be accurate" << std::endl;
 #endif
       flag = false;
     }
@@ -662,6 +661,7 @@ namespace ac_math
     // Extracting (MSB-3:LSB) bits of scaled input to determine the lookup table index
     lutindextype1 lut_index1 = posinput.template slc<AC_MAX(T_in::width-T_in::i_width-3, 1)>(0);  // Extracting the lookup table index
 
+#pragma hls_waive CNS
     if (T_in::width-T_in::i_width>=4 && T_in::width-T_in::i_width<=12) {
       lut_index.set_slc(12- (T_in::width - T_in::i_width), lut_index1);                           // stride
     }
@@ -681,6 +681,7 @@ namespace ac_math
       { lut_index = 1; }
     }
 
+#pragma hls_waive CNS
     if (T_in::width-T_in::i_width>=3) {
       // Getting the octant 0-7 by extracting the first 3 bits from MSB side of scaled input where
       //   octant 0 corresponds to [0-PI/4),
@@ -699,14 +700,15 @@ namespace ac_math
                        ((octant==2) | (octant==5)) ? (T_out)-sincos[lut_index].i():
                        (T_out) sincos[lut_index].r();
       // Below two are the cases when the output corresponds to + or - (0 or 1) for which there is no entry in the lookup table
-      output.i() = ((posinput==0.125 | posinput==0.375)) ?  0.7071067811865475244008:
-                   ((posinput==0.625 | posinput==0.875)) ? -0.7071067811865475244008:
+      output.i() = ((posinput==0.125) | (posinput==0.375)) ?  0.7071067811865475244008:
+                   ((posinput==0.625) | (posinput==0.875)) ? -0.7071067811865475244008:
                    outputtemp.i();
-      output.r() = ((posinput==0.125 | posinput==0.875)) ?  0.7071067811865475244008:
-                   ((posinput==0.375 | posinput==0.625)) ? -0.7071067811865475244008:
+      output.r() = ((posinput==0.125) | (posinput==0.875)) ?  0.7071067811865475244008:
+                   ((posinput==0.375) | (posinput==0.625)) ? -0.7071067811865475244008:
                    outputtemp.r();
     }
 
+#pragma hls_waive CNS
     if (T_in::width-T_in::i_width <= 2) {
       output.i() = (posinput==0   ) ? (T_out) 0:
                    (posinput==0.25) ? (T_out) 1:
@@ -720,14 +722,14 @@ namespace ac_math
                    outputtemp.r();
     }
 
-#if !defined(__SYNTHESIS__) && defined(SINCOS_DEBUG)
-    cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "============AC_FIXED SINCOS============" << endl;
-    cout << "positive input is   = " << posinput << endl;
-    cout << "lut index is   = " << lut_index << endl;
-    cout << "sin value is    = " << output.i() << endl;
-    cout << "cos value is    = " << output.r() << endl;
-    cout << "=================================================" << endl;
+#if !defined(__SYNTHESIS__) && defined(AC_SINCOS_LUT_H_DEBUG)
+    std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+    std::cout << "============AC_FIXED SINCOS======================" << std::endl;
+    std::cout << "positive input is   = " << posinput << std::endl;
+    std::cout << "lut index is   = " << lut_index << std::endl;
+    std::cout << "sin value is    = " << output.i() << std::endl;
+    std::cout << "cos value is    = " << output.r() << std::endl;
+    std::cout << "=================================================" << std::endl;
 #endif
   }
 

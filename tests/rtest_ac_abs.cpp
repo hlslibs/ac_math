@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -84,6 +84,16 @@ void test_ac_abs_float(
   ac_abs(in3, out5);
 }
 
+//Test for ac_complex input and ac_fixed output.
+template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
+void test_ac_abs_complex(
+  const ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > &in,
+  ac_fixed<outWfi, outIfi, false, AC_TRN, AC_WRAP> &out
+)
+{
+  ac_abs(in, out);
+}
+
 // ==============================================================================
 
 #include <math.h>
@@ -116,6 +126,41 @@ bool output_check(
   return correct;
 }
 
+// Calculating error for complex datatype.
+template <class T_in, class T_out>
+double cmplx_err_calc(
+  const ac_complex<T_in> input_complex,
+  const T_out output_complex,
+  const double allowed_error_cmplx,
+  const double threshold
+)
+{
+  double this_error;
+  double a = pow((input_complex.r()).to_double(), 2) + pow((input_complex.i()).to_double(), 2);
+  double actual_value = sqrt(a);
+  double expected_value = output_complex.to_double();
+
+  // If magnitude of expected value is greater than a particular threshold, calculate relative error, else, calculate absolute error.
+  if (abs(expected_value) > threshold) {
+    this_error = ((abs(expected_value - actual_value)) / expected_value ) * 100;
+  } else {
+    this_error = abs(expected_value - actual_value);
+  }
+
+#ifdef DEBUG
+  if (this_error > allowed_error_cmplx) {
+    cout << endl;
+    cout << "  Error tolerance exceeded for following values: " << endl;
+    cout << "  input          = " << input_complex << endl;
+    cout << "  output         = " << output_complex << endl;
+    cout << "  exp_op         = " << expected_value << endl;
+    cout << "  this_error     = " << this_error << endl;
+    assert(false);
+  }
+#endif
+
+  return this_error;
+}
 // ==============================================================================
 // Functions: test_driver functions
 // Description: Templatized functions that can be configured for certain bit-
@@ -145,7 +190,7 @@ int test_driver_int(
   step        = input_s_int.template set_val<AC_VAL_QUANTUM>().to_double();
 
   cout << "TEST: ac_abs() INPUT: ";
-  cout.width(38);
+  cout.width(50);
   cout << left << input_s_int.type_name();
   cout << "OUTPUTS: ";
   cout.width(38);
@@ -205,7 +250,7 @@ int test_driver_fixed(
   step        = input_s_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
 
   cout << "TEST: ac_abs() INPUT: ";
-  cout.width(38);
+  cout.width(50);
   cout << left << input_s_fixed.type_name();
   cout << "OUTPUTS: ";
   cout.width(38);
@@ -253,18 +298,17 @@ int test_driver_float(
   bool details = false
 )
 {
-  typedef ac_float<   Wfl,    Ifl,    Efl, AC_TRN> T_in;
-  T_in input_float;
-  ac_float<outWfl, outIfl, outEfl, AC_TRN> output_float;
+  typedef ac_float<Wfl, Ifl, Efl, AC_TRN> T_in;
+  typedef ac_float<outWfl, outIfl, outEfl, AC_TRN> T_out;
 
-  // Declare an ac_fixed variable of same type as mantissa
-  ac_fixed<Wfl, Ifl, true> sample_mantissa;
-
-  double lower_limit_mantissa, upper_limit_mantissa, step_mantissa;
-
-  lower_limit_mantissa = sample_mantissa.template set_val<AC_VAL_MIN>().to_double();
-  upper_limit_mantissa = sample_mantissa.template set_val<AC_VAL_MAX>().to_double();
-  step_mantissa        = sample_mantissa.template set_val<AC_VAL_QUANTUM>().to_double();
+  // Since ac_float values are normalized, the bit adjacent to the sign bit in the mantissa
+  // will always be set to 1 except for certain negative values. We will hence cycle through all the
+  // bit patterns that correspond to the last (Wfl - 2) bits in the mantissa.
+  ac_int<Wfl - 2, false> sample_mantissa_slc;
+  // Set the lower limit, upper limit and step size of the test iterations.
+  ac_int<Wfl - 2, false> lower_limit_it = 0;
+  ac_int<Wfl - 2, false> upper_limit_it = sample_mantissa_slc.template set_val<AC_VAL_MAX>().to_double();
+  ac_int<Wfl - 2, false> step_it = 1; // Since sample_mantissa_slc is an integer.
 
   // Declare arrays to store all values of exponent to be tested.
   const int exp_arr_size = 2*(Efl - 1) + 3;
@@ -290,11 +334,11 @@ int test_driver_float(
   string empty_str = "";
 
   cout << "TEST: ac_abs() INPUT: ";
-  cout.width(38);
-  cout << left << input_float.type_name();
+  cout.width(50);
+  cout << left << T_in::type_name();
   cout << "OUTPUT:  ";
   cout.width(38);
-  cout << left << output_float.type_name();
+  cout << left << T_out::type_name();
   cout.width(38);
   cout << left << empty_str;
   cout << "RESULT: ";
@@ -302,10 +346,10 @@ int test_driver_float(
   // Dump the test details
   if (details) {
     cout << endl; // LCOV_EXCL_LINE
-    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
-    cout << "    lower_limit_mantissa = " << lower_limit_mantissa << endl; // LCOV_EXCL_LINE
-    cout << "    upper_limit_mantissa = " << upper_limit_mantissa << endl; // LCOV_EXCL_LINE
-    cout << "    step_mantissa        = " << step_mantissa << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for testing iterations:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit_it = " << lower_limit_it << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit_it = " << upper_limit_it << endl; // LCOV_EXCL_LINE
+    cout << "    step_it        = " << step_it << endl; // LCOV_EXCL_LINE
   }
 
   bool correct = true;
@@ -314,17 +358,112 @@ int test_driver_float(
 
   for (int i = 0; i < exp_arr_size; i++) {
     // For a particular exponent value, go through every possible value that can be represented by the mantissa.
-    for (double mant_i = lower_limit_mantissa; mant_i <= upper_limit_mantissa; mant_i += step_mantissa) {
-      // Normalize the mantissa by using a parameterized ac_float constructor.
-      T_in input_float_norm(ac_fixed<Wfl, Ifl, true>(mant_i), sample_exponent_array[i]);
-      input_float = input_float_norm;
+    // The iteration variable has a bitwidth that is 1 higher (bitwidth = Wfl - 1) than the slice of the mantissa
+    // we'll be changing from one iteration to the other (bitwidth of slice = Wfl - 2), to ensure that the loop variable
+    // doesn't overflow.
+    for (ac_int<Wfl - 1, false> mant_i = lower_limit_it; mant_i <= upper_limit_it; mant_i += step_it) {
+      ac_fixed<Wfl, Ifl, true> input_mant;
+      // Set the sign bit to zero to ensure a positive value.
+      input_mant[Wfl - 1] = 0;
+      // Set the bit adjacent to the sign bit to 1 to ensure a normalized mantissa
+      input_mant[Wfl - 2] = 1;
+      // Set the remaining bits to the bit pattern stored in the last (Wfl - 2) bits in mant_i.
+      input_mant.template set_slc(0, mant_i.template slc<Wfl - 2>(0));
+      // Use a parameterized ac_float constructor to set the mantissa and exponent of the floating point input.
+      T_in input_float(input_mant, sample_exponent_array[i]);
+      // Make sure that input_mant was normalized and that the mantissa and exponent values haven't changed after calling the constructor.
+      if (input_float.mantissa() != input_mant || input_float.exp() != sample_exponent_array[i]) {
+        cout << "input_mant was not normalized correctly." << endl;
+        assert(false);
+      }
+      T_out output_float;
       test_ac_abs_float(input_float, output_float);
       // If any iteration does not produce the correct value for the output, then the "correct" variable will be set to false.
       bool correct_iteration = output_check(input_float, output_float);
       correct = correct && correct_iteration;
+      // Pass the negative value of the input and test the output too, in a similar manner.
+      ac_fixed<Wfl, Ifl, true> input_mant_neg = -input_mant;
+      T_in input_float_neg(input_mant_neg, sample_exponent_array[i]);
+      if ((input_float_neg.mantissa() != input_mant_neg || input_float_neg.exp() != sample_exponent_array[i]) && mant_i != 0) {
+        cout << "input_mant_neg was not normalized correctly." << endl;
+        assert(false);
+      }
+      test_ac_abs_float(input_float_neg, output_float);
+      bool correct_iteration_neg = output_check(input_float_neg, output_float);
+      correct = correct && correct_iteration_neg;
     }
   }
 
+  if (correct) { printf("PASSED\n"); }
+  else         { printf("FAILED\n"); } // LCOV_EXCL_LINE
+
+  all_tests_pass = all_tests_pass && correct;
+
+  return 0;
+}
+
+// ==============================================================================
+// Function: test_driver_complex()
+// Description: test_driver function for ac_fixed inputs and outputs.
+
+template <int Wfi, int Ifi, bool S, int outWfi, int outIfi>
+int test_driver_complex(
+  double max_error_cmplx,
+  const double allowed_error_cmplx,
+  const double threshold,
+  bool &all_tests_pass,
+  bool details = false
+)
+{
+  ac_fixed< Wfi, Ifi, S, AC_TRN, AC_WRAP> input_fixed;
+  ac_complex<ac_fixed< Wfi, Ifi, S, AC_TRN, AC_WRAP> > input_complex;
+  ac_fixed< outWfi, outIfi, false, AC_TRN, AC_WRAP> output_complex;
+
+  double lower_limit, upper_limit, step, this_error;
+  bool correct_iteration;
+
+  // set ranges and step size for fixed point testbench
+  lower_limit = input_fixed.template set_val<AC_VAL_MIN>().to_double();
+  upper_limit = input_fixed.template set_val<AC_VAL_MAX>().to_double();
+  step        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
+
+  cout << "TEST: ac_abs() INPUT: ";
+  cout.width(50);
+  cout << left << input_complex.type_name();
+  cout << "OUTPUT:  ";
+  cout.width(38);
+  cout << left << output_complex.type_name();
+  cout.width(38);
+  cout << left << " ";
+  cout << "RESULT: ";
+
+  // Dump the test details
+  if (details) {
+    cout << endl; // LCOV_EXCL_LINE
+    cout << "  Ranges for input types:" << endl; // LCOV_EXCL_LINE
+    cout << "    lower_limit = " << lower_limit << endl; // LCOV_EXCL_LINE
+    cout << "    upper_limit = " << upper_limit << endl; // LCOV_EXCL_LINE
+    cout << "    step        = " << step << endl; // LCOV_EXCL_LINE
+  }
+
+  bool correct = true;
+
+  // test fixed-point complex values.
+
+  for (double i = lower_limit; i <= upper_limit; i += step) {
+    for (double j = lower_limit; j <= upper_limit; j += step) {
+      input_complex.r() = i;
+      input_complex.i() = j;
+      test_ac_abs_complex(input_complex, output_complex);
+      double this_error_complex = cmplx_err_calc(input_complex, output_complex, allowed_error_cmplx, threshold);
+      if (this_error_complex > max_error_cmplx) {max_error_cmplx = this_error_complex;}
+      if (max_error_cmplx < allowed_error_cmplx)
+      { correct_iteration = true; }
+      else
+      { correct_iteration = false; }
+      correct = correct && correct_iteration;
+    }
+  }
   if (correct) { printf("PASSED\n"); }
   else         { printf("FAILED\n"); } // LCOV_EXCL_LINE
 
@@ -341,6 +480,11 @@ int main(int argc, char *argv[])
   bool all_tests_pass = true;
 
   // If any of the tests fail, the all_tests_pass variable will be set to false
+
+  double max_error_cmplx = 0;
+  double allowed_error_cmplx = 0.5;
+
+  const double threshold = 0.005;
 
   // template <int Wint, int outWint>
   test_driver_int<7, 7>(all_tests_pass);
@@ -371,6 +515,16 @@ int main(int argc, char *argv[])
   test_driver_float< 4,  9,  5,  6,  9,  6>(all_tests_pass);
   test_driver_float< 4,  9,  5, 12,  9,  6>(all_tests_pass);
 
+  // template <int Wfi, int Ifi, int Sfi, int outWfi, int outIfi>
+  test_driver_complex<6, 4, true,  32, 6>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+  test_driver_complex<6, 4, false, 32, 7>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+  test_driver_complex<12, 5, true,  32, 7>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+  test_driver_complex<8, 5, false, 32, 8>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+  test_driver_complex<9, 3, true,  32, 5>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+  test_driver_complex<9, 3, false, 32, 6>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+  test_driver_complex<10, 4, true,  32, 6>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+  test_driver_complex<13, 5, false, 32, 7>(max_error_cmplx, allowed_error_cmplx, threshold, all_tests_pass);
+
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished." << endl;
 
@@ -387,26 +541,4 @@ int main(int argc, char *argv[])
   return 0;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

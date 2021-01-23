@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -85,11 +85,6 @@
 #include <ac_complex.h>
 #include <ac_matrix.h>
 
-#if !defined(__SYNTHESIS__)
-#include <iostream>
-using namespace std;
-#endif
-
 namespace ac_math
 {
   template<unsigned M, unsigned N, unsigned P, class TA, class TB, class TC>
@@ -100,7 +95,7 @@ namespace ac_math
       PLOOP:
       for (unsigned j=0; j<P; j++) {
         typedef typename TA::template rt_T<TB>::mult T;
-        typename T::rt_unary::template set<N>::sum add = 0;
+        typename T::rt_unary::template set<N>::sum add = 0.0;
         NLOOP:
         for (unsigned k=0; k<N; k++) {
           T multiply = A[i][k] * B[k][j];

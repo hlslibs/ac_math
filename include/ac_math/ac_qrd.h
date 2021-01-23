@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -30,51 +30,32 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+//********************************************************************************************************************************
 // File: ac_qrd.h
 //
-//  Created on: Jul 11, 2017
+// Created on: Jul 11, 2017
 //
-//  Author: Sachchidanand Deo
+// Author: Sachchidanand Deo
 //
-//  Description: This function computes Q and R matrices which are decompositions of an input matrix (given by A), such that:
-//  A is an input square matrix with dimension MxM
-//  Q matrix is an orthogonal matrix (such that, Q = inverse (Q)
-//  and R is an upper triangular matrix such that all elemets below diagonal are zero.
-//  This function uses Given's rotation algorithm, which takes input matrix of size MxM and in every iteration computes a 2x2 matrix
-//  given by,
-//  [ c -s]
-//  [ s  c]
-// where, c = x/sqrt(x^2+y^2) and s = -y/sqrt(x^2+y^2)
-// c is cosine element where as s is sine element (See diagonal processing element function for further explaination).
-// In above equation, y is element in matrix to be made zero and x being element in same column and row above x.
-// After the above matrix is computed, we form a Givens rotation matrix. given by,
-//  [c -s 0 0 0]
-//  [s  c 0 0 0]
-//  [0  0 1 0 0]
-//  [0  0 0 1 0]
-//  [0  0 0 0 1]
-
-// Then Givens rotation matrix is multiplied to the original matrix and process is repeated until the result is obtained which is R matrix.
-// In this way each iteration performs one rotation, so as to zero one element of matrix. In this file we start with zeroing, first column, last row element and then
-// proceed towards up direction columnwise, upon reaching element below diagonal in every column, we proceed to next column on right.
-//
-// Systolic Array approach : This algorithm uses Systolic array approach to replace the matrix multiplication. This saves a lot of hardware and makes algorithm
-// fully parallelizable. Systolic array approach takes advantage of the fact that only two rows change in one iteration and rather than doing matrix muliplication optimizes
-// off-diagonal processing element to perform operation on two rows at a time, in a stateful manner (See off-diagonal processing element for further explaination).
-//
-// Computation of Q : To avoid matrix multiplication involved in computation of Q alongside storage of previous Q in every iteration, Q is computed in systolic manner, similar to R.
-// First input matrix is concatenated with a identity matrix, to get a higher order matrix, which is then modified using givens rotation in a systolic manner. The larger matrix is then subdivided into
-// R and output of Givens rotation on identity matrix which is Q (as Final_Q = Q1. Q2. Q3....is nothing but performing Givens rotation successively in identity matrix).
+// Description: This function computes Q and R matrices which are decompositions of an
+//    input matrix (given by A), such that:
+//    A is an input square matrix with dimension MxM
+//    Q matrix is an orthogonal matrix (such that, Q = inverse (Q)
+//    and R is an upper triangular matrix.
+//    Supported datatypes are: ac_fixed and ac_complex<ac_fixed>
 //
 // Revision History:
+//    3.3.0  - [CAT-25797] Added CDesignChecker fixes/waivers for code check violations in ac_math PWL and Linear Algebra IPs.
+//             Waivers added for CNS and ABW violations.
+//             Fixes added for FXD and MXS violations.
+//               - FXD violations fixed by changing integer literals to floating point literals or typecasting to ac_fixed values.
+//               - MXS violations fixed by typecasting unsigned variables to int.
+//    3.2.3 - CAT-24362, CAT-24269.
 //
-//----------------------------------------------------------------------------------------------------------------
+//********************************************************************************************************************************
 
 #ifndef _INCLUDED_AC_QRD_H_
 #define _INCLUDED_AC_QRD_H_
-
-// include this part during debugging
-//#define AC_QRD_DEBUG
 
 // Include headers for data types supported by these implementations
 #include <ac_fixed.h>
@@ -82,145 +63,216 @@
 #include <ac_matrix.h>
 
 // Include headers for required functions
+#include <ac_math/ac_div.h>
+#include <ac_math/ac_sqrt.h>
 #include <ac_math/ac_sqrt_pwl.h>
 #include <ac_math/ac_inverse_sqrt_pwl.h>
 
-#if !defined(__SYNTHESIS__)
+#ifndef __SYNTHESIS__
 #include <iostream>
-using namespace std;
 #endif
-
-//=========================================================================
-// Inline functions to perform required matrix operations:
-//=========================================================================
-// initializing the larger matrix as well as the smaller matrices. Formation of A1 from A and identity matrix.
 
 namespace ac_math
 {
+  //=========================================================================
+  // Inline functions to perform required matrix operations:
+  //=========================================================================
+
+  // Assign unity or zero value to output argument for ac_fixed representation.
+  template<int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
+  void assign_unity_or_zero(ac_fixed<W, I, S, Q, O> &output, bool assign_unity)
+  {
+    typedef ac_fixed<1, 1, false> oneBitType;
+
+    output = assign_unity ? oneBitType(1) : oneBitType(0);
+  }
+
+  // Assign unity value to output argument for ac_complex<ac_fixed> representation
+  template<int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
+  void assign_unity_or_zero(ac_complex<ac_fixed<W, I, S, Q, O> > &output, bool assign_unity)
+  {
+    typedef ac_fixed<1, 1, false> oneBitType;
+
+#pragma hls_waive ABW
+    output.r() = assign_unity ? oneBitType(1) : oneBitType(0);
+#pragma hls_waive ABW
+    output.i() = 0.0;
+  }
+
+  // Initializing the larger matrix as well as the smaller matrices. Formation of A1 from A and identity matrix.
   template <unsigned M, typename T1, typename T2>
   void initialize_matrix (ac_matrix<T1, M, M> &A, ac_matrix <T2,M,2*M> &A1)
   {
+    // For matrices that are mapped to register banks, IDENT_ROW and and IDENT_COLUMN can be fully unrolled.
     IDENT_ROW:
     for (unsigned i = 0; i < M; i++) {
       IDENT_COLUMN:
       for (unsigned j = 0; j < M; j++) {
         A1(i,j) = A(i,j); // formation of A1 using A
-        A1(i,j+M) = (j+M-i == M) ? 1: 0; // setting remaining part of A to identity matrix
+        // setting remaining part of A to identity matrix
+        assign_unity_or_zero(A1(i,j+M), j+M-i == M);
+        // Assigment to real and imaginary values for ac_complex variables is handled separately in the ac_complex version of the
+        // assign_unity_or_zero function. This is done in order to avoid using the ac_complex constructor used to assign real
+        // values, due to the fact that doing so results in FXD violations.
       }
     }
   }
 
   // This function is used to get back final Q and R from large matrix A1 on which Givens rotations are performed.
-  template <unsigned M, typename T1, typename T2>
-  void qr_separate (ac_matrix <T1,M,2*M> &A1, ac_matrix <T2,M,M> &Q, ac_matrix <T2,M,M> &R)
+  // It also functions to modify the last column if real_diag is set to true for complex matrices.
+  template <bool real_diag, unsigned M, typename T1, typename T2, typename T3>
+  void qr_separate (ac_matrix <T1,M,2*M> &A1, ac_matrix <T2,M,M> &Q, ac_matrix <T2,M,M> &R, T3 e_coeff)
   {
+    // For matrices that are mapped to register banks, SEPARATE_ROW and and SEPARATE_COLUMN can be fully unrolled.
     SEPARATE_ROW:
     for (unsigned i = 0; i < M; i++) {
       SEPARATE_COLUMN:
       for (unsigned j = 0; j < M; j++) {
-        Q(j,i) = A1(i,j+M); // Q is part where initial matrix was present
+#pragma hls_waive CNS
+        if (real_diag && i == M - 1) {
+          Q(j, i) = A1(i, j + M)*e_coeff;
+        } else {
+          Q(j, i) = A1(i, j + M);
+        }
         R(i,j) = A1(i,j); // R is a part where identity matrix was present
       }
     }
   }
 
-  //=========================================================================
-  //Processing Elements to perform orthogonal rotation in each iteration
-  //=========================================================================
-  // Diagonal Processing Elements:
-  // Description: Diagonal processing elements are used to compute sine (s) and cosine (c) parameters. These parameters
-  // are then passed down to the parent function which then broadcasts them to off-diagonal processing elements. The computation
-  // of c and s is carried out using:
-  // c = x/sqrt(x^2+y^2) and s = -y/sqrt(x^2+y^2)
-  // where x and y are taken from parent function.
-  // To reduce the area, piece wise linear implementation of reciprocal can be used to replace
-  // dividers and piecewise linear implementation of square root can be used to replace accurate square root computation.
-  // ----------------------------------------------------------------------------------------------------------------
-  // Helper struct (types_params_qrd) for defining internal variable:
-  // Description: types_params_qrd is a helper structure that is used for defining
-  // internal varaible given by temp_type which accounts for bit growth due to the
-  // multiplication.
-  // ----------------------------------------------------------------------------------------------------------------
-  template<typename T>
-  struct types_params_qrd {
-  };
-
-  // ----------------------------------------------------------------------------------------------------------------
-  //Helper struct (types_params_qrd) for ac_fixed:
-  // Description: This structue defines temp_type variable required
-  // in ac_fixed implementation of qrd
-  // ----------------------------------------------------------------------------------------------------------------
-  template<int W, int I, bool S, ac_q_mode q_mode, ac_o_mode o_mode>
-  struct types_params_qrd<ac_fixed<W,I,S, q_mode, o_mode> > {
-    typedef ac_fixed<2*W+1, 2*I+1,false, q_mode, o_mode> sqr_type; // for additional of squares
-    typedef ac_fixed<4*W+2, 2*I+1, false, q_mode, o_mode> root_type;
-  };
-
-  // ----------------------------------------------------------------------------------------------------------------
-  //Helper struct (types_params_qrd) for ac_complex:
-  // Description: This structue defines temp_type variable required
-  // in ac_complex implementation of qrd
-  // ----------------------------------------------------------------------------------------------------------------
-  template<int W, int I, bool S, ac_q_mode q_mode, ac_o_mode o_mode>
-  struct types_params_qrd<ac_complex <ac_fixed<W,I,S, q_mode, o_mode> > > {
-    typedef ac_complex <ac_fixed<2*W+1,2*I+1,true, q_mode, o_mode> > sqr_type;
-    typedef ac_complex <ac_fixed<4*W+2,I+1,true, q_mode, o_mode> > root_type;
-  };
-
-  //#pragma map_to_operator [CCORE]
-  template <typename T1, typename T2, typename T3, bool ispwl>
-  void diagonal_PE (T2 x, T2 y, T3 &c, T3 &s)
+  // This function calculates the sum of squares for real diagonal_PE calculations.
+  template<int W, int I, bool S, ac_q_mode Q, ac_o_mode O, int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
+  void sqr_calc(ac_fixed<W, I, S, Q, O> in1, ac_fixed<W, I, S, Q, O> in2, ac_fixed<outW, outI, outS, outQ, outO> &out)
   {
-    typename types_params_qrd <T1>:: sqr_type sqr;
-    typename types_params_qrd <T1>:: root_type root;
-    typename types_params_qrd <T1>:: root_type inverse_root;
-    sqr = (x*x)+ (y*y);
+    out = in1*in1 + in2*in2;
+  }
+
+  // This function calculates the sum of squares for complex diagonal_PE calculations.
+  template<class T, int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
+  void sqr_calc(ac_complex<T> in1, ac_complex<T> in2, ac_fixed<outW, outI, outS, outQ, outO> &out)
+  {
+    out = in1.mag_sqr() + in2.mag_sqr();
+  }
+
+  // This function is used to produce sine and cosine coefficients for the given's rotation transform, for real matrices.
+  template <bool ispwl, class T1, class T2>
+  void diagonal_PE (T1 b, T1 a, T2 &c, T2 &s)
+  {
+    typedef typename T1::rt_unary::mag_sqr s_type;
+    enum {
+      sqr_I = s_type::i_width,
+      n_f_b = 32,
+    };
+    typedef ac_fixed<n_f_b + sqr_I, sqr_I, false> sqr_type;
+
+    sqr_type sqr;
+    sqr_calc(b, a, sqr);
+
+    enum {
+      root_I   = sqr_I%2 == 0 ? sqr_I/2 : (sqr_I + 1)/2,
+      i_root_I = n_f_b%2 == 0 ? n_f_b/2 : (n_f_b + 1)/2,
+    };
+
+    ac_fixed<n_f_b + i_root_I, i_root_I, false> i_root;
+
+#pragma hls_waive CNS
     if (ispwl) {
-      ac_math::ac_inverse_sqrt_pwl (sqr, inverse_root);
-      c = y*inverse_root;
-      s = -x*inverse_root;
+      // Use PWL functions.
+      ac_math::ac_inverse_sqrt_pwl(sqr, i_root);
+      c = a*i_root;
+      s = -b*i_root;
     } else {
-      ac_math::ac_sqrt_pwl(sqr, root);
-      c = y/root;
-      s = -x/root;
+      // Use accurate ac_math functions.
+      ac_fixed<n_f_b + root_I, root_I, false> root;
+      ac_math::ac_sqrt(sqr, root);
+      // Instead of dividing a and -b by root, we find the inverse of root and then
+      // multiply a and -b with it, so as to minimize the usage of dividers.
+      ac_math::ac_div(ac_fixed<1, 1, false>(1), root, i_root);
+      c = a*i_root;
+      s = -b*i_root;
+    }
+  }
+
+  // Perform rotation for real matrices.
+  template<unsigned M, int W1, int I1, bool S1, ac_q_mode Q1, ac_o_mode O1, int W2, int I2, bool S2, ac_q_mode Q2, ac_o_mode O2>
+  void rotate(
+    unsigned i, unsigned j,
+    ac_fixed<W1, I1, S1, Q1, O1> row1_0, ac_fixed<W1, I1, S1, Q1, O1> row1_1,
+    ac_fixed<W1, I1, S1, Q1, O1> &row2_0, ac_fixed<W1, I1, S1, Q1, O1> &row2_1,
+    ac_fixed<W2, I2, S2, Q2, O2> c, ac_fixed<W2, I2, S2, Q2, O2> s
+  )
+  {
+    // Set a temporary variable to store the negative of s. Doing so and using a multiply-add
+    // instead of a multiply-subtract later reduces area.
+    ac_fixed<W2, I2, S2, Q2, O2> s_neg = -s;
+    row2_0 = c*row1_0 + s_neg*row1_1;
+    row2_1 = c*row1_1 + s*row1_0;
+  }
+
+  // Perform rotation for complex matrices.
+  template<unsigned M, class T1, class T2>
+  void rotate(
+    unsigned i, unsigned j,
+    ac_complex<T1> row1_0, ac_complex<T1> row1_1,
+    ac_complex<T1> &row2_0, ac_complex<T1> &row2_1,
+    ac_complex<T2> c, ac_complex<T2> s
+  )
+  {
+    // *_R => Coefficient for R matrix multiplication
+    // *_Q => Coefficient for Q matrix multiplication
+    ac_complex<T2> c_R = c.conj(), c2_R = c, s_R = s, s2_R = -s.conj(), c_Q = c, s2_Q = -s, c2_Q = c.conj(), s_Q = s.conj();
+
+    typedef typename T1::rt_unary::mag_sqr s_type; // Find type of mag_sqr value.
+    enum {
+      sqr_I = s_type::i_width, // Find integer width of magnitude type
+      n_f_b = 32, // Arbitrarily assign 32 fractional bits for intermediate types.
+      // Calculate number of integer bits for root and inverse root variables.
+      root_I   = sqr_I%2 == 0 ? sqr_I/2 : (sqr_I + 1)/2,
+      i_root_I = n_f_b%2 == 0 ? n_f_b/2 : (n_f_b + 1)/2,
+    };
+    typedef ac_fixed<n_f_b + root_I, root_I, false> T_mag;
+    typedef ac_fixed<n_f_b + i_root_I, i_root_I, false> T_i_mag;
+
+    if (i < M) {
+      // Calculations for R matrix.
+      row2_0 = c_R*row1_0  + s2_R*row1_1;
+      row2_1 = c2_R*row1_1 + s_R*row1_0;
+    } else {
+      // Calculations for Q matrix.
+      row2_0 = c_Q*row1_0  + s2_Q*row1_1;
+      row2_1 = c2_Q*row1_1 + s_Q*row1_0;
     }
   }
 
   //=========================================================================
   // Off-Diagonal Processing Elements:
-  // Description: Off-diagonal processing elements take the broadcasted cosine and sine parameters from the diagonal
-  // processing elements, larger matrix on which Givens rotation is to be performed and then systolically update two rows
-  // of the matrices involved in one rotation.
-  // The formula for the rows modification is given by:
-  // row'(0,0) = c*row(0,0) - s*row(1,0)
-  // row'(1,0) = c*row(1,0) + s*row(0,0)
-  // where initial value of row(0,0) and row(1,0) are obtained from the two rows of input matrix, that are part of systolic
-  // implementation of that perticular iteration(this requires initial storage, which is used to break dependancy and make
-  // algorithm fully parallelized).
-  // After the processing is done, new values of row for that perticular iteration are assigned back to the input matrix.
-  //----------------------------------------------------------------------------------------------------------------
+  // Description: Off-diagonal processing elements take the broadcasted
+  // cosine and sine parameters from the diagonal processing elements, larger
+  // matrix on which Givens rotation is to be performed and then systolically
+  // update two rows of the matrices involved in one rotation. After the
+  // processing is done, new values of row for that perticular iteration are
+  // assigned back to the input matrix.
+  //-------------------------------------------------------------------------
 
-  //#pragma map_to_operator [CCORE]
   template<unsigned M, typename T1, typename T2>
   void offdiagonal_PE (ac_matrix<T1, M, 2*M> (&A1), unsigned pivot, T2 c, T2 s, unsigned j)
   {
-    ac_matrix <T1, 2, 2*M> row1;
-    ac_matrix <T1, 2, 2*M> row2;
-    ROW_COPY:
-    for (unsigned i = 0; i < 2 * M; i++) {
-      row1(0,i) = A1(pivot-1,i);
-      row1(1,i) = A1(pivot,i);
-      row2(0,i) = c * row1(0,i) - s * row1(1,i);
-      row2(1,i) = c * row1(1,i) + s * row1(0,i);
-      A1(pivot-1,i) = row2(0,i) ;
-      A1(pivot,i) =  row2(1,i);
-    }
-    A1(pivot,j) = 0;
+    T1 row1[2];
+    T1 row2[2];
 
-#if !defined(__SYNTHESIS__) && defined(AC_QRD_DEBUG)
-    cout << "pivot = " << pivot << endl;
-    cout << "row1 = " << row1 << endl;
-    cout << "row2 = " << row2 << endl;
+    OFFDIAG_PROC:
+    for (unsigned i = 0; i < 2 * M; i++) {
+      row1[0] = A1(pivot-1, i);
+      row1[1] = A1(pivot, i);
+      // Perform givens rotation through the rotate function.
+      rotate<M>(i, j, row1[0], row1[1], row2[0], row2[1], c, s);
+      A1(pivot - 1, i) = row2[0];
+      A1(pivot, i)     = row2[1];
+    }
+
+#if !defined(__SYNTHESIS__) && defined(AC_QRD_H_DEBUG)
+    std::cout << "pivot = " << pivot << std::endl;
+    std::cout << "row1 = {" << row1[0] << ", " << row1[1] << std::endl;
+    std::cout << "row2 = {" << row2[0] << ", " << row2[1] << std::endl;
 #endif
   }
 
@@ -244,52 +296,105 @@ namespace ac_math
   template <bool ispwl = true, unsigned M, int W1, int I1, ac_q_mode q1, ac_o_mode o1, int W2, int I2, ac_q_mode q2, ac_o_mode o2>
   void ac_qrd (ac_matrix <ac_fixed <W1, I1, true, q1, o1>, M, M> &A, ac_matrix <ac_fixed <W2, I2, true, q2, o2>, M, M> &Q, ac_matrix <ac_fixed <W2, I2, true, q2, o2>, M, M> &R)
   {
-    // Defining all typedefs
-    typedef ac_fixed <4*W1, 4*I1, true, AC_RND, AC_SAT> intermediate_type;
-    typedef ac_fixed <W1, I1, true, q1, o1> input_type;
-    typedef ac_fixed <5*W1+2, 2*I1+2, true, AC_RND, AC_SAT> sin_cosine_type;
-    typedef ac_fixed <W2, I2, true, q2, o2> output_type;
-    // Defining intermediate variables
-    sin_cosine_type c;
-    sin_cosine_type s;
-    ac_matrix <intermediate_type, M, 2*M> A1;
+    enum {
+      n_gr = (M*(M - 1))/2, // number of given's rotations = number of elements below matrix diagonal
+      add_bits = ac::log2_ceil<n_gr + 1>::val, // Each given's rotation = one extra addition per element. Number of extra bits for n_gr rotations/additions = ac_log2_ceil<n_gr + 1>
+      I_imd = I1 + add_bits,
+      n_f_b = 32, // Arbitrarily choose 32 fractional bits for intermediate type.
+      W_imd = I_imd + n_f_b,
+    };
 
-    initialize_matrix <M,input_type, intermediate_type> (A, A1);
-    COLUMN:
+    typedef ac_fixed <W_imd, I_imd, true, AC_RND, AC_SAT> intermediate_type;
+    typedef ac_fixed <n_f_b + 2, 2, true, AC_RND, AC_SAT> sin_cosine_type;
+
+    // Defining intermediate variables
+    sin_cosine_type c, s;
+    ac_matrix <intermediate_type, M, 2*M> A1;
+    initialize_matrix(A, A1);
+
+    REAL_PROC_COLUMN:
     for (unsigned column = 0; column < M; column++) {
-      ROW:
-      for (unsigned row = M - 1; row > 0; row--) {
-        if (row == column) { break; }
-        diagonal_PE <input_type, intermediate_type, sin_cosine_type, ispwl>(A1(row,column), A1(row-1,column), c, s);
-        offdiagonal_PE <M, intermediate_type, sin_cosine_type>(A1,row,c,s,column);
+      REAL_PROC_ROW:
+      for (int row = int(M) - 1; row > 0; row--) {
+        if (row == int(column)) { break; }
+        diagonal_PE<ispwl>(A1(row, column), A1(row - 1, column), c, s);
+        offdiagonal_PE(A1, row, c, s, column);
       }
     }
-    qr_separate <M, intermediate_type, output_type>(A1, Q, R);
+    qr_separate<true>(A1, Q, R, ac_fixed<1, 1, false>(1));
   }
 
-  template <bool ispwl = true, unsigned M, int W1, int I1, ac_q_mode q1, ac_o_mode o1, int W2, int I2, ac_q_mode q2, ac_o_mode o2>
+  // real_diag: Make sure that all diagonal matrix elements are real, including bottom right element.
+  template <bool real_diag = false, bool ispwl = true, unsigned M, int W1, int I1, ac_q_mode q1, ac_o_mode o1, int W2, int I2, ac_q_mode q2, ac_o_mode o2>
   void ac_qrd (ac_matrix < ac_complex <ac_fixed <W1, I1, true, q1, o1> >, M, M> &A, ac_matrix <ac_complex <ac_fixed <W2, I2, true, q2, o2> >, M, M> &Q, ac_matrix <ac_complex <ac_fixed <W2, I2, true, q2, o2> >, M, M> &R)
   {
-    // Defining all typedefs
-    typedef ac_complex <ac_fixed <4*W1, 4*I1, true, AC_RND, AC_SAT> > intermediate_type;
-    typedef ac_complex <ac_fixed <W1, I1, true, q1, o1> > input_type;
-    typedef ac_complex <ac_fixed <5*W1+2, 2*I1+2, true, AC_RND, AC_SAT> > sin_cosine_type;
-    typedef ac_complex <ac_fixed <W2, I2, true, q2, o2> > output_type;
-    // Defining intermediate variables
-    sin_cosine_type c;
-    sin_cosine_type s;
-    ac_matrix <intermediate_type, M, 2*M> A1;
+    enum {
+      n_gr = (M*(M - 1))/2, // number of given's rotations = number of elements below matrix diagonal
+      add_bits = ac::log2_ceil<2*n_gr + 1>::val, // number of real additions = 2*number of givens rotations
+      I_imd = I1 + add_bits,
+      n_f_b = 32, // Arbitrarily choose 32 fractional bits for intermediate type
+      W_imd = I_imd + n_f_b,
+    };
 
-    initialize_matrix <M,input_type, intermediate_type> (A, A1);
-    COLUMN:
+    typedef ac_complex<ac_fixed <W_imd, I_imd, true, AC_RND, AC_SAT> > intermediate_type;
+    typedef ac_complex<ac_fixed <n_f_b + 2, 2, true, AC_RND, AC_SAT> > sin_cosine_type;
+
+    // Defining intermediate variables
+    sin_cosine_type c, s;
+    ac_matrix <intermediate_type, M, 2*M> A1;
+    initialize_matrix(A, A1);
+
+    COMPLEX_PROC_COLUMN:
     for (unsigned column = 0; column < M; column++) {
-      ROW:
-      for (unsigned row= M - 1; row > column; row--) {
-        diagonal_PE <input_type, intermediate_type, sin_cosine_type, ispwl>(A1(row,column), A1(row-1,column), c, s);
-        offdiagonal_PE <M, intermediate_type, sin_cosine_type>(A1,row,c,s,column);
+      COMPLEX_PROC_ROW:
+      for (int row = int(M) - 1; row > 0; row--) {
+        if (row == int(column)) { break; }
+        diagonal_PE<ispwl>(A1(row,column), A1(row-1,column), c, s);
+        offdiagonal_PE(A1, row, c, s, column);
       }
     }
-    qr_separate <M, intermediate_type, output_type>(A1, Q, R);
+
+    typedef typename intermediate_type::rt_unary::mag_sqr s_type; // Find type of mag_sqr value.
+    enum {
+      sqr_I = s_type::i_width, // Find integer width of magnitude type.
+      // Calculate number of integer bits for root and inverse root variables.
+      root_I   = sqr_I%2 == 0 ? sqr_I/2 : (sqr_I + 1)/2,
+      i_root_I = n_f_b%2 == 0 ? n_f_b/2 : (n_f_b + 1)/2,
+    };
+    typedef ac_fixed<n_f_b + root_I, root_I, false> T_mag;
+    typedef ac_fixed<n_f_b + i_root_I, i_root_I, false> T_i_mag;
+
+    ac_complex<ac_fixed<n_f_b + 2, 2, true> > exp_arg_br_conj;
+
+#pragma hls_waive CNS
+    if (real_diag) {
+      // If all diagonals need to be real, an extra stages are required to make the bottom
+      // right element real and adjust the last column of the Q matrix accordingly.
+      ac_complex<ac_fixed<W_imd, I_imd, true> > br_elem = A1(M - 1, M - 1);
+      T_mag mag_br;
+      T_i_mag i_mag_br;
+      if (ispwl) {
+        // Use PWL functions
+        mag_br = ac_math::ac_sqrt_pwl<T_mag>(br_elem.mag_sqr());
+        i_mag_br = ac_math::ac_inverse_sqrt_pwl<T_i_mag>(br_elem.mag_sqr());
+      } else {
+        // Use accurate ac_math functions.
+        ac_math::ac_sqrt(br_elem.mag_sqr(), mag_br);
+        // Only one divider is used, and it finds the inverse of the magnitude of the
+        // bottom right element. We use the ac_div function instead of the "/" operator,
+        // to avoid any issues that may occur if the synthesis library doesn't have a
+        // component for division.
+        ac_math::ac_div(ac_fixed<1, 1, false>(1), mag_br, i_mag_br);
+      }
+      exp_arg_br_conj.r() = br_elem.r()*i_mag_br;
+      exp_arg_br_conj.i() = br_elem.i()*i_mag_br;
+      A1(M - 1, M - 1).r() = mag_br;
+      A1(M - 1, M - 1).i() = 0.0;
+    }
+
+    // If all diagonal elements are required to be real, qr_separate modifies the last column
+    // of the Q matrix.
+    qr_separate<real_diag>(A1, Q, R, exp_arg_br_conj);
   }
 
   template <bool ispwl = true, unsigned M, int W1, int I1, ac_q_mode q1, ac_o_mode o1, int W2, int I2, ac_q_mode q2, ac_o_mode o2>
@@ -299,7 +404,9 @@ namespace ac_math
     ac_matrix <ac_fixed <W2, I2, true, q2, o2>, M, M> Q_mat;
     ac_matrix <ac_fixed <W2, I2, true, q2, o2>, M, M> R_mat;
 
+    COPY_REAL_C_ARRAY_INPUT_ROW:
     for (unsigned i = 0; i < M; i++) {
+      COPY_REAL_C_ARRAY_INPUT_COL:
       for (unsigned j = 0; j < M; j++) {
         input_mat (i,j) = A[i][j];
       }
@@ -307,7 +414,9 @@ namespace ac_math
 
     ac_qrd <ispwl> (input_mat, Q_mat, R_mat);
 
+    COPY_REAL_C_ARRAY_OUTPUT_ROW:
     for (unsigned i = 0; i < M; i++) {
+      COPY_REAL_C_ARRAY_OUTPUT_COL:
       for (unsigned j = 0; j < M; j++) {
         Q [i][j] = Q_mat (i,j);
         R [i][j] = R_mat (i,j);
@@ -316,23 +425,27 @@ namespace ac_math
 
   }
 
-
-  template <bool ispwl = true, unsigned M, int W1, int I1, ac_q_mode q1, ac_o_mode o1, int W2, int I2, ac_q_mode q2, ac_o_mode o2>
+  // real_diag: Make sure that all diagonal matrix elements are real, including bottom right element.
+  template <bool real_diag = false, bool ispwl = true, unsigned M, int W1, int I1, ac_q_mode q1, ac_o_mode o1, int W2, int I2, ac_q_mode q2, ac_o_mode o2>
   void ac_qrd (ac_complex <ac_fixed <W1, I1, true, q1, o1> > A[M][M], ac_complex <ac_fixed <W2, I2, true, q2, o2> > Q[M][M], ac_complex <ac_fixed <W2, I2, true, q2, o2> > R[M][M])
   {
     ac_matrix <ac_complex <ac_fixed <W1, I1, true, q1, o1> >, M, M> input_mat;
     ac_matrix <ac_complex <ac_fixed <W2, I2, true, q2, o2> >, M, M> Q_mat;
     ac_matrix <ac_complex <ac_fixed <W2, I2, true, q2, o2> >, M, M> R_mat;
 
+    COPY_COMPLEX_C_ARRAY_INPUT_ROW:
     for (unsigned i = 0; i < M; i++) {
+      COPY_COMPLEX_C_ARRAY_INPUT_COL:
       for (unsigned j = 0; j < M; j++) {
         input_mat(i,j) = A[i][j];
       }
     }
 
-    ac_qrd <ispwl> (input_mat, Q_mat, R_mat);
+    ac_qrd <real_diag, ispwl> (input_mat, Q_mat, R_mat);
 
+    COPY_COMPLEX_C_ARRAY_OUTPUT_ROW:
     for (unsigned i = 0; i < M; i++) {
+      COPY_COMPLEX_C_ARRAY_OUTPUT_COL:
       for (unsigned j = 0; j < M; j++) {
         Q[i][j] = Q_mat(i,j);
         R[i][j] = R_mat(i,j);
@@ -343,4 +456,3 @@ namespace ac_math
 }
 
 #endif
-

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -133,7 +133,6 @@
 
 #if !defined(__SYNTHESIS__) && defined(AC_DETERMINANT_H_DEBUG)
 #include <iostream>
-using namespace std;
 #endif
 
 //=================================================================================================================
@@ -159,6 +158,22 @@ namespace ac_math
   struct Factorial<0> {
     enum { value = 1 };
   };
+
+
+//======================================================================================
+// zero_init:
+// Initializes argument to zero, for both ac_complex and ac_complex<ac_fixed> variables.
+// -------------------------------------------------------------------------------------
+  template <int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
+  void zero_init(ac_fixed<W, I, S, Q, O> &output) {
+    output = 0.0;
+  }
+
+  template <int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
+  void zero_init(ac_complex<ac_fixed<W, I, S, Q, O> > &output) {
+    output.r() = 0.0;
+    output.i() = 0.0;
+  }
 
 //=================================================================================================================
 // Templatized helper struct: determinant_matrix
@@ -193,7 +208,8 @@ namespace ac_math
     static output_type determinant_compute (const ac_matrix <input_type, M, M> &A) {
       int pr = -1; // pr is used to keep track of sign in determinant computation
       c_type c[M]; // c is used to store the internal results of intermediate matrices, before multiplication and accumulation happens
-      d_type d = 0; // d is used to store and return the final result
+      d_type d; // d is used to store and return the final result
+      zero_init(d);
       ac_matrix <input_type, M-1, M-1> b; // b is used to store minor matrix whose determinant is then to be computed recursively
 
       temp_type temp;
@@ -365,11 +381,11 @@ namespace ac_math
     typedef ac_fixed <W2, I2, true, q2, o2> output_type;
     ac_determinant_combined <M, override, input_type, output_type, internal_type> (a, result);
 #if !defined(__SYNTHESIS__) && defined(AC_DETERMINANT_H_DEBUG)
-    cout << "M = " << M << endl;
-    cout << "input total bitwidth = " << W1 << endl;
-    cout << "input integer bitwidth = " << I1 << endl;
-    cout << "input matrix supplied :" << a << endl;
-    cout << "Final output = " << result << endl;
+    std::cout << "M = " << M << std::endl;
+    std::cout << "input total bitwidth = " << W1 << std::endl;
+    std::cout << "input integer bitwidth = " << I1 << std::endl;
+    std::cout << "input matrix supplied :" << a << std::endl;
+    std::cout << "Final output = " << result << std::endl;
 #endif
   }
 
@@ -381,11 +397,11 @@ namespace ac_math
     typedef ac_complex <ac_fixed <W2, I2, true, q2, o2> > output_type;
     ac_determinant_combined <M, override, input_type, output_type, internal_type> (a, result);
 #if !defined(__SYNTHESIS__) && defined(AC_DETERMINANT_H_DEBUG)
-    cout << "M = " << M << endl;
-    cout << "input total bitwidth = " << W1 << endl;
-    cout << "input integer bitwidth = " << I1 << endl;
-    cout << "input matrix supplied :" << a << endl;
-    cout << "Final output = " << result << endl;
+    std::cout << "M = " << M << std::endl;
+    std::cout << "input total bitwidth = " << W1 << std::endl;
+    std::cout << "input integer bitwidth = " << I1 << std::endl;
+    std::cout << "input matrix supplied :" << a << std::endl;
+    std::cout << "Final output = " << result << std::endl;
 #endif
   }
 

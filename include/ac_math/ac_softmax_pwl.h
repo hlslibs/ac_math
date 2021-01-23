@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -78,6 +78,7 @@
 //    ac_reciprocal_pwl() function from the file ac_reciprocal_pwl.h.
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
 //    3.2.0 - Initial version
 //
 //*****************************************************************************************
@@ -111,7 +112,7 @@ namespace ac_math
            unsigned K,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
-  // By declaring the function parameters as references to arrays (i.e. "(&input)[K]" and "(&output)[K]"), we ensure 
+  // By declaring the function parameters as references to arrays (i.e. "(&input)[K]" and "(&output)[K]"), we ensure
   // that template parameter deduction infers the value of K.
   void ac_softmax_pwl(
     const ac_fixed<W, I, S, Q, O> (&input)[K],
@@ -126,10 +127,12 @@ namespace ac_math
     // The default rounding and saturation modes are AC_TRN and AC_WRAP, respectively.
     const ac_q_mode exp_Q = or_e ? ac_q_mode(iQ_e) : ac_q_mode(AC_TRN);
     const ac_o_mode exp_O = or_e ? ac_o_mode(iO_e) : ac_o_mode(AC_WRAP);
-    // The below static_assert limits the size the integer width of the exponent variable can reach. 
+    // The below static_assert limits the size the integer width of the exponent variable can reach.
     static_assert(exp_int_bits <= 64, "imediate bitwidth calculation gives a very large value for integer bits. Consider reducing the number of input integer bits.");
     typedef ac_fixed<exp_frac_bits + exp_int_bits, exp_int_bits, false, exp_Q, exp_O> T_exp;
     typedef ac_fixed<T_exp::width + ac::log2_ceil<K>::val, T_exp::i_width + ac::log2_ceil<K>::val, false> T_sum;
+	
+	#pragma hls_waive APT
     T_exp exp_arr[K];
     // The reciprocal variable is also assigned a default bitwidth based on the default PWL bitwidths and segments (10 fractional bits and 8 segments).
     // For any PWL implementation other than the default, these bitwidths may change.
@@ -144,17 +147,17 @@ namespace ac_math
     // 1. Pipelining all the loops and the main function call with an II of 1 gives (2K) number of throughput cycles.
     // 2. Unrolling all the loops and pipelining the main function call with an II of 1 ensures a throughput of 1.
     // The second option can also result in a very large area score.
-    
+
     // Calculate exponential of all inputs.
     CALC_EXP_LOOP: for (unsigned i = 0; i < K; i++) { ac_exp_pwl<pwl_Q>(input[i], exp_arr[i]); }
-    
+
     // Perform a MAC operation to add all the exponential values.
-    T_sum sum_exp = 0;
+    T_sum sum_exp = 0.0;
     SUM_EXP_LOOP: for (unsigned i = 0; i < K; i++) { sum_exp += exp_arr[i]; }
-    
+
     // Find the reciprocal of the sum of exponentials.
     ac_reciprocal_pwl<pwl_Q>(sum_exp, sum_exp_recip);
-    
+
     // The types for the exponent and reciprocal variable are configurable primarily to ensure that the size of the multiplier used for the multiplication below
     // does not become too large. A large multiplier can become an issue if the loop below is being unrolled and the number of iterations (K) is large,
     // hence resulting in many large multipliers and a very large area.

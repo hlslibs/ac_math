@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -102,6 +102,13 @@
 //    #endif
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
+//    3.3.0  - [CAT-25797] Added CDesignChecker fixes/waivers for code check violations in ac_math PWL and Linear Algebra IPs.
+//             Waivers added for CNS and CCC violations.
+//             Fixes added for FXD, STF and MXS violations.
+//               - FXD violations fixed by changing integer literals to floating point literals or typecasting to ac_fixed values.
+//               - STF violations fixed by using "const" instead of "static const" parameters. LUT generator files also print out "const" LUTs instead of "static const" LUTs.
+//               - MXS violations fixed by typecasting unsigned variables to int.
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //*****************************************************************************************
@@ -140,9 +147,12 @@ namespace ac_math
     const int TI = XI;
     const int TW = TI + TF;
     unsigned un = 0x7FFFFFFF & n;
+		#pragma hls_waive ISE
+
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) >> un;
 
     ac_fixed<TW+R_HALF,TI,false> t2 = t;
+#pragma hls_waive CNS
 
     if (R_HALF) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -173,15 +183,20 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
+	#pragma hls_waive ISE
+	
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) >> n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,false> t2 = t;
 
+#pragma hls_waive CNS
     if (R_HALF || S_OVER) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
       m1 <<= n;
       ac_fixed<XW,XI,false> mask = ~(ac_fixed<XW,XI,false>) m1;
+#pragma hls_waive CNS
       if (n >= 0) {
+#pragma hls_waive CNS
         if (R_HALF)
         { t2[0] = !! (x & mask); }
       } else {
@@ -212,10 +227,13 @@ namespace ac_math
     // Since this is a unidirectional shift in the right direction, the intermediate type only needs the same number of integer bits as in the input.
     const int TI = XI;
     const int TW = TI + TF;
+	#pragma hls_waive ISE
+	
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) >> n;
     unsigned un = 0x7FFFFFFF & n;
 
     ac_fixed<TW+R_HALF,TI,true> t2 = t;
+#pragma hls_waive CNS
 
     if (R_HALF) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -246,15 +264,19 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
+	#pragma hls_waive ISE
+	
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) >> n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,true> t2 = t;
 
+#pragma hls_waive CNS
     if (R_HALF || S_OVER==2) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,true>) 0;
       m1 <<= n;
       ac_fixed<XW,XI,true> mask = ~(ac_fixed<XW,XI,true>) m1;
       if (n >= 0) {
+#pragma hls_waive CNS
         if (R_HALF)
         { t2[0] = !! (x & mask); }
       } else {
@@ -285,9 +307,13 @@ namespace ac_math
     const int TF = XW - XI;
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
+	
+	#pragma hls_waive ISE
+
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) << n;
 
     ac_fixed<TW+S_OVER,TI+S_OVER,false> t2 = t;
+#pragma hls_waive CNS
 
     if (S_OVER) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -318,10 +344,13 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
+		#pragma hls_waive ISE
+
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) << n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,false> t2 = t;
 
+#pragma hls_waive CNS
     if (R_HALF || S_OVER) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
       m1 >>= n;
@@ -356,9 +385,12 @@ namespace ac_math
     const int TF = XW - XI;
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
+		#pragma hls_waive ISE
+
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) << n;
 
     ac_fixed<TW+S_OVER,TI+S_OVER,true> t2 = t;
+#pragma hls_waive CNS
 
     if (S_OVER==2) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -391,9 +423,12 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
+		#pragma hls_waive ISE
+
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) << n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,true> t2 = t;
+#pragma hls_waive CNS
 
     if (R_HALF || S_OVER==2) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;

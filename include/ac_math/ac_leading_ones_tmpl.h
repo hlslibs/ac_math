@@ -30,89 +30,63 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+//*****************************************************************************************
+// File: ac_leading_ones_tmpl.h
+//
+// Description: An example of using C++ template recursion to implement a leading ones
+//    detection block. Note that this results in single-bit logic, so as it get bigger
+//    timing will get worse. Placing this in a C-CORE will help as long as it can fit
+//    in one clock cycle.
+//
+// Usage:
+//
+// Notes:
+//
 // Revision History:
-//    3.1.0  - Added ac_tanh_pwl.h
-//    2.0.10 - Removed including of ac_random.h from ac_math.h header file.
-//             Completed list of header file inclusions in ac_math.h
+//    3.4.0  - Copied from HLS Bluebook examples
+//
+//*****************************************************************************************
 
-#ifndef _INCLUDED_AC_MATH_H_
-#define _INCLUDED_AC_MATH_H_
+#ifndef _INCLUDED_AC_LEADING_ONES_TMPL_H_
+#define _INCLUDED_AC_LEADING_ONES_TMPL_H_
 
-#include <ac_math/ac_abs.h>
-// ac_abs()
+#include <ac_int.h>
 
-#include <ac_math/ac_arccos_cordic.h>
-// ac_arccos_cordic()
+template<int N_BITS>
+bool ac_leading_ones(ac_int<N_BITS,false> &din,
+                     ac_int<ac::log2ceil<N_BITS>::val,false> &dout)
+{
+  enum {
+    P2 = ac::nbits<(N_BITS+1)/2>::val
+  };
+  ac_int<N_BITS-P2,false> upper;
+  ac_int<P2,false> lower;
+  ac_int<ac::log2ceil<N_BITS>::val,0> idx=0;
+  ac_int<ac::log2ceil<N_BITS-P2>::val,0> idxu=0;
+  ac_int<ac::log2ceil<P2>::val,0> idxl=0;
+  static bool flag = false;
 
-#include <ac_math/ac_arcsin_cordic.h>
-// ac_arcsin_cordic()
+  upper.set_slc(0, din.template slc<N_BITS-P2>(P2));
+  lower.set_slc(0, din.template slc<P2>(0));
+  flag = (din!=0) ? 1 : 0;
+  if (upper) {
+    ac_leading_ones<N_BITS-P2>(upper,idxu);
+    idx = idxu | P2;
+  } else {
+    ac_leading_ones<P2>(lower,idxl);
+    idx = idxl;
+  }
+  dout = idx;
+  return flag;
+}
 
-#include <ac_math/ac_atan_pwl.h>
-// ac_atan_pwl()
-
-#include <ac_math/ac_atan_pwl_ha.h>
-// ac_atan_pwl_ha()
-
-#include <ac_math/ac_atan2_cordic.h>
-// ac_atan2_cordic()
-
-#include <ac_math/ac_div.h>
-// ac_div()
-
-#include <ac_math/ac_hcordic.h>
-// ac_log_cordic()
-// ac_log2_cordic()
-// ac_exp_cordic()
-// ac_exp2_cordic()
-// ac_pow_cordic()
-
-#include <ac_math/ac_inverse_sqrt_pwl.h>
-// ac_inverse_sqrt_pwl()
-
-#include <ac_math/ac_log_pwl.h>
-// ac_log_pwl()
-// ac_log2_pwl()
-
-#include <ac_math/ac_normalize.h>
-// ac_normalize()
-
-#include <ac_math/ac_pow_pwl.h>
-// ac_pow2_pwl()
-// ac_exp_pwl()
-
-#include <ac_math/ac_reciprocal_pwl.h>
-// ac_reciprocal_pwl()
-
-#include <ac_math/ac_reciprocal_pwl_ha.h>
-// ac_reciprocal_pwl_ha()
-
-#include <ac_math/ac_shift.h>
-// ac_shift_left()
-// ac_shift_right()
-
-#include <ac_math/ac_sigmoid_pwl.h>
-// ac_sigmoid_pwl()
-
-#include <ac_math/ac_sincos_cordic.h>
-// ac_sincos_cordic()
-
-#include <ac_math/ac_sincos_lut.h>
-// ac_sincos_lut()
-
-#include <ac_math/ac_sqrt.h>
-// ac_sqrt()
-
-#include <ac_math/ac_sqrt_pwl.h>
-// ac_sqrt_pwl()
-
-#include <ac_math/ac_tan_pwl.h>
-// ac_tan_pwl()
-
-#include <ac_math/ac_tanh_pwl.h>
-// ac_tanh_pwl()
-
-#include <ac_math/ac_softmax_pwl.h>
-// ac_softmax_pwl()
+template<>
+bool ac_leading_ones<1>(ac_int<1,false> &din,
+                        ac_int<1,false> &dout)
+{
+  dout = 0;
+  return din[0];
+}
 
 #endif
 

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -72,6 +72,7 @@
 //    #endif
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
 //    3.1.2  - Renamed typedef to avoid redeclaration conflict with typedef in ac_atan2_cordic.h
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //
@@ -173,7 +174,7 @@ namespace ac_math
   };
 
   static table_st K_table[] = {
-    -1,
+    -1.0,
       .707106781186547461715008466853760182857513427734375,
       .63245553203367588235295215781661681830883026123046875,
       .6135719910778962837838435007142834365367889404296875,
@@ -247,15 +248,17 @@ namespace ac_math
 
   static table_st atan_pi_2mi(int i)
   {
+	#pragma hls_waive CNS 
     if (i >= TE)
-    { return 0; }
+    { return 0.0; }
     return atan_pi_pow2_table[i];
   }
 
   static table_st K(int n)
   {
+#pragma hls_waive CNS  
     if (n >= TE)
-    { return 0; }
+    { return 0.0; }
     return K_table[n];
   }
 
@@ -312,17 +315,17 @@ namespace ac_math
     fx_xy K_x_scale = C * k;
 
     if (target_a > (ac_fixed<1,0,false>) 0.5) {  // PI/2 <= angle < PI/2
-      x = 0;
+      x = 0.0;
       y = K_x_scale;
       acc_a = 0.5;
     } else if (target_a < (ac_fixed<1,0,true>) -0.5) { // -PI <= angle < -PI/2
-      x = 0;
+      x = 0.0;
       y = -K_x_scale;
       acc_a = -0.5;
     } else { // -PI/2 <= angle <= PI/2
       x = K_x_scale;
-      y = 0;
-      acc_a = 0;
+      y = 0.0;
+      acc_a = 0.0;
     }
 
     for (int i = 0; i < N_I; i++) {
@@ -350,7 +353,7 @@ namespace ac_math
     ac_fixed<OW,OI,true,OQ,OO> &sin
   )
   {
-    ac_fixed<OW,OI,true,OQ,OO> scale = 1;
+    ac_fixed<OW,OI,true,OQ,OO> scale = 1.0;
     ac_fixed<OW,OI,true,OQ,OO> cos;
     ac_sincos_cordic(angle_over_pi, scale, sin, cos);
   }
@@ -362,7 +365,7 @@ namespace ac_math
     ac_fixed<OW,OI,true,OQ,OO> &cos
   )
   {
-    ac_fixed<OW,OI,true,OQ,OO> scale = 1;
+    ac_fixed<OW,OI,true,OQ,OO> scale = 1.0;
     ac_fixed<OW,OI,true,OQ,OO> sin;
     ac_sincos_cordic(angle_over_pi, scale, sin, cos);
   }

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -52,6 +52,9 @@
 //    functions from the ac_math header files.
 //
 // Revision History:
+//    3.3.0  - [CAT-25797] Added CDesignChecker fixes/waivers for code check violations in ac_math PWL and Linear Algebra IPs.
+//             Waivers added for CNS, CCC, ABR and ABW violations.
+//             FXD violations fixed by changing integer literals to floating point literals.
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //    Niramay Sanghvi : Nov 24 2017 : Used friend function to handle ac_matrix inputs/outputs.
 //    Niramay Sanghvi : Nov 12 2017 : Added overloaded functions to handle standard C arrays.
@@ -82,7 +85,6 @@
 
 #if !defined(__SYNTHESIS__) && defined(AC_CHOL_D_H_DEBUG)
 #include <iostream>
-using namespace std;
 #endif
 
 // =========================================================================
@@ -209,6 +211,7 @@ namespace ac_math
       i_s_t_u recip_Ljj;
       T_out_u int_Ljj;
       // Compute values for and initialize diagonal elements using PWL/accurate math functions, as may be the case.
+#pragma hls_waive CNS
       if (use_pwl) {
         // Use the PWL functions
         ac_math::ac_sqrt_pwl((i_s_t_u) sum_Ajj_Ljk_sq, int_Ljj);
@@ -220,15 +223,16 @@ namespace ac_math
         ac_math::ac_sqrt((i_s_t_u)sum_Ajj_Ljk_sq, int_Ljj);
         L_int_1D[ind_conv<t_1D>(j, j)] = int_Ljj;
         // Make sure that every variable to be passed to the div function has the same sign.
-        static const ac_fixed<1, 1, false> unity = 1;
+        static const ac_fixed<1, 1, false> unity = 1.0;
         // Store inverse of diagonal element in separate variable (i.e. "recip_Ljj") for later calculations.
+#pragma hls_waive DBZ
         ac_math::ac_div(unity, int_Ljj, recip_Ljj);
       }
 #if !defined(__SYNTHESIS__) && defined(AC_CHOL_D_H_DEBUG)
-      cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-      cout << "sum_Ajj_Ljk_sq = " << sum_Ajj_Ljk_sq << endl;
-      cout << "int_Ljj        = " << int_Ljj << endl;
-      cout << "recip_Ljj      = " << recip_Ljj << endl;
+      std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+      std::cout << "sum_Ajj_Ljk_sq = " << sum_Ajj_Ljk_sq << std::endl;
+      std::cout << "int_Ljj        = " << int_Ljj << std::endl;
+      std::cout << "recip_Ljj      = " << recip_Ljj << std::endl;
 #endif
 
       // Initializing non-diagonal elements.
@@ -239,12 +243,12 @@ namespace ac_math
         ARRAY_AC_FIXED_LIJ_K:
         for (index_type k = 0; k < M; k++) {
           // Break statement is used to avoid incorrect accesses to L_int_1D.
-          if(k == j) { break; }
+          if (k == j) { break; }
           sum_Aij_Lik_Ljk -= L_int_1D[ind_conv<t_1D>(i, k)] * L_int_1D[ind_conv<t_1D>(j, k)];
           //sum_Aij_Lik_Ljk -= L_int[i][k] * L_int[j][k];
         }
         // Break statement is used to avoid incorrect accesses to L_int_1D.
-        if(i == j) { break; }
+        if (i == j) { break; }
         L_int_1D[ind_conv<t_1D>(i, j)] = (T_out)(recip_Ljj * sum_Aij_Lik_Ljk);
       }
     }
@@ -254,7 +258,7 @@ namespace ac_math
       ARRAY_AC_FIXED_SET_OUTPUT_COPY_COL:
       for (index_type j = 0; j < M; j++) {
         // If L is not positive definite, all elements should be initialized to zero.
-        if(j > i || !pos_def) { L[i][j] = 0; }
+        if (j > i || !pos_def) { L[i][j] = 0.0; }
         // If L is positive definite, only initialize elements above the diagonal to zero.
         else {
           L[i][j] = L_int_1D[ind_conv<t_1D>(i, j)];
@@ -351,6 +355,7 @@ namespace ac_math
     ARRAY_AC_COMP_AC_FIXED_L_COL:
     for (index_type j = 0; j < M; j++) {
       i_s_t sum_Ajj_Ljk_sq;
+#pragma hls_waive ABR
       sum_Ajj_Ljk_sq = A[j][j].r();
       ARRAY_AC_COMP_AC_FIXED_LJJ_K:
       for (index_type k = 0; k < M; k++) {
@@ -373,14 +378,17 @@ namespace ac_math
       T_out_fixed_u int_Ljj;
 
       // Compute values for and initialize diagonal elements using PWL/accurate math functions, as may be the case.
+#pragma hls_waive CNS
       if (use_pwl) {
         // Use the PWL functions
         // Initialize diagonal elements. Since the diagonal elements are real, initialize the imaginary part to 0.
         // Only bother with the real part, as the diagonal elements of the decomposed matrix are always real.
         ac_math::ac_sqrt_pwl((i_s_t_u) sum_Ajj_Ljk_sq, int_Ljj);
         t_1D act_ind = ind_conv<t_1D>(j, j);
+#pragma hls_waive ABW
         L_int_1D[act_ind].r() = int_Ljj;
-        L_int_1D[act_ind].i() = 0;
+#pragma hls_waive ABW
+        L_int_1D[act_ind].i() = 0.0;
         // Store inverse of real part of diagonal element in separate variable (i.e. "recip_Ljj") for later calculations.
         ac_math::ac_inverse_sqrt_pwl((i_s_t_u) sum_Ajj_Ljk_sq, recip_Ljj);
       } else {
@@ -388,19 +396,22 @@ namespace ac_math
         // Only bother with the real part, as the diagonal elements of the decomposed matrix are always real.
         ac_math::ac_sqrt((i_s_t_u)sum_Ajj_Ljk_sq, int_Ljj);
         t_1D act_ind = ind_conv<t_1D>(j, j);
+#pragma hls_waive ABW
         L_int_1D[act_ind].r() = int_Ljj;
-        L_int_1D[act_ind].i() = 0;
+#pragma hls_waive ABW
+        L_int_1D[act_ind].i() = 0.0;
         // Make sure that every variable to be passed to the div function has the same sign.
-        static const ac_fixed<1, 1, false> unity = 1;
+        static const ac_fixed<1, 1, false> unity = 1.0;
         // Store inverse of diagonal element in separate variable (i.e. "recip_Ljj") for later calculations.
+#pragma hls_waive DBZ
         ac_math::ac_div(unity, int_Ljj, recip_Ljj);
       }
 #if !defined(__SYNTHESIS__) && defined(AC_CHOL_D_H_DEBUG)
-      cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-      cout << "j = " << j << endl;
-      cout << "sum_Ajj_Ljk_sq = " << sum_Ajj_Ljk_sq << endl;
-      cout << "int_Ljj        = " << int_Ljj << endl;
-      cout << "recip_Ljj      = " << recip_Ljj << endl;
+      std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+      std::cout << "j = " << j << std::endl;
+      std::cout << "sum_Ajj_Ljk_sq = " << sum_Ajj_Ljk_sq << std::endl;
+      std::cout << "int_Ljj        = " << int_Ljj << std::endl;
+      std::cout << "recip_Ljj      = " << recip_Ljj << std::endl;
 #endif
 
       // Initializing non-diagonal elements.
@@ -416,9 +427,11 @@ namespace ac_math
           //sum_Aij_Lik_Ljk -= L_int[i][k] * L_int[j][k].conj();
         }
         // Break statement is used to avoid incorrect accesses to L_int_1D.
-        if(i == j) { break; }
+        if (i == j) { break; }
         t_1D act_ind = ind_conv<t_1D>(i, j);
+#pragma hls_waive ABW
         L_int_1D[act_ind].r() = (T_out)(recip_Ljj * sum_Aij_Lik_Ljk.r());
+#pragma hls_waive ABW
         L_int_1D[act_ind].i() = (T_out)(recip_Ljj * sum_Aij_Lik_Ljk.i());
       }
     }
@@ -429,7 +442,12 @@ namespace ac_math
       for (index_type j = 0; j < M; j++) {
         // If input matrix is not positive definite, all elements should be initialized to zero.
         // If input matrix is positive definite, only initialize elements above the diagonal to zero.
-        if(j > i || !pos_def) { L[i][j] = 0; }
+        if (j > i || !pos_def) {
+#pragma hls_waive ABW
+          L[i][j].r() = 0.0;
+#pragma hls_waive ABW
+          L[i][j].i() = 0.0;
+        }
         else { L[i][j] = L_int_1D[ind_conv<t_1D>(i, j)]; }
       }
     }

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -51,7 +51,7 @@ using namespace ac_math;
 
 // Test Design for real and complex fixed point values, using PWL functions
 // for QR decomposition.
-template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 void test_ac_qrd_pwl(
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M],
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M],
@@ -68,14 +68,14 @@ void test_ac_qrd_pwl(
 )
 {
   ac_qrd<true>(in_arr, Q_arr, R_arr);
-  ac_qrd<true>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  ac_qrd<real_diag, true>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
   ac_qrd<true>(in_matrix, Q_matrix, R_matrix);
-  ac_qrd<true>(in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
+  ac_qrd<real_diag, true>(in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 }
 
 // Test Design for real and complex fixed point values, using the accurate
 // functions for QR decomposition.
-template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 void test_ac_qrd_accurate(
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M],
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M],
@@ -92,9 +92,9 @@ void test_ac_qrd_accurate(
 )
 {
   ac_qrd<false>(in_arr, Q_arr, R_arr);
-  ac_qrd<false>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  ac_qrd<real_diag, false>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
   ac_qrd<false>(in_matrix, Q_matrix, R_matrix);
-  ac_qrd<false>(in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
+  ac_qrd<real_diag, false>(in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 }
 
 // ==============================================================================
@@ -277,7 +277,7 @@ double compare_matrices(
 //   multiplication using the standard C double types. The maximum error for each
 //   type is accumulated in variables defined in the calling function.
 
-template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 int test_driver_pwl(
   double &cumulative_max_error,
   double &cumulative_max_error_cmplx,
@@ -345,7 +345,7 @@ int test_driver_pwl(
     }
   }
 
-  test_ac_qrd_pwl(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
+  test_ac_qrd_pwl<real_diag>(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_ac_matrix_converted[M][M];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_ac_matrix_converted[M][M];
@@ -397,7 +397,7 @@ int test_driver_pwl(
   return 0;
 }
 
-template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 int test_driver_accurate(
   double &cumulative_max_error,
   double &cumulative_max_error_cmplx,
@@ -465,7 +465,7 @@ int test_driver_accurate(
     }
   }
 
-  test_ac_qrd_accurate(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
+  test_ac_qrd_accurate<real_diag>(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_ac_matrix_converted[M][M];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_ac_matrix_converted[M][M];
@@ -519,33 +519,35 @@ int test_driver_accurate(
 
 int main(int argc, char *argv[])
 {
-  double max_error = 0, cmplx_max_error = 0;
-  double allowed_error = 4;
+  double max_error_pwl = 0, cmplx_max_error_pwl = 0, max_error_accurate = 0, cmplx_max_error_accurate = 0;
+  double allowed_error_pwl = 4, allowed_error_accurate = 0.001;
 
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_qrd(), for scalar and complex datatypes - allowed error = " << allowed_error << endl;
+  cout << "Testing function: ac_qrd(), for scalar and complex datatypes - allowed error_pwl = " << allowed_error_pwl << ", allowed_error_accurate = " << allowed_error_accurate << endl;
 
-  // template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-  test_driver_pwl<3, 16, 8, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_pwl<4, 12, 5, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_pwl<3,  7, 4, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_pwl<2, 15, 7, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_pwl<5, 11, 4, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
+  // template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+  test_driver_pwl<false, 3, 16, 8, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver_pwl<true,  4, 12, 5, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver_pwl<true,  3,  7, 4, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver_pwl<true,  2, 15, 7, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver_pwl<false, 5, 11, 4, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
 
-  // template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-  test_driver_accurate<3, 16, 7, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_accurate<4, 12, 5, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_accurate<3,  7, 4, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_accurate<2, 15, 7, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
-  test_driver_accurate<5, 11, 4, true, 64, 32, true> (max_error, cmplx_max_error, allowed_error);
+  // template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+  test_driver_accurate<false, 3, 16, 7, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver_accurate<true,  4, 12, 5, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver_accurate<true,  3,  7, 4, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver_accurate<true,  2, 15, 7, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver_accurate<false, 5, 11, 4, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all data type / bit-width variations:" << endl;
-  cout << "    max_error            = " << max_error << endl;
-  cout << "    cmplx_max_error      = " << cmplx_max_error << endl;
+  cout << "    max_error_pwl            = " << max_error_pwl << endl;
+  cout << "    cmplx_max_error_pwl      = " << cmplx_max_error_pwl << endl;
+  cout << "    max_error_accurate       = " << max_error_accurate << endl;
+  cout << "    cmplx_max_error_accurate = " << cmplx_max_error_accurate << endl;
 
   // If error limits on any tested datatype have been crossed, the test has failed
-  bool test_fail = (max_error > allowed_error) || (cmplx_max_error > allowed_error);
+  bool test_fail = (max_error_pwl > allowed_error_pwl) || (cmplx_max_error_pwl > allowed_error_pwl) || (max_error_accurate > allowed_error_accurate) || (cmplx_max_error_accurate > allowed_error_accurate);
 
   // Notify the user whether or not the test was a failure.
   if (test_fail) {

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -85,6 +85,7 @@
 //    with a type that is not implemented will result in a compile error.
 //
 // Revision History:
+//    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
 //    3.1.0  - bug51400 - Modified code to generate a smaller adder during synthesis.
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //
@@ -101,6 +102,9 @@
 #include <ac_int.h>
 #include <ac_fixed.h>
 #include <ac_float.h>
+#include <ac_complex.h>
+
+#include <ac_math/ac_sqrt_pwl.h>
 
 //=========================================================================
 // Function: ac_abs (for ac_int)
@@ -259,11 +263,60 @@ namespace ac_math
     //   adjust 2^I*2^E to 2^(I-1)*2^(E+1)
     bool ismax = xabs_m[XW - 1];
     xabs.e = x.e + ismax;
-    xabs.m[XW - 1] = 0;
+    xabs.m = 0.0;
     xabs.m.set_slc(0, xabs_m.template slc<XW-1>(ismax));
     y = xabs;
   }
 }
 
+//=========================================================================
+// Function: ac_abs (for ac_complex<ac_fixed>)
+//
+// Description:
+//    Calculation of absolute value of ac_complex
+//    variables.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_abs.h>
+//    using namespace ac_math;
+//
+//    typedef ac_complex<ac_fixed<20, 11, true, AC_RND, AC_SAT> > input_type;
+//    typedef ac_fixed<24, 14, true, AC_RND, AC_SAT> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_abs(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(3.0, 4.0);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+template <ac_q_mode pwl_Q = AC_TRN,
+          int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
+          int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
+void ac_abs(
+  const ac_complex<ac_fixed<W, I, S, Q, O> > &input,
+  ac_fixed<outW, outI, outS, outQ, outO>     &output
+)
+{
+  ac_math::ac_sqrt_pwl<pwl_Q>(input.mag_sqr(), output);
+}
 #endif
 

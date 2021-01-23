@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -74,6 +74,12 @@
 //    ac_shift_left function from the ac_shift.h header file.
 //
 // Revision History:
+//    3.3.0  - [CAT-25797] Added CDesignChecker fixes/waivers for code check violations in ac_math PWL and Linear Algebra IPs.
+//             Waivers added for CNS and CCC violations.
+//             Fixes added for FXD, STF and MXS violations.
+//               - FXD violations fixed by changing integer literals to floating point literals or typecasting to ac_fixed values.
+//               - STF violations fixed by using "const" instead of "static const" parameters. LUT generator files also print out "const" LUTs instead of "static const" LUTs.
+//               - MXS violations fixed by typecasting unsigned variables to int.
 //    Niramay Sanghvi : Aug 15 2017 : Default template parameters for configurability added
 //    Niramay Sanghvi : Aug 07 2017 : Used ac_shift_left function for RND and SAT support.
 //    Niramay Sanghvi : Jul 12 2017 : Added header style format.
@@ -102,7 +108,6 @@
 
 #if !defined(__SYNTHESIS__)
 #include <iostream>
-using namespace std;
 #endif
 
 //=========================================================================
@@ -137,7 +142,7 @@ namespace ac_math
   )
   {
     // Stores the fractional part of the input. By default it is set to 0
-    ac_fixed<AC_MAX(W - I, 1), 0, false> input_frac_part = 0;
+    ac_fixed<AC_MAX(W - I, 1), 0, false> input_frac_part = 0.0;
 
     // Take out the fractional part of the input
     // This serves as a sort of normalization, with the fractional part being
@@ -146,6 +151,7 @@ namespace ac_math
     // Only carry out slicing if the input has a fractional component.
     // If the input doesn't have a fractional part, the default value of input_frac_part, i.e. 0,
     // is suitable to be used in later calculations.
+#pragma hls_waive CNS
     if (W > I) {input_frac_part.set_slc(0, input.template slc<AC_MAX(W - I, 1)>(0));}
 
     // Start of code outputted by ac_pow_pwl_lutgen.cpp
@@ -174,8 +180,8 @@ namespace ac_math
     // PWL that covers the domain of [0, 1)
     // In order to ensure that the intermediate variables always have a length >= 1 and thereby prevent a compile-time error, AC_MAX is used.
     const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W - I - 2));
-    static const ac_fixed<n_frac_bits, 0, false> m_lut[n_segments_lut] = {.189453125, .224609375, 0.2666015625, .3173828125};
-    static const ac_fixed<n_frac_bits + 1, 1, false> c_lut[n_segments_lut] = {.998046875, 1.1875, 1.412109375, 1.6787109375};
+    const ac_fixed<n_frac_bits, 0, false> m_lut[n_segments_lut] = {.189453125, .224609375, 0.2666015625, .3173828125};
+    const ac_fixed<n_frac_bits + 1, 1, false> c_lut[n_segments_lut] = {.998046875, 1.1875, 1.412109375, 1.6787109375};
 
     // End of code outputted by ac_pow_pwl_lutgen.cpp
 
@@ -197,11 +203,11 @@ namespace ac_math
     ac_math::ac_shift_left(output_pwl, input.to_int(), output);
 
 #if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
-    cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "Actual input              = " << input << endl;
-    cout << "normalized input          = " << input_frac_part << endl;
-    cout << "output up-scaled by exp   = " << output << endl;
-    cout << "index                     = " << index  << endl;
+    std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+    std::cout << "Actual input              = " << input << std::endl;
+    std::cout << "normalized input          = " << input_frac_part << std::endl;
+    std::cout << "output up-scaled by exp   = " << output << std::endl;
+    std::cout << "index                     = " << index  << std::endl;
 #endif
   }
 
@@ -288,7 +294,7 @@ namespace ac_math
     ac_fixed<outW, outI, false, outQ, outO> &output
   )
   {
-    static const ac_fixed<17, 3, true> log2e = 1.44269504089;
+    const ac_fixed<17, 3, true> log2e = 1.44269504089;
     // Find type of intermediate variable used to store output of x*log2(e)
     typedef class comp_pii_exp<W, I, S, Q, O, n_f_b>::pit_t input_inter_type;
     input_inter_type input_inter;
@@ -297,13 +303,13 @@ namespace ac_math
     ac_pow2_pwl<pwl_Q>(input_inter, output);
 
 #if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
-    cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "input_inter.width       = " << input_inter.width << endl;
-    cout << "input_inter.i_width     = " << input_inter.i_width << endl;
-    cout << "input (power_exp)       = " << input << endl;
-    cout << "log2e (power_exp)       = " << log2e << endl;
-    cout << "input_inter (power_exp) = " << input_inter << endl;
-    cout << "output (power_exp)      = " << output << endl;
+    std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+    std::cout << "input_inter.width       = " << input_inter.width << std::endl;
+    std::cout << "input_inter.i_width     = " << input_inter.i_width << std::endl;
+    std::cout << "input (power_exp)       = " << input << std::endl;
+    std::cout << "log2e (power_exp)       = " << log2e << std::endl;
+    std::cout << "input_inter (power_exp) = " << input_inter << std::endl;
+    std::cout << "output (power_exp)      = " << output << std::endl;
 #endif
   }
 
@@ -362,8 +368,8 @@ namespace ac_math
 //
 // Notes:
 //    This function relies on the ac_pow2_pwl and ac_log_pwl functions for its
-//    computation. It does this by multiplying expon with log2(base), then 
-//    passing it to the ac_pow2_pwl function. In doing so, we also make sure 
+//    computation. It does this by multiplying expon with log2(base), then
+//    passing it to the ac_pow2_pwl function. In doing so, we also make sure
 //    that the product variable has enough precision to store the result of
 //    expon*log2(base).
 //    Input for the base and output for the exponential value have to be
@@ -381,12 +387,12 @@ namespace ac_math
     ac_fixed<outW, outI, false, outQ, outO> &output
   )
   {
-    // Find the number of integer bits required to represent the minimum and maximum values expressable for log2 of the base. 
+    // Find the number of integer bits required to represent the minimum and maximum values expressable for log2 of the base.
     // The number of integer bits used for the temporary variable that stores log2(base) is whichever is larger + 1.
     const int t_I_frac = ac::nbits<AC_MAX(baseW - baseI, 0)>::val;
     const int t_I_int  = ac::nbits<AC_MAX(baseI, 0)>::val;
     const int t_I      = (t_I_frac > t_I_int ? t_I_frac : t_I_int) + 1;
-    // Store the number of fractional bits for the temp output that ensures losslessness. This can change based on the log2 
+    // Store the number of fractional bits for the temp output that ensures losslessness. This can change based on the log2
     // PWL implementation, hence, the user must handle these changes appropriately.
     const int n_f_b_pwl_out = 22;
     ac_fixed <n_f_b_pwl_out + t_I, t_I, true, pwl_Q> log2_base;
@@ -396,9 +402,9 @@ namespace ac_math
     ac_pow2_pwl(expon*log2_base, output);
 
 #if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
-    cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-    cout << "log2_base          = " << log2_base << endl;
-    cout << "output(ac_pow_pwl) = " << output << endl;
+    std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
+    std::cout << "log2_base          = " << log2_base << std::endl;
+    std::cout << "output(ac_pow_pwl) = " << output << std::endl;
 #endif
   }
 

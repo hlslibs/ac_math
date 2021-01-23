@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.2                                                 *
+ *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Fri Aug 23 11:40:48 PDT 2019                        *
+ *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.2.1                                               *
+ *  Release Build   : 3.4.0                                               *
  *                                                                        *
  *  Copyright , Mentor Graphics Corporation,                     *
  *                                                                        *
@@ -74,6 +74,9 @@ typedef int                  S16TYPEplusS16TYPE;
 
 typedef ac_fixed<40,30,true>  ACTYPEmultACTYPE;
 typedef ac_complex<ac_fixed<41,31,true> > cACTYPEmultACTYPE;
+// matrix mult preserves data via bitgrowth
+typedef ac_fixed<42,32,true>  ACTYPEmatmultACTYPE;
+typedef ac_complex<ac_fixed<43,33,true> > cACTYPEmatmultACTYPE;
 
 template <typename ACType>
 void SET_VAL(ACType &obj, unsigned int val) { obj = val; }
@@ -330,7 +333,7 @@ int main(int argc, char *argv[])
 
   TEST_FUNC_AUTO(pwisemult,*,      ACTYPE,4,5,      ACTYPE,4,5,     5,100,    5,200,    ACTYPEmultACTYPE, 4,5,    false)
 
-  TEST_MATMULT_AUTO(ref1,   ACTYPE,4,5,    ACTYPE,5,4,       1,1,      1,1,       ACTYPEmultACTYPE,4,4,     false)
+  TEST_MATMULT_AUTO(ref1,   ACTYPE,4,5,    ACTYPE,5,4,       1,1,      1,1,       ACTYPEmatmultACTYPE,4,4,     false)
 
   TEST_OP_AUTO(+,     cACTYPE,4,5,     cACTYPE,4,5,     5,100,    5,200,   cACTYPEplusACTYPE,  4,5,    false)
   TEST_OP_AUTO(+,     cACTYPE,4,5,    cS16TYPE,4,5,     5,100,    5,200,   cACTYPEplusS16TYPE, 4,5,    false)
@@ -349,7 +352,7 @@ int main(int argc, char *argv[])
 
   TEST_FUNC_AUTO(pwisemult,*,     cACTYPE,4,5,     cACTYPE,4,5,     5,100,    5,200,   cACTYPEmultACTYPE, 4,5,    false)
 
-  TEST_MATMULT_AUTO(ref2,  cACTYPE,4,5,   cACTYPE,5,4,       1,1,      1,1,      cACTYPEmultACTYPE,4,4,     false)
+  TEST_MATMULT_AUTO(ref2,  cACTYPE,4,5,   cACTYPE,5,4,       1,1,      1,1,      cACTYPEmatmultACTYPE,4,4,     false)
 
   ac_matrix<int,5,7> matA;
   ac_matrix<int,5,7> matB;
