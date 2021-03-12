@@ -214,14 +214,14 @@ namespace ac_math
 
       temp_type temp;
       // PIVOT loop to keep track of pivot (element about which minor is to be computed)
-#pragma unroll yes
+#pragma hls_unroll yes
       PIVOT:
       for (unsigned j=0; j<M; j++) {
         // ROW and COLUMN loop to create matrices
-#pragma unroll yes
+#pragma hls_unroll yes
         ROW:
         for (unsigned p=1; p<M; p++) {
-#pragma unroll yes
+#pragma hls_unroll yes
           COLUMN:
           for (unsigned q=1; q<M; q++) {
             b(p-1, q-1) = A(p, q-(q<=j));
@@ -234,7 +234,7 @@ namespace ac_math
         c[j] = pr * temp;
       }
       // Accumulate loop for accumulation after multiplication with pivot
-#pragma unroll yes
+#pragma hls_unroll yes
       ACCUMULATE:
       for (unsigned j=0; j<M; j++) {
         d = d + A(0,j) * c[j];
@@ -411,10 +411,10 @@ namespace ac_math
   {
     ac_matrix < ac_fixed <W1, I1, S1, q1, o1>, M, M > a_temp;
 
-#pragma unroll yes
+#pragma hls_unroll yes
     ROW_CPY:
     for (unsigned i = 0; i < M; i++) {
-#pragma unroll yes
+#pragma hls_unroll yes
       COLUMN_CPY:
       for (unsigned j = 0; j < M; j++) {
         a_temp (i,j) = a[i][j];
@@ -427,10 +427,10 @@ namespace ac_math
   void ac_determinant (const ac_complex <ac_fixed <W1, I1, S1, q1, o1> > a[M][M], ac_complex <ac_fixed <W2, I2, true, q2, o2> > &result)
   {
     ac_matrix < ac_complex <ac_fixed <W1, I1, S1, q1, o1> >, M, M > a_temp;
-#pragma unroll yes
+#pragma hls_unroll yes
     ROW_CPY:
     for (unsigned i = 0; i < M; i++) {
-#pragma unroll yes
+#pragma hls_unroll yes
       COLUMN_CPY:
       for (unsigned j = 0; j < M; j++) {
         a_temp (i,j) = a[i][j];
