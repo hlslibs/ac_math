@@ -457,14 +457,14 @@ namespace ac_math
   void ac_sqrt_pwl (const ac_complex <ac_fixed <W, I, true, Q, O> > input,  ac_complex <ac_fixed <outW, outI, true, outQ, outO> > &output)
   {
     // Calculate parameterized bitwidths for all intermediate types.
-    typedef class find_rt_sqrt_pwl<(2*(W - I)), (2*I - 1)>::rt_sqrt_pwl sqrt_mod_type;
+    typedef typename find_rt_sqrt_pwl<(2*(W - I)), (2*I - 1)>::rt_sqrt_pwl sqrt_mod_type;
     const int W1 = sqrt_mod_type::width;
     const int I1 = sqrt_mod_type::i_width;
     const int n_f_b_1 = W1 - I1;
     const int t_I = I + 1;
     const int t_n_f_b = (W - I) > n_f_b_1 ? W - I : n_f_b_1;
     const int t_W = t_I + t_n_f_b;
-    typedef class find_rt_sqrt_pwl<t_W, t_I - 1>::rt_sqrt_pwl x_y_type;
+    typedef typename find_rt_sqrt_pwl<t_W, t_I - 1>::rt_sqrt_pwl x_y_type;
     const int W2 = x_y_type::width;
     const int I2 = x_y_type::i_width;
 

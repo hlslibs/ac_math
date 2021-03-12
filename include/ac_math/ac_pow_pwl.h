@@ -296,7 +296,7 @@ namespace ac_math
   {
     const ac_fixed<17, 3, true> log2e = 1.44269504089;
     // Find type of intermediate variable used to store output of x*log2(e)
-    typedef class comp_pii_exp<W, I, S, Q, O, n_f_b>::pit_t input_inter_type;
+    typedef typename comp_pii_exp<W, I, S, Q, O, n_f_b>::pit_t input_inter_type;
     input_inter_type input_inter;
     // e^x = 2^(x*log2(e))
     input_inter = input*log2e;
