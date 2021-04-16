@@ -110,7 +110,7 @@ int test_driver_fixed(
   }
 
   bool incorrect = false;
-  int nocalls, expret_fixed, expret_complex;
+  int nocalls=0, expret_fixed, expret_complex;
 
   // test fixed-point real and complex.
 
