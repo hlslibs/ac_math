@@ -136,7 +136,9 @@ int test_driver_fixed(
       bool incorrect_complex = ((cmplx_output_fixed.r().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.r().to_double()) || (cmplx_output_fixed.i().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.i().to_double()));
       // Make sure that the range of the normalized output is as expected.
       incorrect_complex = incorrect_complex || ((cmplx_output_fixed.r() > -0.5) && (cmplx_output_fixed.r() < 0.5) && (cmplx_output_fixed.i() > -0.5) && (cmplx_output_fixed.i() < 0.5));
-      incorrect_complex = incorrect_complex || (cmplx_output_fixed.r() >= 1) || (cmplx_output_fixed.r() < -1) || (cmplx_output_fixed.i() >= 1) && (cmplx_output_fixed.i() < -1);
+      // Expected range is: [-1.0, +1.0]
+      in_range = ((cmplx_output_fixed.r() >= -1) && (cmplx_output_fixed.r() <= 1)) || ((cmplx_output_fixed.i() >= -1) && (cmplx_output_fixed.i() <= 1));
+      incorrect_complex = incorrect_complex || !in_range;
       // Inputs and outputs being zero is a special case, and the range-checking above will produce a false negative in such a case. This is taken care of below.
       if (cmplx_output_fixed.r() == 0 && cmplx_output_fixed.i() == 0 && cmplx_input_fixed.r() == 0 && cmplx_input_fixed.i() == 0) {incorrect_complex = false;}
 
