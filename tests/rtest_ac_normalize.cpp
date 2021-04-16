@@ -126,7 +126,9 @@ int test_driver_fixed(
       // This flag is set to false if the real output is incorrect
       bool incorrect_fixed = (output_fixed.to_double() * pow(2, (double)expret_fixed) != input_fixed);
       // Make sure that the range of the normalized output is as expected.
-      incorrect_fixed = incorrect_fixed || ((output_fixed > -0.5) && (output_fixed < 0.5)) || ((output_fixed >= 1) && (output_fixed < -1));
+      // Expected range is: [-1.0, -0.5] U [0.5, 1.0]
+      bool in_range = ((output_fixed >= -1) && (output_fixed <= -0.5)) || ((output_fixed >= 0.5) && (output_fixed <= 1));
+      incorrect_fixed = incorrect_fixed || !in_range;
       // Inputs and outputs being zero is a special case, and the range-checking above will produce a false negative in such a case. This is taken care of below.
       if (output_fixed == 0 && input_fixed == 0) {incorrect_fixed = false;}
 
