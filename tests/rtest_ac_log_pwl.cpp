@@ -147,7 +147,7 @@ int test_driver_fixed(
 
   bool check_monotonic = true;
   bool compare_log = false;
-  double old_output_log;
+  double old_output_log = 0.0;
 
   // make loop variable slightly larger than required to store the max value.
   for (ac_fixed<Wfi + 2, Ifi + 1, false, AC_TRN, AC_WRAP> i = lower_limit; i <= upper_limit; i += step) {
