@@ -732,11 +732,11 @@ int test_driver_float(
       //Iterate through all possible combinations of mantissa values stored in the arrays above.
       //The denominator will be the negative of the corresponding unsigned value for that iteration. 
       //The numerator will have the same value as the corresponding unsigned value.
-      for (int i = 0; i <= numW - 1; i++) {
+      for (int i = 0; i <= numW - 2; i++) {
         // Normalize numerator mantissa
         num_type real_num_norm(us_real_num_m_arr[i], sample_exponent_array_num[i_out]);
         real_num = real_num_norm;
-        for (int j = 0; j <= denW - 1; j++) {
+        for (int j = 0; j <= denW - 2; j++) {
           // Normalize denominator mantissa
           den_type real_den_norm(us_real_den_m_arr[j], sample_exponent_array_den[j_out]);
           real_den = real_den_norm;
