@@ -110,7 +110,7 @@ int test_driver_fixed(
   }
 
   bool incorrect = false;
-  int nocalls=0, expret_fixed, expret_complex;
+  int expret_fixed, expret_complex;
 
   // test fixed-point real and complex.
 
@@ -121,7 +121,6 @@ int test_driver_fixed(
       cmplx_input_fixed.r() = i;
       cmplx_input_fixed.i() = j;
       test_ac_normalize(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed, expret_fixed, expret_complex);
-      nocalls++;
 
       // This flag is set to false if the real output is incorrect
       bool incorrect_fixed = (output_fixed.to_double() * pow(2, (double)expret_fixed) != input_fixed);
