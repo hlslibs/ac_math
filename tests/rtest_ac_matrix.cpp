@@ -419,10 +419,10 @@ int main(int argc, char *argv[])
 
   // Testing operator==() with wrong-sized matrix
   cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".operator==(" << matD2.type_name() << ") RESULT: ";
-  bool opeqbad1 = true;
+  opeqbad = true;
   if (matA == matD2) { opeqbad = false; }
-  if (opeqbad1 == false)  { cout << "FAILED" << endl; fail_count++; }
-  else                   { cout << "PASSED" << endl; }
+  if (opeqbad == false) { cout << "FAILED" << endl; fail_count++; }
+  else                  { cout << "PASSED" << endl; }
 
   // Test method sum()
   cout << "Testing: " << std::left << setw(fw) << matA.type_name() << ".sum() RESULT: ";
