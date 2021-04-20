@@ -140,8 +140,6 @@ int test_driver(
 
       // Update the old value
       old_output_exp = actual_value_exp;
-      // Once an old value has been stored, i.e. towards the end of the first iteration, this value is set to true.
-      compare_exp = true;
 
       // same thing as above, but for the natural exponential.
       if (compare_exp) {
@@ -153,6 +151,7 @@ int test_driver(
           assert(false); // LCOV_EXCL_LINE
         }
       }
+      // Once an old value has been stored, i.e. towards the end of the first iteration, this value is set to true.
       old_output_exp = actual_value_exp;
       compare_exp = true;
     }
