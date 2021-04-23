@@ -198,7 +198,7 @@ int test_driver_int(
   ac_int<numW, false> us_real_num, us_real_num_arr[numW];
   ac_int<numW, false> us_real_num_start = 0;
   ac_int<denW, false> us_real_den, us_real_den_arr[denW];
-  ac_int<numW, false> us_real_den_start = 0;
+  ac_int<denW, false> us_real_den_start = 0;
   ac_int<quoW, false> us_real_quo;
   ac_int<remW, false> us_real_rem;
 
