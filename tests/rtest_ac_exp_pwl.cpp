@@ -138,9 +138,6 @@ int test_driver(
       // are testing is an increasing function, and our testbench value keeps incrementing or remains the same (in case of saturation), we expect the
       // old value to be lesser than or equal to the current one.
 
-      // Update the old value
-      old_output_exp = actual_value_exp;
-
       // same thing as above, but for the natural exponential.
       if (compare_exp) {
         if (old_output_exp > actual_value_exp) {
