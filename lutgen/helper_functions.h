@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -49,11 +47,11 @@ template <int size>
 bool is_neg_max_array(const double (&input_array)[size], const unsigned nsegments, double &max_val)
 {
   // This variable is set to true if even a single element is negative.
-  bool is_neg = false;
+  bool is_neg = (input_array[0] < 0);
   max_val = abs(input_array[0]);
   for(unsigned i = 1; i < nsegments; i++) {
     if(input_array[i] < 0) { is_neg = true; }
-    if(abs(input_array[i]) > max_val) { max_val = input_array[i]; }
+    if(abs(input_array[i]) > max_val) { max_val = abs(input_array[i]); }
   }
   return is_neg;
 }
@@ -65,7 +63,6 @@ double make_non_zero(double input)
   return input;
 }
 
-//int m_int_bits = ceil(log2(make_non_zero(abs(m_max_val)))) + 2*int(is_neg_m) + 1;
 int int_bits_calc(double val, bool S)
 {
   return ceil(log2(make_non_zero(abs(val)))) + int(S) + 1;

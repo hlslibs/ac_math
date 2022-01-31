@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -147,12 +145,12 @@ namespace ac_math
     const int TI = XI;
     const int TW = TI + TF;
     unsigned un = 0x7FFFFFFF & n;
-		#pragma hls_waive ISE
+    #pragma hls_waive ISE
 
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) >> un;
 
     ac_fixed<TW+R_HALF,TI,false> t2 = t;
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
 
     if (R_HALF) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -183,20 +181,20 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
-	#pragma hls_waive ISE
-	
+    #pragma hls_waive ISE
+
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) >> n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,false> t2 = t;
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (R_HALF || S_OVER) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
       m1 <<= n;
       ac_fixed<XW,XI,false> mask = ~(ac_fixed<XW,XI,false>) m1;
-#pragma hls_waive CNS
+      #pragma hls_waive CNS
       if (n >= 0) {
-#pragma hls_waive CNS
+        #pragma hls_waive CNS
         if (R_HALF)
         { t2[0] = !! (x & mask); }
       } else {
@@ -227,13 +225,13 @@ namespace ac_math
     // Since this is a unidirectional shift in the right direction, the intermediate type only needs the same number of integer bits as in the input.
     const int TI = XI;
     const int TW = TI + TF;
-	#pragma hls_waive ISE
-	
+    #pragma hls_waive ISE
+
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) >> n;
     unsigned un = 0x7FFFFFFF & n;
 
     ac_fixed<TW+R_HALF,TI,true> t2 = t;
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
 
     if (R_HALF) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -264,19 +262,19 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
-	#pragma hls_waive ISE
-	
+    #pragma hls_waive ISE
+
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) >> n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,true> t2 = t;
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (R_HALF || S_OVER==2) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,true>) 0;
       m1 <<= n;
       ac_fixed<XW,XI,true> mask = ~(ac_fixed<XW,XI,true>) m1;
       if (n >= 0) {
-#pragma hls_waive CNS
+        #pragma hls_waive CNS
         if (R_HALF)
         { t2[0] = !! (x & mask); }
       } else {
@@ -307,13 +305,13 @@ namespace ac_math
     const int TF = XW - XI;
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
-	
-	#pragma hls_waive ISE
+
+    #pragma hls_waive ISE
 
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) << n;
 
     ac_fixed<TW+S_OVER,TI+S_OVER,false> t2 = t;
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
 
     if (S_OVER) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -344,13 +342,13 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
-		#pragma hls_waive ISE
+    #pragma hls_waive ISE
 
     ac_fixed<TW,TI,false> t = ((ac_fixed<TW,TI,false>) x) << n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,false> t2 = t;
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (R_HALF || S_OVER) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
       m1 >>= n;
@@ -385,12 +383,12 @@ namespace ac_math
     const int TF = XW - XI;
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
-		#pragma hls_waive ISE
+    #pragma hls_waive ISE
 
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) << n;
 
     ac_fixed<TW+S_OVER,TI+S_OVER,true> t2 = t;
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
 
     if (S_OVER==2) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;
@@ -423,12 +421,12 @@ namespace ac_math
     const int TF = AC_MAX(XW-XI, OW-OI+R_BIT);
     const int TI = AC_MAX(XI, OI);
     const int TW = TI + TF;
-		#pragma hls_waive ISE
+    #pragma hls_waive ISE
 
     ac_fixed<TW,TI,true> t = ((ac_fixed<TW,TI,true>) x) << n;
 
     ac_fixed<TW+R_HALF+S_OVER,TI+S_OVER,true> t2 = t;
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
 
     if (R_HALF || S_OVER==2) {
       ac_fixed<TW,TI,false> m1 = ~(ac_fixed<TW,TI,false>) 0;

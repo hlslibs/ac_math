@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -35,7 +33,7 @@
 //
 // Description: Provides high-accuracy piece-wise linear implementations of the
 //    reciprocal function for the AC (tm) Datatypes: ac_fixed, ac_float,
-//    ac_complex<ac_fixed> and ac_complex<ac_float>.
+//    ac_complex<ac_fixed>, ac_complex<ac_float>, ac_ieee_float.
 //
 // Usage:
 //    A sample testbench and its implementation look like
@@ -145,20 +143,33 @@ namespace ac_math
     // is encountered.
     // If AC_ASSERT is not activated: the output will saturate when a zero input is encountered.
     // The functionality behind this is taken care of by other sections of the code.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!input, "Reciprocal of zero not supported.");
-#endif
+    #endif
 
     ac_fixed<outW, outI, outS, outQ, outO> output_temp;
 
     // Start of code outputted by ac_reciprocal_pwl_ha_lutgen.cpp
-    const unsigned n_segments_lut = 32;
-    const int n_frac_bits = 16;
-    static const ac_fixed<-2 + n_frac_bits, -2, true> m_lut[n_segments_lut] = {-.06060791015625, -.0570220947265625, -.0537567138671875, -.0507659912109375, -.04803466796875, -.045501708984375, -.0431671142578125, -.041015625, -.0390167236328125, -.0371551513671875, -.035430908203125, -.0338134765625, -.032318115234375, -.030914306640625, -.02960205078125, -.0283660888671875, -.0272064208984375, -.0261077880859375, -.0251007080078125, -.0241241455078125, -.023223876953125, -.0223541259765625, -.02154541015625, -.020782470703125, -.020050048828125, -.01934814453125, -.018707275390625, -.01806640625, -.017486572265625, -.0169219970703125, -.016387939453125, -.015869140625};
-    static const ac_fixed<2 + n_frac_bits, 2, false> c_lut[n_segments_lut] = {1.9997711181640625, 1.9391632080078125, 1.88214111328125, 1.828369140625, 1.7776031494140625, 1.7295684814453125, 1.684051513671875, 1.6408843994140625, 1.5998687744140625, 1.56085205078125, 1.5236968994140625, 1.4882659912109375, 1.4544525146484375, 1.4221343994140625, 1.3912200927734375, 1.3616180419921875, 1.333251953125, 1.3060455322265625, 1.279937744140625, 1.2548370361328125, 1.230712890625, 1.207489013671875, 1.1851348876953125, 1.1635894775390625, 1.1428070068359375, 1.1227569580078125, 1.1034088134765625, 1.0847015380859375, 1.0666351318359375, 1.0491485595703125, 1.0322265625, 1.015838623046875};
-    static const ac_fixed<0 + n_frac_bits, 0, false> x_min_lut = .5;
-    static const ac_fixed<1 + n_frac_bits, 1, false> x_max_lut = 1.0;
-    static const ac_fixed<7 + n_frac_bits, 7, false> sc_constant_lut = 64.0;
+    const unsigned n_segments_lut = 32; // Number of PWL segments.
+    const int n_frac_bits = 16; // Number of fractional bits
+    // Since scaling constant is a positive power-of-two, multiplication with it is the same as left-shifting by 6.
+    // Accordingly, the scaled normalized input will have 6 less fractional bits than the normalized input, provided that this
+    // number of fractional bits is lesser than n_frac_bits. If not, the number of fractional bits in the scaled input is set to n_frac_bits.
+    const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W - 6 - int(S))); // One less bit is used if the function input is signed, due to how ac_normalize works.
+    static const ac_fixed<-2 + n_frac_bits, -2, true> m_lut[n_segments_lut] = {
+      -.06060791015625, -.0570220947265625, -.0537567138671875, -.0507659912109375, -.04803466796875, -.045501708984375, -.0431671142578125, -.041015625,
+        -.0390167236328125, -.0371551513671875, -.035430908203125, -.0338134765625, -.032318115234375, -.030914306640625, -.02960205078125, -.0283660888671875,
+        -.0272064208984375, -.0261077880859375, -.0251007080078125, -.0241241455078125, -.023223876953125, -.0223541259765625, -.02154541015625, -.020782470703125,
+        -.020050048828125, -.01934814453125, -.018707275390625, -.01806640625, -.017486572265625, -.0169219970703125, -.016387939453125, -.015869140625
+      };
+    static const ac_fixed<2 + n_frac_bits, 2, false> c_lut[n_segments_lut] = {
+      1.9997711181640625, 1.9391632080078125, 1.88214111328125, 1.828369140625, 1.7776031494140625, 1.7295684814453125, 1.684051513671875, 1.6408843994140625,
+      1.5998687744140625, 1.56085205078125, 1.5236968994140625, 1.4882659912109375, 1.4544525146484375, 1.4221343994140625, 1.3912200927734375, 1.3616180419921875,
+      1.333251953125, 1.3060455322265625, 1.279937744140625, 1.2548370361328125, 1.230712890625, 1.207489013671875, 1.1851348876953125, 1.1635894775390625,
+      1.1428070068359375, 1.1227569580078125, 1.1034088134765625, 1.0847015380859375, 1.0666351318359375, 1.0491485595703125, 1.0322265625, 1.015838623046875
+    };
+    static const ac_fixed<0 + n_frac_bits, 0, false> x_min_lut = .5; // Minimum limit of PWL domain
+    static const ac_fixed<7 + n_frac_bits, 7, false> sc_constant_lut = 64.0; // Scaling constant
     // End of code outputted by ac_reciprocal_pwl_ha_lutgen.cpp
 
     // The absolute value of the input is taken and passed to the normalization function. Initialize variables for the same.
@@ -179,23 +190,22 @@ namespace ac_math
 
     const int int_bits = ac::nbits<n_segments_lut - 1>::val;
     // Compute reciprocal using pwl.
-    // Scale the normalized input from [x_min_lut, x_max_lut) to [0, n_segments_lut)
-    // (x_min_lut and and x_max_lut are the lower and upper limits of the domain)
-    ac_fixed<int_bits + n_frac_bits, int_bits, false> x_in_sc = (normalized_fixed - x_min_lut)*sc_constant_lut;
+    // Scale the normalized input from 0 to n_segments_lut.
+    ac_fixed<int_bits + sc_input_frac_bits, int_bits, false> x_in_sc = (normalized_fixed - x_min_lut)*sc_constant_lut;
     // Take out the fractional bits of the scaled input
-    ac_fixed<n_frac_bits, 0, false> x_in_sc_frac;
-    x_in_sc_frac.set_slc(0, x_in_sc.template slc<n_frac_bits>(0));
+    ac_fixed<sc_input_frac_bits, 0, false> x_in_sc_frac;
+    x_in_sc_frac.set_slc(0, x_in_sc.template slc<sc_input_frac_bits>(0));
     // The integer part of the input is the index of the LUT table
     ac_int<int_bits, false> index = x_in_sc.to_int();
     // The output of the PWL approximation should have the same signedness as the output of the function.
     // The precision given below will ensure that there is no precision lost in the assignment to output_pwl, hence rounding for the variable is switched off by default.
     // However, if the user uses less fractional bits and turn rounding on instead, they are welcome to do so by giving a different value for pwl_Q.
-    typedef ac_fixed<2*n_frac_bits + 1 + int(outS), 1 + int(outS), outS, pwl_Q> output_pwl_type;
+    typedef ac_fixed<sc_input_frac_bits + n_frac_bits + 1 + int(outS), 1 + int(outS), outS, pwl_Q> output_pwl_type;
     output_pwl_type output_pwl = m_lut[index]*x_in_sc_frac + c_lut[index];
 
     if (input != 0) { // If input is non-zero, De-normalize output by shifting right by expret_temp
       // If input and output are signed, change sign of output_pwl based on whether input is positive or negative.
-      if (S && outS) {output_pwl = (input < 0) ? (output_pwl_type)(-output_pwl) : output_pwl;}
+      if (S && outS) { output_pwl = (input < 0) ? (output_pwl_type)(-output_pwl) : output_pwl; }
       // ac_shift_right function used for denormalization so as to ensure saturation and rounding.
       ac_math::ac_shift_right(output_pwl, expret_temp, output_temp);
     } else {
@@ -205,7 +215,7 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input                   = " << input << std::endl;
     std::cout << "input_abs_value         = " << input_abs_value << std::endl;
@@ -216,7 +226,7 @@ namespace ac_math
     std::cout << "output_pwl              = " << output_pwl << std::endl;
     std::cout << "output_temp             = " << output_temp << std::endl;
     std::cout << "output up-scaled by exp = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -277,12 +287,17 @@ namespace ac_math
     ac_float<outW, outI, outE, outQ> &output
   )
   {
-    // The derived type for the mantissa has it's bitwidths calculated to ensure
-    // a lossless return type for the mantissa.
-    // Note that the variable below might have to be changed if the "n_frac_bits"
-    // variable in the fixed point PWL implementation changes.
-    const int n_frac_bits_fixed = 16; // Enter the number of fractional bits specified by the "n_frac_bits" variable in the fixed point PWL.
-    const int W1 = W + 2*n_frac_bits_fixed + 1;
+    // Start of code to be changed if the ac_fixed PWL implementation changes.
+
+    const bool is_sc_constant_po2 = true; // is sc_constant_lut used in ac_fixed implementation a power of two?
+    const int log2_sc_constant = 6; // log2(sc_constant_lut), if sc_constant_lut is a power-of-two. If not, this value is ignored.
+    const int n_frac_bits = 16; // Number of fractional bits used in ac_fixed PWL implementation.
+
+    // End of code to be changed if the ac_fixed PWL implementation changes.
+
+    const int sc_input_frac_bits = is_sc_constant_po2 ? AC_MAX(1, AC_MIN(n_frac_bits, W - log2_sc_constant - 1)) : n_frac_bits;
+
+    const int W1 = W + n_frac_bits + sc_input_frac_bits + 1;
     const int I1 = W - I + 2;
 
     // Find the reciprocal of the mantissa using the ac_fixed implementation.
@@ -299,7 +314,7 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input                   = " << input << std::endl;
     std::cout << "input.mantissa()        = " << input.mantissa() << std::endl;
@@ -311,7 +326,7 @@ namespace ac_math
     std::cout << "output                  = " << output << std::endl;
     std::cout << "output.mantissa()       = " << output.mantissa() << std::endl;
     std::cout << "output.exp()            = " << output.exp() << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -380,20 +395,28 @@ namespace ac_math
     ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > &output
   )
   {
-    ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > output_temp;
+    const int W1 = S ? 2*W - 1 : 2*W + 1;
+    const int I1 = S ? 2*I - 1 : 2*I + 1;
+
+    // Start of code to be changed if the ac_fixed PWL implementation changes.
+
+    const bool is_sc_constant_po2 = true; // is sc_constant_lut used in ac_fixed implementation a power of two?
+    const int log2_sc_constant = 6; // log2(sc_constant_lut), if sc_constant_lut is a power-of-two. If not, this value is ignored.
+    const int n_frac_bits = 16; // Number of fractional bits used in ac_fixed PWL implementation.
+
+    // End of code to be changed if the ac_fixed PWL implementation changes.
+
+    const int sc_input_frac_bits = is_sc_constant_po2 ? AC_MAX(1, AC_MIN(n_frac_bits, W1 - log2_sc_constant - int(S))) : n_frac_bits;
 
     // The derived type for the reciprocal of the mag_sqr() of the input has its
     // bitwidths calculated to ensure a lossless return type for said reciprocal.
-    // Note that the variable below might have to be changed if the "n_frac_bits"
-    // variable in the fixed point PWL implementation changes.
-    const int W1 = S ? 2*W - 1 : 2*W + 1;
-    const int I1 = S ? 2*I - 1 : 2*I + 1;
-    const int n_frac_bits_fixed = 16; // Enter the number of fractional bits specified by the "n_frac_bits" variable in the fixed point PWL.
-    const int W2 = W1 + 2*n_frac_bits_fixed + int(!S);
+    const int W2 = W1 + sc_input_frac_bits + n_frac_bits + int(!S);
     const int I2 = W1 - I1 + 1;
 
     ac_fixed<W2, I2, false, outQ, outO> recip_mag_sqr;
     ac_reciprocal_pwl_ha<pwl_Q>(input.mag_sqr(), recip_mag_sqr);
+
+    ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > output_temp;
 
     if (input.r() != 0 || input.i() != 0) {
       // Use the formula "1/(a+bi) = (a-bi)/(a^2+b^2)" to assign values to the output.
@@ -407,13 +430,13 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input.mag_sqr() = " << input.mag_sqr() << std::endl;
     std::cout << "recip_mag_sqr   = " << recip_mag_sqr << std::endl;
     std::cout << "output_temp     = " << output_temp << std::endl;
     std::cout << "output          = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -482,7 +505,15 @@ namespace ac_math
     ac_complex<ac_float<outW, outI, outE, outQ> > &output
   )
   {
-    ac_complex<ac_float<outW, outI, outE, outQ> > output_temp;
+    // Start of code to be changed if the ac_fixed PWL implementation changes.
+
+    const bool is_sc_constant_po2 = true; // is sc_constant_lut used in ac_fixed implementation a power of two?
+    const int log2_sc_constant = 6; // log2(sc_constant_lut), if sc_constant_lut is a power-of-two. If not, this value is ignored.
+    const int n_frac_bits = 16; // Number of fractional bits used in ac_fixed PWL implementation.
+
+    // End of code to be changed if the ac_fixed PWL implementation changes.
+
+    const int sc_input_frac_bits = is_sc_constant_po2 ? AC_MAX(1, AC_MIN(n_frac_bits, 2*W + 1 - log2_sc_constant)) : n_frac_bits;
 
     // Calculate real^2 + imag^2
     ac_float<W, I, E, Q> input_real = input.r();
@@ -495,12 +526,8 @@ namespace ac_math
     typedef ac_float<2*W + 1, 2*I + 1, E + 2, Q> i_m_s_type;
     i_m_s_type input_mag_sqr;
 
-    // Calculate bitwidths for the return type of reciprocal of the input magnitude
-    // squared to ensure that there is no loss in precision.
-    // Note that the variable below might have to be changed if the "n_frac_bits"
-    // variable in the fixed point PWL implementation changes.
-    const int n_frac_bits_fixed = 16; // Enter the number of fractional bits specified by the "n_frac_bits" variable in the fixed point PWL.
-    const int W_r_m_s = 2*W + 1 + 2*n_frac_bits_fixed + 1;
+    // Calculate bitwidths for the return type of reciprocal of the input magnitude.
+    const int W_r_m_s = 2*W + 1 + sc_input_frac_bits + n_frac_bits + 1;
     const int I_r_m_s = 2*W + 1 - (2*I + 1) + 2;
 
     ac_float<W_r_m_s, I_r_m_s, E + 3, outQ> recip_mag_sqr;
@@ -508,6 +535,8 @@ namespace ac_math
     // Store value of input_mag_sqr to the variable.
     input_mag_sqr.add(input_real*input_real, input_imag*input_imag);
     ac_reciprocal_pwl_ha<pwl_Q>(input_mag_sqr, recip_mag_sqr);
+
+    ac_complex<ac_float<outW, outI, outE, outQ> > output_temp;
 
     if (input_mag_sqr.mantissa() != 0) {
       // 1/(a+bi) = (a-bi)/(a^2+b^2)
@@ -522,7 +551,7 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_HA_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input                     = " << input << std::endl;
     std::cout << "input_mag_sqr             = " << input_mag_sqr << std::endl;
@@ -533,18 +562,72 @@ namespace ac_math
     std::cout << "output                    = " << output << std::endl;
     std::cout << "output.r().to_double()    = " << output.r().to_double() << std::endl;
     std::cout << "output.i().to_double()    = " << output.i().to_double() << std::endl;
-#endif
+    #endif
   }
 
 // For this section of the code to work, the user must include ac_std_float.h in their testbench before including the reciprocal header,
-// so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
-#ifdef __AC_STD_FLOAT_H
+// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
+  #ifdef __AC_STD_FLOAT_H
+//=========================================================================
+// Function: ac_reciprocal_pwl_ha (for ac_std_float)
+//
+// Description:
+//    Calculation of reciprocal of real inputs, passed as ac_std_float
+//    variables.
+//
+// Usage:
+//    A sample testbench and its implementation looks like this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_reciprocal_pwl_ha.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_reciprocal_pwl_ha.h>
+//    using namespace ac_math;
+//
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_reciprocal_pwl_ha(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(0.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <ac_q_mode pwl_Q = AC_TRN, int W, int E, int outW, int outE>
+  void ac_reciprocal_pwl_ha(
+    const ac_std_float<W, E> &input,
+    ac_std_float<outW, outE> &output
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_reciprocal_pwl_ha<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
+
 //=========================================================================
 // Function: ac_reciprocal_pwl_ha (for ac_ieee_float)
 //
 // Description:
-//    Calculation of reciprocal of real, positive inputs, passed as
-//    ac_ieee_float variables.
+//    Calculation of reciprocal of real inputs, passed as ac_ieee_float
+//    variables.
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
@@ -597,7 +680,7 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
   }
-#endif
+  #endif
 
 //=========================================================================
 // Version that allows returning of values.

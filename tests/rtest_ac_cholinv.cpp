@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -49,50 +47,30 @@ using namespace ac_math;
 //   using multiple data types at the same time. Template parameters are
 //   used to configure the bit-widths of the types.
 
-// Test Design for real and complex fixed point values, using PWL functions
-// for cholesky decomposition.
-template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-void test_ac_cholinv_pwl(
-  const ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> A1[M][M],
+// Test Design for real and complex fixed point values.
+template <bool use_pwl, unsigned M, int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
+void test_ac_cholinv(
+  const ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP> A1[M][M],
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> L1[M][M],
-  const ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > A2[M][M],
+  const ac_complex<ac_fixed<Wfi + 1, Ifi + 1, true, AC_TRN, AC_WRAP> > A2[M][M],
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > L2[M][M],
-  const ac_matrix<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>, M, M> &A3,
+  const ac_matrix<ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP>, M, M> &A3,
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> &L3,
-  const ac_matrix<ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> >, M, M> &A4,
+  const ac_matrix<ac_complex<ac_fixed<Wfi + 1, Ifi + 1, true, AC_TRN, AC_WRAP> >, M, M> &A4,
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> &L4
 )
 {
-  ac_cholinv<true, true>(A1, L1);
-  ac_cholinv<true, true>(A2, L2);
-  ac_cholinv<true, true>(A3, L3);
-  ac_cholinv<true, true>(A4, L4);
-}
-
-// Test Design for real and complex fixed point values, using accurate div and sqrt
-// functions for cholesky decomposition.
-template <unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-void test_ac_cholinv_accurate(
-  const ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> A1[M][M],
-  ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> L1[M][M],
-  const ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > A2[M][M],
-  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > L2[M][M],
-  const ac_matrix<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>, M, M> &A3,
-  ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> &L3,
-  const ac_matrix<ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> >, M, M> &A4,
-  ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> &L4
-)
-{
-  ac_cholinv<false, false>(A1, L1);
-  ac_cholinv<false, false>(A2, L2);
-  ac_cholinv<false, false>(A3, L3);
-  ac_cholinv<false, false>(A4, L4);
+  ac_cholinv<use_pwl, use_pwl>(A1, L1);
+  ac_cholinv<use_pwl, use_pwl>(A2, L2);
+  ac_cholinv<use_pwl, use_pwl>(A3, L3);
+  ac_cholinv<use_pwl, use_pwl>(A4, L4);
 }
 
 // ==============================================================================
 
-#include <ac_math/ac_random.h>
 #include <math.h>
+#include <random>
+#include <limits>
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -112,113 +90,109 @@ void print_matrix(T mat[M][M])
     for (int j = 0; j < (int)M; j++) {cout << "mat[" << i << "][" << j << "] = " << mat[i][j] << endl;}
   }
 }
-
-template<unsigned M, unsigned N, class T>
-void print_matrix(T mat[M][N])
-{
-  cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl;
-  for (int i = 0; i < (int)M; i++) {
-    for (int j = 0; j < (int)N; j++) {cout << "mat[" << i << "][" << j << "] = " << mat[i][j] << endl;}
-  }
-}
 #endif
 
-//Generate positive definite matrix of ac_matrix<ac_fixed> values
-template<int N, class T, unsigned M>
-void gen_matrix(ac_matrix<T, M, M> &A)
+// Generate positive definite matrix of ac_fixed values
+template<unsigned M, int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
+void gen_matrix(ac_matrix<ac_fixed<W, I, S, Q, O>, M, M> &A)
 {
-  //Declare an MxN and NxM matrix. The NxM matrix, i.e. tbmatT, stores the transpose
-  //of the MxN matrix, i.e. tbmat
-  ac_matrix<T, M, N> tbmat;
-  ac_matrix<T, N, M> tbmatT;
+  static_assert(I - int(S) >= ac::nbits<M - 1>::val, "Not enough integer bits in input type.");
+  static_assert(W - I >= 2, "Input type must have at least 2 fractional bits.");
 
-  for (int i = 0; i < (int)M; i++) {
-    for (int j = 0; j < (int)N; j++) {
-      if ( j == i ) {
-        //The diagonal elements of tbmat are all initialized to the same value, i.e. M
-        //Any common, non-zero value can be used for this purpose, not just M
-        tbmat(i, j)  = (T)M;
-        tbmatT(j, i) = tbmat(i, j);
-      } else {
-        //The non-diagonal, lower triangular elements of tbmat are initialized to random, unique values
-        ac_fixed<16, 1, true> rand_val;
-        ac_random(rand_val);
-        tbmat(i, j) = rand_val * M;
-        tbmatT(j, i) = tbmat(i, j);
-      }
-    }
-  }
+  // Declare two MxM matrices, once of which (tbmatT) is the transpose of the other.
+  ac_fixed<(W - I)/2, 0, false> tbmat[M][M];
+  ac_fixed<(W - I)/2, 0, false> tbmatT[M][M];
 
-#ifdef DEBUG
-  cout << "tbmat = " << endl;
-  cout << tbmat << endl;
-  cout << "tbmatT = " << endl;
-  cout << tbmatT << endl;
-#endif
+  // Make sure the minimum limit for the random number generator is the quantum double value.
+  double min_rand_limit = std::numeric_limits<double>::min();
+  // default_random_engine and uniform_real_distribution are libraries from the <random> header,
+  // packaged with C++11 and later standards.
+  default_random_engine generator;
+  // Use a uniform distribution to maximize the chance of obtaining an invertible tbmat/tbmatT matrix.
+  // The output produced by this is similar to that of matlab's "rand" function, i.e. a randomly
+  // selected value picked out of a uniform probability density in the range of (0, 1).
+  uniform_real_distribution<double> distribution(min_rand_limit, 1.0);
 
-  //Multiply tbmat by its transpose to get the positive definite input matrix
-  A = 0;
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
-      for (int k = 0; k < (int)N; k++) {
-        A(i, j) += tbmat(i, k) * tbmatT(k, j);
+      tbmat[i][j] = distribution(generator);
+      tbmatT[j][i] = tbmat[i][j];
+    }
+  }
+
+  #ifdef DEBUG
+  cout << "tbmat is : " << endl;
+  print_matrix(tbmat);
+  cout << "tbmatT is : " << endl;
+  print_matrix(tbmatT);
+  #endif
+
+  // Multiply tbmat by its transpose to get the positive definite input matrix
+  for (int i = 0; i < (int)M; i++) {
+    for (int j = 0; j < (int)M; j++) {
+      A(i, j) = 0;
+      for (int k = 0; k < (int)M; k++) {
+        A(i, j) += tbmat[i][k] * tbmatT[k][j];
       }
     }
   }
 
-#ifdef DEBUG
-  cout << "A in function = " << endl;
+  #ifdef DEBUG
+  cout << "A in gen_matrix function is : " << endl;
   cout << A << endl;
-#endif
+  #endif
 }
 
-//Generate positive definite matrix of ac_matrix<ac_complex<ac_fixed> > values
-template<int N, class T, unsigned M>
-void gen_matrix(ac_matrix<ac_complex<T>, M, M> &A)
+// Generate positive definite matrix of ac_complex<ac_fixed> values
+template<unsigned M, int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
+void gen_matrix(ac_matrix<ac_complex<ac_fixed<W, I, S, Q, O> >, M, M> &A)
 {
-  //Declare an MxN and NxM matrix. The NxM matrix, i.e. tbmatT, stores the conjugate transpose
-  //of the MxN matrix, i.e. tbmat
-  ac_matrix<ac_complex<T>, M, N> tbmat;
-  ac_matrix<ac_complex<T>, N, M> tbmatT;
-  ac_complex<T> zero_complex(0, 0);
+  static_assert(S, "Input type must be signed");
+  static_assert(I - 1 >= ac::nbits<M - 1>::val, "Not enough integer bits in input type.");
+  static_assert(W - I >= 4, "Input type must have at least 4 fractional bits.");
 
-  for (int i = 0; i < (int)M; i++) {
-    for (int j = 0; j < (int)N; j++) {
-      if (i == j) {
-        //The diagonal elements of tbmat are all real, and initialized to the same value, i.e. M
-        //Any common, real, non-zero value can be used for this purpose, not just M
-        tbmat(i, j).r()  = M;
-        tbmat(i, j).i()  = 0;
-        tbmatT(j, i)     = tbmat(i, j);
-      } else {
-        //The non-diagonal elements of tbmat are initialized to random, unique, complex values
-        ac_fixed<16, 1, true> rand_val;
-        ac_fixed<12, 1, true> rand_val_2;
-        ac_random(rand_val);
-        ac_random(rand_val_2);
-        tbmat(i, j).r()  = rand_val * M;
-        tbmat(i, j).i()  = rand_val_2 * M;
-        tbmatT(j, i)     = tbmat(i, j).conj();
-      }
-    }
-  }
+  // Declare two MxM matrices, once of which (tbmatT) is the conjugate transpose of the other.
+  ac_complex<ac_fixed<(W - I)/2, 0, true> > tbmat[M][M];
+  ac_complex<ac_fixed<(W - I)/2, 0, true> > tbmatT[M][M];
 
-#ifdef DEBUG
-  cout << "tbmat = " << endl;
-  cout << tbmat << endl;
-  cout << "tbmatT = " << endl;
-  cout << tbmatT << endl;
-#endif
+  // Make sure the minimum limit for the random number generator is the quantum double value.
+  double min_rand_limit = std::numeric_limits<double>::min();
+  // default_random_engine and uniform_real_distribution are libraries from the <random> header,
+  // packaged with C++11 and later standards.
+  default_random_engine generator;
+  // Use a uniform distribution to maximize the chance of obtaining an invertible tbmat/tbmatT matrix.
+  uniform_real_distribution<double> distribution(min_rand_limit, 0.5);
 
-  //Multiply tbmat by its conjugate transpose to get the positive definite input matrix
-  A = zero_complex;
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
-      for (int k = 0; k < (int)N; k++) {
-        A(i, j) += tbmat(i, k) * tbmatT(k, j);
+      ac_fixed<(W - I)/2 - 1, -1, false> rand_val;
+      tbmat[i][j].r() = distribution(generator);
+      tbmat[i][j].i() = distribution(generator);
+      tbmatT[j][i] = tbmat[i][j].conj();
+    }
+  }
+
+  #ifdef DEBUG
+  cout << "tbmat is : " << endl;
+  print_matrix(tbmat);
+  cout << "tbmatT is : " << endl;
+  print_matrix(tbmatT);
+  #endif
+
+  // Multiply tbmat by its transpose to get the positive definite input matrix
+  for (int i = 0; i < (int)M; i++) {
+    for (int j = 0; j < (int)M; j++) {
+      A(i, j) = 0;
+      for (int k = 0; k < (int)M; k++) {
+        A(i, j) += tbmat[i][k] * tbmatT[k][j];
       }
     }
   }
+
+  #ifdef DEBUG
+  cout << "A in gen_matrix function is : " << endl;
+  cout << A << endl;
+  #endif
 }
 
 template<class T_tb>
@@ -491,18 +465,18 @@ double compare_matrices(
       //for the error calculation.
       this_error = 100 * abs( conv_val(Ainv(i, j)) - conv_val(Ainv_tb(i, j)) ) / (max_val);
       if (this_error > max_error) { max_error = this_error;}
-#ifdef DEBUG
+      #ifdef DEBUG
       cout << "Ainv(i, j)    = " << Ainv(i, j) << endl;
       cout << "Ainv_tb(i, j) = " << Ainv_tb(i, j) << endl;
       cout << "this_error = " << this_error << endl;
       assert(this_error < allowed_error);
-#endif
+      #endif
     }
   }
 
-#ifdef DEBUG
+  #ifdef DEBUG
   cout << "max_val = " << max_val << endl;
-#endif
+  #endif
 
   return max_error;
 
@@ -542,32 +516,38 @@ void copy_to_array_2D(
 //   in variables defined in the calling function.
 
 // ==============================================================================
-// Function: test_driver_pwl()
+// Function: test_driver()
 // Description: test_driver function for ac_fixed and ac_complex<ac_fixed> inputs
-//   and outputs, using PWL functions for cholesky inverse.
+//   and outputs.
 
-template <unsigned M, unsigned N, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-int test_driver_pwl(
+// FBfi = number of fractional bits in input type.
+template <bool use_pwl, unsigned M, int FBfi, int outWfi, int outIfi, bool outSfi>
+int test_driver(
   double &cumulative_max_error,
   double &cumulative_max_error_cmplx,
   const double allowed_error
 )
 {
+  enum {
+    Ifi = ac::nbits<M - 1>::val,
+    Wfi = FBfi + Ifi,
+    Ifi_c = Ifi + 1,
+    Wfi_c = Wfi + 1
+  };
+  
   bool passed = true;
 
-  ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> A_C_array[M][M];
+  ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP> A_C_array[M][M];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Ainv_C_array[M][M];
-  ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > cmplx_A_C_array[M][M];
+  ac_complex<ac_fixed<Wfi_c, Ifi_c, true, AC_TRN, AC_WRAP> > cmplx_A_C_array[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > cmplx_Ainv_C_array[M][M];
-  ac_matrix<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>, M, M> A_ac_matrix;
+  ac_matrix<ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP>, M, M> A_ac_matrix;
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> Ainv_ac_matrix;
-  ac_matrix<ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> >, M, M> cmplx_A_ac_matrix;
+  ac_matrix<ac_complex<ac_fixed<Wfi_c, Ifi_c, true, AC_TRN, AC_WRAP> >, M, M> cmplx_A_ac_matrix;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> cmplx_Ainv_ac_matrix;
 
-  cout << "TEST: ac_cholinv(), with pwl functions.      M = ";
+  cout << "TEST: ac_cholinv(), with " << (use_pwl ? "PWL" : "accurate") << " functions. M = ";
   cout << M << ",";
-  cout << " N = ";
-  cout << N << ",";
   cout << "INPUT: ";
   cout.width(38);
   cout << left << A_C_array[0][0].type_name();
@@ -579,14 +559,14 @@ int test_driver_pwl(
   ac_matrix<double, M, M> Ainv_tb, A_tb;
   ac_matrix<ac_complex<double>, M, M> cmplx_Ainv_tb, cmplx_A_tb;
 
-  gen_matrix<N>(A_ac_matrix);
-  gen_matrix<N>(cmplx_A_ac_matrix);
+  gen_matrix(A_ac_matrix);
+  gen_matrix(cmplx_A_ac_matrix);
   //CCS_DESIGN(project)(A, Ainv);
 
   copy_to_array_2D(A_ac_matrix, A_C_array);
   copy_to_array_2D(cmplx_A_ac_matrix, cmplx_A_C_array);
 
-  test_ac_cholinv_pwl(A_C_array, Ainv_C_array, cmplx_A_C_array, cmplx_Ainv_C_array, A_ac_matrix, Ainv_ac_matrix, cmplx_A_ac_matrix, cmplx_Ainv_ac_matrix);
+  test_ac_cholinv<use_pwl>(A_C_array, Ainv_C_array, cmplx_A_C_array, cmplx_Ainv_C_array, A_ac_matrix, Ainv_ac_matrix, cmplx_A_ac_matrix, cmplx_Ainv_ac_matrix);
 
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> Ainv_C_array_converted;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> cmplx_Ainv_C_array_converted;
@@ -606,7 +586,7 @@ int test_driver_pwl(
   chol_inv_tb<M>(A_tb, Ainv_tb);
   chol_inv_tb<M>(cmplx_A_tb, cmplx_Ainv_tb);
 
-#ifdef DEBUG
+  #ifdef DEBUG
   cout << "A_ac_matrix = " << endl;
   cout << A_ac_matrix << endl;
   cout << "A_tb = " << endl;
@@ -639,128 +619,7 @@ int test_driver_pwl(
   cout << cmplx_A_ac_matrix << endl;
   cout << "cmplx_Ainv_ac_matrix = " << endl;
   cout << cmplx_Ainv_ac_matrix << endl;
-#endif
-
-  // Compare matrices and get the max error
-  double max_error = compare_matrices(Ainv_C_array_converted, Ainv_tb, allowed_error);
-  double max_error_cmplx = compare_matrices(cmplx_Ainv_C_array_converted, cmplx_Ainv_tb, allowed_error);
-  double max_error_ac_matrix = compare_matrices(Ainv_ac_matrix, Ainv_tb, allowed_error);
-  double max_error_cmplx_ac_matrix = compare_matrices(cmplx_Ainv_ac_matrix, cmplx_Ainv_tb, allowed_error);
-
-  // Put max overall error in a separate variable.
-  double max_error_overall = max_error > max_error_ac_matrix ? max_error : max_error_ac_matrix;
-  double max_error_cmplx_overall = max_error_cmplx > max_error_cmplx_ac_matrix ? max_error_cmplx : max_error_cmplx_ac_matrix;
-
-  passed = (max_error_overall < allowed_error) && (max_error_cmplx_overall < allowed_error);
-
-  if (passed) { printf("PASSED , max err (%f) (%f complex)\n", max_error_overall, max_error_cmplx_overall); }
-  else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_overall, max_error_cmplx_overall); } // LCOV_EXCL_LINE
-
-  if (max_error_overall > cumulative_max_error) { cumulative_max_error = max_error_overall; }
-  if (max_error_cmplx_overall > cumulative_max_error_cmplx) { cumulative_max_error_cmplx = max_error_cmplx_overall; }
-
-  return 0;
-}
-
-// ==============================================================================
-// Function: test_driver_accurate()
-// Description: test_driver function for ac_fixed and ac_complex<ac_fixed> inputs
-//   and outputs, using accurate functions for cholesky inverse.
-
-template <unsigned M, unsigned N, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-int test_driver_accurate(
-  double &cumulative_max_error,
-  double &cumulative_max_error_cmplx,
-  const double allowed_error
-)
-{
-  bool passed = true;
-
-  ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> A_C_array[M][M];
-  ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Ainv_C_array[M][M];
-  ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> > cmplx_A_C_array[M][M];
-  ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > cmplx_Ainv_C_array[M][M];
-  ac_matrix<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>, M, M> A_ac_matrix;
-  ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> Ainv_ac_matrix;
-  ac_matrix<ac_complex<ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> >, M, M> cmplx_A_ac_matrix;
-  ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> cmplx_Ainv_ac_matrix;
-
-  cout << "TEST: ac_cholinv(), with accurate functions.      M = ";
-  cout << M << ",";
-  cout << " N = ";
-  cout << N << ",";
-  cout << "INPUT: ";
-  cout.width(38);
-  cout << left << A_C_array[0][0].type_name();
-  cout << "OUTPUT: ";
-  cout.width(38);
-  cout << left << Ainv_C_array[0][0].type_name();
-  cout << "RESULT: ";
-
-  ac_matrix<double, M, M> Ainv_tb, A_tb;
-  ac_matrix<ac_complex<double>, M, M> cmplx_Ainv_tb, cmplx_A_tb;
-
-  gen_matrix<N>(A_ac_matrix);
-  gen_matrix<N>(cmplx_A_ac_matrix);
-  //CCS_DESIGN(project)(A, Ainv);
-
-  copy_to_array_2D(A_ac_matrix, A_C_array);
-  copy_to_array_2D(cmplx_A_ac_matrix, cmplx_A_C_array);
-
-  test_ac_cholinv_accurate(A_C_array, Ainv_C_array, cmplx_A_C_array, cmplx_Ainv_C_array, A_ac_matrix, Ainv_ac_matrix, cmplx_A_ac_matrix, cmplx_Ainv_ac_matrix);
-
-  ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> Ainv_C_array_converted;
-  ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> cmplx_Ainv_C_array_converted;
-
-  copy_to_ac_matrix(Ainv_C_array, Ainv_C_array_converted);
-  copy_to_ac_matrix(cmplx_Ainv_C_array, cmplx_Ainv_C_array_converted);
-
-  //ac_matrix<double, M, M> A_tb;
-  for (unsigned i=0; i<M; i++) {
-    for (unsigned j=0; j<M; j++) {
-      A_tb(i, j) = A_ac_matrix(i,j).to_double();
-      cmplx_A_tb(i, j).r() = cmplx_A_ac_matrix(i,j).r().to_double();
-      cmplx_A_tb(i, j).i() = cmplx_A_ac_matrix(i,j).i().to_double();
-    }
-  }
-
-  chol_inv_tb<M>(A_tb, Ainv_tb);
-  chol_inv_tb<M>(cmplx_A_tb, cmplx_Ainv_tb);
-
-#ifdef DEBUG
-  cout << "A_ac_matrix = " << endl;
-  cout << A_ac_matrix << endl;
-  cout << "A_tb = " << endl;
-  cout << A_tb << endl;
-  cout << "Ainv_tb = " << endl;
-  cout << Ainv_tb << endl;
-  cout << "cmplx_A_ac_matrix = " << endl;
-  cout << cmplx_A_ac_matrix << endl;
-  cout << "cmplx_A_tb = " << endl;
-  cout << cmplx_A_tb << endl;
-  cout << "cmplx_Ainv_tb = " << endl;
-  cout << cmplx_Ainv_tb << endl;
-  cout << "A_C_array = " << endl;
-  print_matrix(A_C_array);
-  cout << "Ainv_C_array = " << endl;
-  print_matrix(Ainv_C_array);
-  cout << "Ainv_tb = " << endl;
-  print_matrix(Ainv_tb);
-  cout << "cmplx_A_C_array = " << endl;
-  print_matrix(cmplx_A_C_array);
-  cout << "cmplx_Ainv_C_array = " << endl;
-  print_matrix(cmplx_Ainv_C_array);
-  cout << "cmplx_Ainv_tb = " << endl;
-  print_matrix(cmplx_Ainv_tb);
-  cout << "A_ac_matrix = " << endl;
-  cout << A_ac_matrix << endl;
-  cout << "Ainv_ac_matrix = " << endl;
-  cout << Ainv_ac_matrix << endl;
-  cout << "cmplx_A_ac_matrix = " << endl;
-  cout << cmplx_A_ac_matrix << endl;
-  cout << "cmplx_Ainv_ac_matrix = " << endl;
-  cout << cmplx_Ainv_ac_matrix << endl;
-#endif
+  #endif
 
   // Compare matrices and get the max error
   double max_error = compare_matrices(Ainv_C_array_converted, Ainv_tb, allowed_error);
@@ -792,56 +651,16 @@ int main(int argc, char *argv[])
   cout << "=============================================================================" << endl;
   cout << "Testing function: ac_cholinv(), for scalar and complex datatypes - allowed_error_pwl = " << allowed_error_pwl << ", allowed_error_accurate = " << allowed_error_accurate << endl;
 
-  // template <unsigned M, unsigned N, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-  test_driver_pwl<4,  4, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<4,  5, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<4,  6, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<4,  7, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<4,  8, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<4,  9, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<5,  5, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<5,  6, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<5,  7, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<5,  8, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<5,  9, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<5, 10, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  // test_driver_pwl<6,  6, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl); //corner case, will fail
-  test_driver_pwl<6,  7, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  // test_driver_pwl<6,  8, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl); //corner case, will fail
-  test_driver_pwl<6,  9, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<6, 10, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<6, 11, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  // test_driver_pwl<7,  7, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl); //corner case, will fail
-  test_driver_pwl<7,  8, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<7,  9, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<7, 10, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<7, 11, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_pwl<7, 12, 41, 21, true, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  // template <bool use_pwl, unsigned M, int FBfi, int outWfi, int outIfi, bool outSfi>
+  test_driver<true, 5, 16, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
+  test_driver<true, 7, 16, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
 
-  test_driver_accurate<4,  4, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<4,  5, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<4,  6, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<4,  7, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<4,  8, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<4,  9, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<5,  5, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<5,  6, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<5,  7, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<5,  8, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<5,  9, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<5, 10, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<6,  6, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<6,  7, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<6,  8, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<6,  9, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<6, 10, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<6, 11, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<7,  7, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<7,  8, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<7,  9, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<7, 10, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<7, 11, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
-  test_driver_accurate<7, 12, 41, 21, true, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver<false, 4, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver<false, 5, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver<false, 6, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver<false, 7, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver<false, 8, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
+  test_driver<false, 9, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
 
   cout << "=============================================================================" << endl;
   cout << "  Testbench finished. Maximum errors observed across all data type / bit-width variations:" << endl;
@@ -865,25 +684,3 @@ int main(int argc, char *argv[])
   return 0;
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

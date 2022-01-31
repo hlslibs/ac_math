@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -172,7 +170,7 @@ namespace ac_math
 
   static table_t atan_2mi(int i)
   {
-  #pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (i >= TE)
     { return 0.0; }
     return atan_pow2_table[i];
@@ -220,7 +218,7 @@ namespace ac_math
       ac_fixed<ICW,0,false> d_a = atan_2mi(i);
       fx_xy_2 x_2mi = x1 >> i;  // x1 * pow(2, -i)
       fx_xy y_2mi = y1 >> i;  // y1 * pow(2, -i)
-             if (y1 < 0) {
+      if (y1 < 0) {
         x1 -= y_2mi;
         y1 += x_2mi;
         acc_a -= d_a;

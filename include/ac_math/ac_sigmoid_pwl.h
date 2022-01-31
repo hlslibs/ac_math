@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -193,7 +191,7 @@ namespace ac_math
 
     output = output_pwl;
 
-#if !defined(__SYNTHESIS__) && defined(AC_SIGMOID_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_SIGMOID_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input           = " << input << std::endl;
     std::cout << "sc_constant_lut = " << sc_constant_lut << std::endl;
@@ -201,7 +199,7 @@ namespace ac_math
     std::cout << "x_in_sc         = " << x_in_sc << std::endl;
     std::cout << "output_pwl      = " << output_pwl << std::endl;
     std::cout << "output          = " << output << std::endl;
-#endif
+    #endif
   }
 
   template<ac_q_mode pwl_Q = AC_TRN,
@@ -234,7 +232,7 @@ namespace ac_math
 
 // For this section of the code to work, the user must include ac_std_float.h in their testbench before including the sigmoid header,
 // so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
-#ifdef __AC_STD_FLOAT_H
+  #ifdef __AC_STD_FLOAT_H
 //=========================================================================
 // Function: ac_sigmoid_pwl (for ac_ieee_float)
 //
@@ -293,7 +291,7 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
   }
-#endif
+  #endif
 
   // The following version enables a return-by-value.
   template<class T_out,

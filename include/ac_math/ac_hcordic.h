@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -492,14 +490,14 @@ namespace ac_math
       z = offset + zc;
     }
 
-#if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
     string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
     std::cout << base_string << std::endl;
     std::cout << "x = " << x << std::endl;
     std::cout << "x_norm = " << x_norm << std::endl;
     std::cout << "expret = " << expret << std::endl;
     std::cout << "z = " << z << std::endl;
-#endif
+    #endif
 
   }
 
@@ -578,7 +576,7 @@ namespace ac_math
 
     z = zs;
 
-#if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
     std::cout << "x = " << x << std::endl;
     std::cout << "q_int = " << q_int << std::endl;
     std::cout << "q = " << q << std::endl;
@@ -590,7 +588,7 @@ namespace ac_math
     std::cout << "q.type_name() = " << q.type_name() << std::endl;
     std::cout << "zc.type_name() = " << zc.type_name() << std::endl;
     std::cout << "zs.type_name() = " << zs.type_name() << std::endl;
-#endif
+    #endif
 
   }
 
@@ -695,9 +693,9 @@ namespace ac_math
     ac_fixed<ZCW+SHIFT_W,SHIFT_W+2,false> zc_shift = ((ac_fixed<ZCW+SHIFT_W,SHIFT_W+2,false>)zc) << q_int;
     z = zc_shift;
 
-#if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
     std::cout << "zc_shift.type_name() = " << zc_shift.type_name() << std::endl;
-#endif
+    #endif
   }
 
 }

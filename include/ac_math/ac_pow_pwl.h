@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -151,7 +149,7 @@ namespace ac_math
     // Only carry out slicing if the input has a fractional component.
     // If the input doesn't have a fractional part, the default value of input_frac_part, i.e. 0,
     // is suitable to be used in later calculations.
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (W > I) {input_frac_part.set_slc(0, input.template slc<AC_MAX(W - I, 1)>(0));}
 
     // Start of code outputted by ac_pow_pwl_lutgen.cpp
@@ -202,13 +200,13 @@ namespace ac_math
     // Shift left by the integer part of the input to cancel out the previous normalization.
     ac_math::ac_shift_left(output_pwl, input.to_int(), output);
 
-#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "Actual input              = " << input << std::endl;
     std::cout << "normalized input          = " << input_frac_part << std::endl;
     std::cout << "output up-scaled by exp   = " << output << std::endl;
     std::cout << "index                     = " << index  << std::endl;
-#endif
+    #endif
   }
 
 //=============================================================================
@@ -302,7 +300,7 @@ namespace ac_math
     input_inter = input*log2e;
     ac_pow2_pwl<pwl_Q>(input_inter, output);
 
-#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input_inter.width       = " << input_inter.width << std::endl;
     std::cout << "input_inter.i_width     = " << input_inter.i_width << std::endl;
@@ -310,7 +308,7 @@ namespace ac_math
     std::cout << "log2e (power_exp)       = " << log2e << std::endl;
     std::cout << "input_inter (power_exp) = " << input_inter << std::endl;
     std::cout << "output (power_exp)      = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=============================================================================
@@ -401,11 +399,11 @@ namespace ac_math
     // Multiply expon by log2(base) and pass it to the ac_pow2_pwl function
     ac_pow2_pwl(expon*log2_base, output);
 
-#if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_POW_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "log2_base          = " << log2_base << std::endl;
     std::cout << "output(ac_pow_pwl) = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=============================================================================

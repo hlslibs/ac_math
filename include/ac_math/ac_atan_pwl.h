@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -31,7 +29,7 @@
  *                                                                        *
  *************************************************************************/
 //******************************************************************************************
-// Function: ac_atan_pwl (for ac_fixed)
+// Function: ac_atan_pwl
 //
 // Description:
 //    Calculation of arctangent of real inputs.
@@ -166,7 +164,7 @@ namespace ac_math
     // Also, keep in mind that the input can only exceed 1 if the number of integer bits are greater than or equal to 1 and we won't need a reciprocal operation if that's
     // not the case. The "if (I >= 1)" condition will then ensure that the reciprocal block is optimized away.
     bool input_exceeds_1 = false;
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (I >= 1) { input_exceeds_1 = (input > 1); }
     if ((I >= 1) && input_exceeds_1) { ac_math::ac_reciprocal_pwl<pwl_Q>(input, normalized_input); }
     // If input is lesser than 1, then it is within the domain of the PWL function. Hence, no reciprocal operation is required.
@@ -194,14 +192,14 @@ namespace ac_math
 
     output = output_pwl;
 
-#if !defined(__SYNTHESIS__) && defined(AC_ATAN_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_ATAN_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input            = " << input << std::endl;
     std::cout << "normalized_input = " << normalized_input << std::endl;
     std::cout << "x_in_sc          = " << x_in_sc << std::endl;
     std::cout << "output_pwl       = " << output_pwl << std::endl;
     std::cout << "output           = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -251,11 +249,11 @@ namespace ac_math
     ac_float<outW, outI, outE, outQ> &output
   )
   {
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     // ac_atan_pwl only works for first quadrant angles and hence can only accept positive
     // inputs. The AC_ASSERT below will ensure that that is always the case.
     AC_ASSERT(input.mantissa() >= 0, "Input must be positive.");
-#endif
+    #endif
     const ac_fixed<11, 1, false> pi_by_2 = 1.5703125; // Store the approximate value of pi by 2
 
     // Calculate intermediate bitwidth of reciprocal output. Consider changing the formula if PWL implementation changes from the default.
@@ -266,7 +264,7 @@ namespace ac_math
     // If input exceeds one, pass the reciprocal of the input to the atan function and use
     // the formula atan(x) = pi/2 - atan(1/x) to calculate the final output.
     bool input_exceeds_1 = (input >= 1);
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (input_exceeds_1) { ac_math::ac_reciprocal_pwl<pwl_Q>(input, atan_input_fl); }
     else { atan_input_fl = input; }
 
@@ -291,9 +289,63 @@ namespace ac_math
     output = output_temp;
   }
 
-// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the atan header,
-// so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
-#ifdef __AC_STD_FLOAT_H
+// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the arctangent header,
+// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
+  #ifdef __AC_STD_FLOAT_H
+//=========================================================================
+// Function: ac_atan_pwl (for ac_std_float)
+//
+// Description:
+//    Calculation of arctangent of real inputs, passed as ac_std_float
+//    variables.
+//
+// Usage:
+//    A sample testbench and its implementation looks like this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_atan_pwl.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_atan_pwl.h>
+//    using namespace ac_math;
+//
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_atan_pwl(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(0.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <ac_q_mode pwl_Q = AC_TRN, int W, int E, int outW, int outE>
+  void ac_atan_pwl(
+    const ac_std_float<W, E> &input,
+    ac_std_float<outW, outE> &output
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_atan_pwl<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
+
 //=========================================================================
 // Function: ac_atan_pwl (for ac_ieee_float)
 //
@@ -352,7 +404,7 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
   }
-#endif
+  #endif
 
   // The following version enables a return-by-value.
   template<class T_out,

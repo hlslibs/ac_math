@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -83,6 +81,8 @@
 //    the ac_shift header file.
 //
 // Revision History:
+//    3.4.1  - Added special input handling for ac_std_float and ac_ieee_float implementations.
+//    25.1.0 - [CAT-28829] Added ac_float, ac_std_float and ac_ieee_float support.
 //    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
 //    3.1.0  - Fixed lines that could cause OVL violations.
 //    2.0.10 - Official open-source release as part of the ac_math library.
@@ -92,16 +92,21 @@
 #ifndef _INCLUDED_AC_SQRT_H_
 #define _INCLUDED_AC_SQRT_H_
 
-#ifndef __cplusplus
-#error C++ is required to include this header file
-#endif
-
 // Include headers for data types supported by these implementations
 #include <ac_int.h>
 #include <ac_fixed.h>
+#include <ac_float.h>
+#include <ac_std_float.h>
 
 // Include header for required functions
 #include <ac_math/ac_shift.h>
+
+// The floating point functions use default template parameters, which are only supported by C++11 or
+// later compiler standards. Hence, the user should be informed if they are not using those standards.
+
+#if !(__cplusplus >= 201103L)
+#error Please use C++11 or a later standard for compilation.
+#endif
 
 namespace ac_math
 {
@@ -175,8 +180,8 @@ namespace ac_math
     const int OF = (OW-OI) + RBIT;
 
     const int RI = (XI+1)/2;
-	#pragma hls_waive CNS
 
+    #pragma hls_waive CNS
     if (RI-1 < -OF) {
       // MSB of result is smaller than LSB of requested output
       sqrt = 0.0;
@@ -221,7 +226,7 @@ namespace ac_math
     }
 
     ac_fixed<RW+1,RW,false> r2 = (ac_fixed<RW+1,RW,false>) r;
-	#pragma hls_waive CNS
+    #pragma hls_waive CNS
 
     if (OQ == AC_RND_ZERO || OQ == AC_RND_MIN_INF || OQ == AC_RND_CONV ||  OQ == AC_RND_CONV_ODD) {
       bool rem = (d != 0) || ((z >> 2*RW) != 0);
@@ -236,6 +241,159 @@ namespace ac_math
     ac_math::ac_shift_right(r2, RF, sqrt);
   }
 
+//=========================================================================
+// Function: ac_sqrt (for ac_float)
+//
+// Description:
+//    Calculation of square root of real inputs, passed as ac_float
+//    variables.
+//    + input: ac_float argument
+//    + output: ac_float square root
+//
+//-------------------------------------------------------------------------
+
+  template<bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+           int TF_ = 32, // Template argument for fractional bitwidth to override with.
+           ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+           int XW, int XI, int XE, ac_q_mode XQ,
+           int OW, int OI, int OE, ac_q_mode OQ>
+  void ac_sqrt(
+    ac_float<XW,XI,XE,XQ> x,
+    ac_float<OW,OI,OE,OQ> &sqrt
+  )
+  {
+    #ifdef ASSERT_ON_INVALID_INPUT
+    AC_ASSERT(x >= 0, "Negative input not supported.");
+    #endif
+
+    // While we don't consider the sign bit for the input mantissa, we still need to add an extra
+    // MSB because we might need to left-shift by 1 later.
+    ac_fixed<XW, XI, false, XQ> x_mant = x.mantissa();
+    // Left shift by 1 if exponent is odd, to aid in denormalization later.
+    x_mant <<= x.exp()[0];
+
+    // If OR_TF is set to true, fractional bitwidth used in temp ac_fixed variables (sqrt_mant and sqrt_mant2) is set to TF_.
+    // If OR_TF is set to false, fractional bitwidth of the temp ac_fixed variables is set to that of the output mantissa.
+    const int TF = OR_TF ? TF_ : OW - OI;
+    // Number of integer bits required to store square root of input mantissa = ceil(integer_bits_in_x_mant/2) = ceil(XI/2)
+    const int TI = XI%2 == 0 ? XI/2 : (XI + 1)/2;
+    ac_fixed<TF + TI, TI, false, TQ> sqrt_mant;
+
+    ac_sqrt(x_mant, sqrt_mant);
+    // sqrt(mant*2^exp) = sqrt(mant)*2^(exp/2)
+    // Since we've already taken into account odd exponentials by left-shifting the mantissa if needed,
+    // we only need to right shift the exponent by 1 to take the "2^(exp/2)" factor into account, even
+    // for odd exponential values.
+    ac_float<OW, OI, OE, OQ> sqrt_temp(sqrt_mant, x.exp() >> 1, true);
+
+    sqrt = sqrt_temp;
+  }
+
+//=========================================================================
+// Function: ac_sqrt (for ac_std_float)
+//
+// Description:
+//    Calculation of square root of real inputs, passed as ac_std_float
+//    variables.
+//    + input: ac_std_float argument
+//    + output: ac_std_float square root
+//
+//    This implementation is a wrapper around the ac_float version, with
+//    temporary variables added to enable compatibility between it and the
+//    ac_float implementation.
+//
+//    The template arguments with default values (i.e. OR_TF, TF_ and TQ)
+//    apply to the associated ac_float implementation.
+//
+//-------------------------------------------------------------------------
+
+  template<bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+           int TF_ = 32, // Template argument for fractional bitwidth to override with.
+           ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+           int XW, int XE, int OW, int OE>
+  void ac_sqrt(
+    ac_std_float<XW, XE> x,
+    ac_std_float<OW, OE> &sqrt
+  )
+  {
+    ac_float<OW - OE + 1, 2, OE> sqrt_ac_fl; // Equivalent ac_float representation for output.
+    ac_sqrt<OR_TF, TF_, TQ>(x.to_ac_float(), sqrt_ac_fl); // Call ac_float version.
+    ac_std_float<OW, OE> sqrt_temp(sqrt_ac_fl); // Convert output ac_float to ac_std_float.
+
+    // Start of special input handling (modeled after the sqrt() function in math.h)
+
+    // If input is -0.0, output is also set to -0.0.
+    if (x == x.zero() && x.signbit()) {
+      sqrt_temp.set_signbit(true);
+    }
+    #ifdef AC_SQRT_NAN_SUPPORTED
+    // If input is nan or a negative, non-zero number, the output is set to nan. The sign bit
+    // of the output is the same as that of the input.
+    else if (x.isnan() || x.signbit()) {
+      sqrt_temp = sqrt_temp.nan();
+      sqrt_temp.set_signbit(x.signbit());
+    }
+    #endif
+
+    // End of special input handling.
+
+    sqrt = sqrt_temp;
+  }
+
+//=========================================================================
+// Function: ac_sqrt (for ac_ieee_float)
+//
+// Description:
+//    Calculation of square root of real inputs, passed as ac_ieee_float
+//    variables.
+//    + input: ac_ieee_float argument
+//    + output: ac_ieee_float square root
+//
+//    This implementation is a wrapper around the ac_float version, with
+//    temporary variables added to enable compatibility between it and the
+//    ac_float implementation.
+//
+//    The template arguments with default values (i.e. OR_TF, TF_ and TQ)
+//    apply to the associated ac_float implementation.
+//
+//-------------------------------------------------------------------------
+
+  template<bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+           int TF_ = 32, // Template argument for fractional bitwidth to override with.
+           ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+           ac_ieee_float_format Format,
+           ac_ieee_float_format outFormat>
+  void ac_sqrt(
+    ac_ieee_float<Format> x,
+    ac_ieee_float<outFormat> &sqrt
+  )
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int OW = T_out::width;
+    const int OE = T_out::e_width;
+    ac_float<OW - OE + 1, 2, OE> sqrt_ac_fl; // Equivalent ac_float representation for output.
+    ac_sqrt<OR_TF, TF_, TQ>(x.to_ac_float(), sqrt_ac_fl); // Call ac_float version.
+    ac_ieee_float<outFormat> sqrt_temp(sqrt_ac_fl); // Convert output ac_float to ac_ieee_float.
+
+    // Start of special input handling (modeled after the sqrt() function in math.h)
+
+    // If input is -0.0, output is also set to -0.0.
+    if (x == x.zero() && x.signbit()) {
+      sqrt_temp.set_signbit(true);
+    }
+    #ifdef AC_SQRT_NAN_SUPPORTED
+    // If input is nan or a negative, non-zero number, the output is set to nan. The sign bit
+    // of the output is the same as that of the input.
+    else if (x.isnan() || x.signbit()) {
+      sqrt_temp = sqrt_temp.nan();
+      sqrt_temp.set_signbit(x.signbit());
+    }
+    #endif
+
+    // End of special input handling.
+
+    sqrt = sqrt_temp;
+  }
 }
 
 #endif

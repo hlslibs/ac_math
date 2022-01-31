@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -165,12 +163,14 @@ namespace ac_math
 // Initializes argument to zero, for both ac_complex and ac_complex<ac_fixed> variables.
 // -------------------------------------------------------------------------------------
   template <int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
-  void zero_init(ac_fixed<W, I, S, Q, O> &output) {
+  void zero_init(ac_fixed<W, I, S, Q, O> &output)
+  {
     output = 0.0;
   }
 
   template <int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
-  void zero_init(ac_complex<ac_fixed<W, I, S, Q, O> > &output) {
+  void zero_init(ac_complex<ac_fixed<W, I, S, Q, O> > &output)
+  {
     output.r() = 0.0;
     output.i() = 0.0;
   }
@@ -380,13 +380,14 @@ namespace ac_math
     typedef ac_fixed <W1, I1, S1, q1, o1> input_type;
     typedef ac_fixed <W2, I2, true, q2, o2> output_type;
     ac_determinant_combined <M, override, input_type, output_type, internal_type> (a, result);
-#if !defined(__SYNTHESIS__) && defined(AC_DETERMINANT_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_DETERMINANT_H_DEBUG)
     std::cout << "M = " << M << std::endl;
     std::cout << "input total bitwidth = " << W1 << std::endl;
     std::cout << "input integer bitwidth = " << I1 << std::endl;
-    std::cout << "input matrix supplied :" << a << std::endl;
+    std::cout << "input matrix supplied :" << std::endl;
+    std::cout << a << std::endl;
     std::cout << "Final output = " << result << std::endl;
-#endif
+    #endif
   }
 
   template <bool override = false, int internal_width = 16, int internal_int = 8, bool internal_sign = true, ac_q_mode internal_rnd = AC_RND, ac_o_mode internal_sat = AC_SAT, unsigned M, int W1, int I1,bool S1, ac_q_mode q1, ac_o_mode o1, int W2, int I2, ac_q_mode q2, ac_o_mode o2>
@@ -396,13 +397,13 @@ namespace ac_math
     typedef ac_complex <ac_fixed <W1, I1, S1, q1, o1> > input_type;
     typedef ac_complex <ac_fixed <W2, I2, true, q2, o2> > output_type;
     ac_determinant_combined <M, override, input_type, output_type, internal_type> (a, result);
-#if !defined(__SYNTHESIS__) && defined(AC_DETERMINANT_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_DETERMINANT_H_DEBUG)
     std::cout << "M = " << M << std::endl;
     std::cout << "input total bitwidth = " << W1 << std::endl;
     std::cout << "input integer bitwidth = " << I1 << std::endl;
     std::cout << "input matrix supplied :" << a << std::endl;
     std::cout << "Final output = " << result << std::endl;
-#endif
+    #endif
   }
 
   // Define c-array function versions for determinant

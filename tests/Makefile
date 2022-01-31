@@ -8,7 +8,7 @@ ifeq "$(GCC_EXEC)" ""
 GCC_EXEC = g++
 endif
 
-CXXFLAGS = -g -std=c++11
+CXXFLAGS = -g -std=c++11 -I. -O3
 LDFLAGS = -s -static-libstdc++
 WD = $(shell pwd)
 GCOV_ENABLED = false
@@ -32,6 +32,9 @@ ECHO      := echo
 SOURCES_CPP = \
   rtest_ac_div.cpp \
   rtest_ac_atan_pwl.cpp \
+  rtest_ac_atan_pwl_ha.cpp \
+  rtest_ac_atan_pwl_vha.cpp \
+  rtest_ac_barrel_shift.cpp\
   rtest_ac_tan_pwl.cpp \
   rtest_ac_sigmoid_pwl.cpp \
   rtest_ac_tanh_pwl.cpp \
@@ -49,10 +52,12 @@ SOURCES_CPP = \
   rtest_ac_atan2_cordic.cpp \
   rtest_ac_exp_pwl.cpp \
   rtest_ac_inverse_sqrt_pwl.cpp \
+  rtest_ac_inverse_sqrt_pwl_vha.cpp \
   rtest_ac_log_cordic.cpp \
   rtest_ac_log2_cordic.cpp \
   rtest_ac_log2_pwl.cpp \
   rtest_ac_log_pwl.cpp \
+  rtest_ac_array.cpp \
   rtest_ac_matrix.cpp \
   rtest_ac_matrixmul.cpp \
   rtest_ac_normalize.cpp \
@@ -60,12 +65,15 @@ SOURCES_CPP = \
   rtest_ac_pow_cordic.cpp \
   rtest_ac_pow_pwl.cpp \
   rtest_ac_reciprocal_pwl.cpp \
+  rtest_ac_reciprocal_pwl_ha.cpp \
+  rtest_ac_reciprocal_pwl_vha.cpp \
   rtest_ac_shift.cpp \
   rtest_ac_sincos_cordic.cpp \
   rtest_ac_sincos_lut.cpp \
   rtest_ac_softmax_pwl.cpp \
   rtest_ac_sqrt.cpp \
-  rtest_ac_sqrt_pwl.cpp
+  rtest_ac_sqrt_pwl.cpp \
+  rtest_ac_leading.cpp
 
 OBJS = $(SOURCES_CPP:.cpp=.o)
 

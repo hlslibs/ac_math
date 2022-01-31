@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -31,10 +29,10 @@
  *                                                                        *
  *************************************************************************/
 //******************************************************************************************
-// Function: ac_atan_pwl_ha (for ac_fixed)
+// Function: ac_atan_pwl_ha
 //
 // Description:
-//    High-accurate tangent calculation of real inputs.
+//    High-accuracy tangent calculation of real inputs.
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
@@ -134,11 +132,11 @@ namespace ac_math
     const unsigned n_segments_lut = 32;
     const int n_frac_bits = 16;
     const ac_fixed<32, 1, false> pi_by_2 = 1.570796326734125614166259765625;
-     const ac_fixed<-4 + n_frac_bits, -4, false> m_lut[n_segments_lut] = {.0312347412109375, .03118896484375, .03106689453125, .0308837890625, .0306396484375, .0303497314453125, .0300140380859375, .0296173095703125, .0291900634765625, .028717041015625, .0282135009765625, .027679443359375, .0271148681640625, .026519775390625, .0259246826171875, .0253143310546875, .024688720703125, .0240631103515625, .0234222412109375, .0227813720703125, .02215576171875, .0215301513671875, .020904541015625, .020294189453125, .0196990966796875, .0191192626953125, .0185394287109375, .017974853515625, .017425537109375, .0168914794921875, .0163726806640625, .0158233642578125};
-     const ac_fixed<1 + n_frac_bits, 1, false> c_lut[n_segments_lut] = {0.0, .0312347412109375, .0624237060546875, .0934906005859375, .1243743896484375, .1550140380859375, .18536376953125, .2153778076171875, .2450103759765625, .274200439453125, .30291748046875, .3311309814453125, .3588104248046875, .38592529296875, .412445068359375, .4383697509765625, .46368408203125, .488372802734375, .5124359130859375, .535858154296875, .5586395263671875, .5807952880859375, .602325439453125, .6232452392578125, .6435394287109375, .663238525390625, .6823577880859375, .700897216796875, .7188720703125, .736297607421875, .7531890869140625, .769561767578125};
-     const ac_fixed<1 + n_frac_bits, 1, false> x_min_lut = .0;
-     const ac_fixed<1 + n_frac_bits, 1, false> x_max_lut = 1.0;
-     const ac_fixed<6 + n_frac_bits, 6, false> sc_constant_lut = 32.0;
+    const ac_fixed<-4 + n_frac_bits, -4, false> m_lut[n_segments_lut] = {.0312347412109375, .03118896484375, .03106689453125, .0308837890625, .0306396484375, .0303497314453125, .0300140380859375, .0296173095703125, .0291900634765625, .028717041015625, .0282135009765625, .027679443359375, .0271148681640625, .026519775390625, .0259246826171875, .0253143310546875, .024688720703125, .0240631103515625, .0234222412109375, .0227813720703125, .02215576171875, .0215301513671875, .020904541015625, .020294189453125, .0196990966796875, .0191192626953125, .0185394287109375, .017974853515625, .017425537109375, .0168914794921875, .0163726806640625, .0158233642578125};
+    const ac_fixed<1 + n_frac_bits, 1, false> c_lut[n_segments_lut] = {0.0, .0312347412109375, .0624237060546875, .0934906005859375, .1243743896484375, .1550140380859375, .18536376953125, .2153778076171875, .2450103759765625, .274200439453125, .30291748046875, .3311309814453125, .3588104248046875, .38592529296875, .412445068359375, .4383697509765625, .46368408203125, .488372802734375, .5124359130859375, .535858154296875, .5586395263671875, .5807952880859375, .602325439453125, .6232452392578125, .6435394287109375, .663238525390625, .6823577880859375, .700897216796875, .7188720703125, .736297607421875, .7531890869140625, .769561767578125};
+    const ac_fixed<1 + n_frac_bits, 1, false> x_min_lut = .0;
+    const ac_fixed<1 + n_frac_bits, 1, false> x_max_lut = 1.0;
+    const ac_fixed<6 + n_frac_bits, 6, false> sc_constant_lut = 32.0;
     // End of code outputted by ac_atan_pwl_ha_lutgen.cpp
 
     // If the input exceeds or equals 1, we take the reciprocal of the input and find the arctangent of that reciprocal. We then use the formula
@@ -169,14 +167,14 @@ namespace ac_math
 
     output = output_pwl;
 
-#if !defined(__SYNTHESIS__) && defined(AC_ATAN_PWL_HA_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_ATAN_PWL_HA_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input            = " << input << std::endl;
     std::cout << "normalized_input = " << normalized_input << std::endl;
     std::cout << "x_in_sc          = " << x_in_sc << std::endl;
     std::cout << "output_pwl       = " << output_pwl << std::endl;
     std::cout << "output           = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -226,11 +224,11 @@ namespace ac_math
     ac_float<outW, outI, outE, outQ> &output
   )
   {
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     // ac_atan_pwl_ha only works for first quadrant angles and hence can only accept positive
     // inputs. The AC_ASSERT below will ensure that that is always the case.
     AC_ASSERT(input.mantissa() >= 0, "Input must be positive.");
-#endif
+    #endif
     const ac_fixed<32, 1, false> pi_by_2 = 1.570796326734125614166259765625;
 
     // Calculate intermediate bitwidth of reciprocal output.
@@ -270,9 +268,63 @@ namespace ac_math
     output = output_temp;
   }
 
-// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the atan header,
-// so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
-#ifdef __AC_STD_FLOAT_H
+// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the arctangent header,
+// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
+  #ifdef __AC_STD_FLOAT_H
+//=========================================================================
+// Function: ac_atan_pwl_ha (for ac_std_float)
+//
+// Description:
+//    Calculation of arctangent of real inputs, passed as ac_std_float
+//    variables.
+//
+// Usage:
+//    A sample testbench and its implementation looks like this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_atan_pwl_ha.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_atan_pwl_ha.h>
+//    using namespace ac_math;
+//
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_atan_pwl_ha(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(0.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <ac_q_mode pwl_Q = AC_TRN, int W, int E, int outW, int outE>
+  void ac_atan_pwl_ha(
+    const ac_std_float<W, E> &input,
+    ac_std_float<outW, outE> &output
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_atan_pwl_ha<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
+
 //=========================================================================
 // Function: ac_atan_pwl_ha (for ac_ieee_float)
 //
@@ -331,7 +383,7 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
   }
-#endif
+  #endif
 
   // The following version enables a return-by-value.
   template<class T_out,

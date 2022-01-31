@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -131,8 +129,8 @@ namespace ac_math
     static_assert(exp_int_bits <= 64, "imediate bitwidth calculation gives a very large value for integer bits. Consider reducing the number of input integer bits.");
     typedef ac_fixed<exp_frac_bits + exp_int_bits, exp_int_bits, false, exp_Q, exp_O> T_exp;
     typedef ac_fixed<T_exp::width + ac::log2_ceil<K>::val, T_exp::i_width + ac::log2_ceil<K>::val, false> T_sum;
-	
-	#pragma hls_waive APT
+
+    #pragma hls_waive APT
     T_exp exp_arr[K];
     // The reciprocal variable is also assigned a default bitwidth based on the default PWL bitwidths and segments (10 fractional bits and 8 segments).
     // For any PWL implementation other than the default, these bitwidths may change.

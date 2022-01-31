@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -132,9 +130,9 @@ namespace ac_math
     // is encountered.
     // If AC_ASSERT is not activated: the output will saturate when a zero input is encountered.
     // The functionality behind this is taken care of by other sections of the code.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!input, "Log of zero not supported.");
-#endif
+    #endif
 
     ac_fixed<W, 0, false, Q, O> input_normalized;
 
@@ -143,7 +141,7 @@ namespace ac_math
 
     // If call_normalize is set to true, the design does not assume that the input is already normalized and performs normalization by calling ac_normalize().
     // If call_normalize is set to false, the design assumes that the input is already normalized and does not call ac_normalize, thereby saving on hardware.
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (call_normalize) {
       exp = ac_math::ac_normalize(input, input_normalized);
     } else {
@@ -185,7 +183,7 @@ namespace ac_math
     // assignment to the final output
     output = (input == 0) ? output_min : t2;
 
-#if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
     std::cout << "input.type_name(): " << input.type_name() << std::endl;
     std::cout << "input = " << input << std::endl;
     std::cout << "input to normalization function = " << input << std::endl;
@@ -193,7 +191,7 @@ namespace ac_math
     std::cout << "normalized exp = " << exp << std::endl;
     std::cout << "index of element chosen from ROM = " << index << std::endl;
     std::cout << "final output = " << output << std::endl;
-#endif
+    #endif
   }
 
 //===========================================================================
@@ -266,11 +264,11 @@ namespace ac_math
     // If input is zero, then assign minimum value to output.
     output = input != 0 ? (ac_fixed <outW, outI, outS, outQ, outO>)(output_temp*ln2) : output_min;
 
-#if !defined(__SYNTHESIS__) && defined (AC_LOG_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined (AC_LOG_PWL_H_DEBUG)
     std::cout << "Input to the log base e function = " << input << std::endl;
     std::cout << "output_temp = " << output_temp << std::endl;
     std::cout << "output = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=================================================================================
@@ -326,9 +324,9 @@ namespace ac_math
       // Use a macro to activate the AC_ASSERT
       // If AC_ASSERT is activated, the program will stop running as soon as a negative input
       // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+      #ifdef ASSERT_ON_INVALID_INPUT
       AC_ASSERT(input >= 0, "Negative input not supported.");
-#endif
+      #endif
       // Store ln(2) as a constant ac_fixed value.
       const ac_fixed <15, 0, false> ln2 =  0.693145751953125;
 
@@ -355,31 +353,30 @@ namespace ac_math
       // denorm_sum variable stores the sum total of these two factors, and is used to denormalize the output.
       typename ac::rt_2T<I_m_1_type, ac_int<E, true> >::plus denorm_sum = I_m_1_type(I - 1) + input.exp(); // Convert (I - 1) to an ac_int(I_m_1_type) variable to reduce area.
       // De-normalize the output.
-#pragma hls_waive CNS
+      #pragma hls_waive CNS
       if (base_val == float_base::base_2) {
         ac_float<outW, outI, outE, outQ> output_temp_b2(output_mant_norm + denorm_sum);
         output_temp = output_temp_b2;
-      }
-      else
-#pragma hls_waive CNS
-      if (base_val == float_base::base_e) {
-        ac_float<outW, outI, outE, outQ> output_temp_be((output_mant_norm + denorm_sum)*ln2); // Multiply the output by ln(2) if base is e.
-        output_temp = output_temp_be;
-      }
+      } else
+        #pragma hls_waive CNS
+        if (base_val == float_base::base_e) {
+          ac_float<outW, outI, outE, outQ> output_temp_be((output_mant_norm + denorm_sum)*ln2); // Multiply the output by ln(2) if base is e.
+          output_temp = output_temp_be;
+        }
 
       if (input_mant == 0) {
         output_temp.template set_val<AC_VAL_MIN>(); // If input is 0, set output to the minimum possible value.
       }
       output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
+      #if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
       std::cout << "input = " << input << std::endl;
       std::cout << "input_mant_norm = " << input_mant_norm << std::endl;
       std::cout << "output_mant_norm = " << output_mant_norm << std::endl;
       std::cout << "I_m_1_type::type_name() : " << I_m_1_type::type_name() << std::endl;
       std::cout << "input.exp().type_name() : " << input.exp().type_name() << std::endl;
       std::cout << "denorm_sum.type_name() : " << denorm_sum.type_name() << std::endl;
-#endif
+      #endif
     }
 
     ac_generic_float_log_pwl() {}
@@ -488,9 +485,117 @@ namespace ac_math
     GFLP_obj.interface(input, output);
   }
 
-// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the logarithm header,
-// so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
-#ifdef __AC_STD_FLOAT_H
+// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the log header,
+// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
+  #ifdef __AC_STD_FLOAT_H
+//=========================================================================
+// Function: ac_log2_pwl (for ac_std_float, returns 1/sqrt(input) )
+//
+// Description:
+//    Calculation of base 2 logarithm of real inputs, passed as
+//    ac_std_float variables.
+//
+// Usage:
+//    A sample testbench and its implementation looks like this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_log_pwl.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_log_pwl.h>
+//    using namespace ac_math;
+//
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_log2_pwl(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(0.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <ac_q_mode pwl_Q = AC_TRN, int W, int E, int outW, int outE>
+  void ac_log2_pwl(
+    const ac_std_float<W, E> &input,
+    ac_std_float<outW, outE> &output
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_log2_pwl<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
+
+//=========================================================================
+// Function: ac_log_pwl (for ac_std_float, returns 1/sqrt(input) )
+//
+// Description:
+//    Calculation of logarithm of real inputs, passed as ac_std_float
+//    variables.
+//
+// Usage:
+//    A sample testbench and its implementation looks like this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_log_pwl.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_log_pwl.h>
+//    using namespace ac_math;
+//
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_log_pwl(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(0.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <ac_q_mode pwl_Q = AC_TRN, int W, int E, int outW, int outE>
+  void ac_log_pwl(
+    const ac_std_float<W, E> &input,
+    ac_std_float<outW, outE> &output
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_log_pwl<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
+
 //=================================================================================
 // Function: ac_log2_pwl (for ac_ieee_float, returns log2(input) )
 //
@@ -549,10 +654,10 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
     std::cout << "input.to_ac_float().type_name() : " << input.to_ac_float().type_name() << std::endl;
     std::cout << "output_ac_fl.type_name() : " << output_ac_fl.type_name() << std::endl;
-#endif
+    #endif
   }
 
 //=================================================================================
@@ -613,13 +718,13 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_LOG_PWL_H_DEBUG)
     std::cout << "input.to_ac_float().type_name() : " << input.to_ac_float().type_name() << std::endl;
     std::cout << "output_ac_fl.type_name() : " << output_ac_fl.type_name() << std::endl;
-#endif
+    #endif
   }
 
-#endif
+  #endif
 
 //=========================================================================
 // Version that allows returning of values for log2.

@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -121,10 +119,10 @@ namespace ac_math
   {
     static bool flag = true;
     if (flag && T_in::width-T_in::i_width > 12) {
-#ifndef __SYNTHESIS__
+      #ifndef __SYNTHESIS__
       std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
       std::cout << "Warning: The output will not be accurate" << std::endl;
-#endif
+      #endif
       flag = false;
     }
     typedef ac_complex<T_out> outputcomplex_type;
@@ -661,7 +659,7 @@ namespace ac_math
     // Extracting (MSB-3:LSB) bits of scaled input to determine the lookup table index
     lutindextype1 lut_index1 = posinput.template slc<AC_MAX(T_in::width-T_in::i_width-3, 1)>(0);  // Extracting the lookup table index
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (T_in::width-T_in::i_width>=4 && T_in::width-T_in::i_width<=12) {
       lut_index.set_slc(12- (T_in::width - T_in::i_width), lut_index1);                           // stride
     }
@@ -681,7 +679,7 @@ namespace ac_math
       { lut_index = 1; }
     }
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (T_in::width-T_in::i_width>=3) {
       // Getting the octant 0-7 by extracting the first 3 bits from MSB side of scaled input where
       //   octant 0 corresponds to [0-PI/4),
@@ -708,7 +706,7 @@ namespace ac_math
                    outputtemp.r();
     }
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (T_in::width-T_in::i_width <= 2) {
       output.i() = (posinput==0   ) ? (T_out) 0:
                    (posinput==0.25) ? (T_out) 1:
@@ -722,7 +720,7 @@ namespace ac_math
                    outputtemp.r();
     }
 
-#if !defined(__SYNTHESIS__) && defined(AC_SINCOS_LUT_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_SINCOS_LUT_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "============AC_FIXED SINCOS======================" << std::endl;
     std::cout << "positive input is   = " << posinput << std::endl;
@@ -730,7 +728,7 @@ namespace ac_math
     std::cout << "sin value is    = " << output.i() << std::endl;
     std::cout << "cos value is    = " << output.r() << std::endl;
     std::cout << "=================================================" << std::endl;
-#endif
+    #endif
   }
 
 //============================================================================

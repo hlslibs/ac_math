@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -144,13 +142,13 @@ namespace ac_math
     // that corresponds to leading_1.
     int expret = input != 0 ? I - int(S) - leading_1 : 0;
 
-#if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input to normalize = " << input << std::endl;
     std::cout << "leading_1          = " << leading_1 << std::endl;
     std::cout << "normalized_fixed   = " << normalized_fixed << std::endl;
     std::cout << "expret             = " << expret << std::endl;
-#endif
+    #endif
 
     return expret;
   }
@@ -247,13 +245,13 @@ namespace ac_math
     // that corresponds to leading_1.
     int expret = input != 0 ? I - int(S) - leading_1 : 0;
 
-#if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_NORMALIZE_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input to normalize = " << input << std::endl;
     std::cout << "leading_1          = " << leading_1 << std::endl;
     std::cout << "normalized_complex = " << normalized_complex << std::endl;
     std::cout << "expret             = " << expret << std::endl;
-#endif
+    #endif
 
     return expret;
   }

@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -159,12 +157,12 @@ namespace ac_math
     // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
     for (unsigned i = 0; i < M; i++) {
-#pragma hls_waive CNS
+      #pragma hls_waive CNS
       if (use_pwl2) {
         ac_math::ac_reciprocal_pwl(L[i][i], recip_L);
       } else {
         static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
-#pragma hls_waive DBZ
+        #pragma hls_waive DBZ
         ac_math::ac_div(unity, L[i][i], recip_L);
       }
       // Diagonal elements of Linv are reciprocal of L matrix
@@ -179,12 +177,12 @@ namespace ac_math
             if (k>=j)
             { break; }
           }
-#pragma hls_waive CNS
+          #pragma hls_waive CNS
           if (use_pwl2) {
             ac_math::ac_reciprocal_pwl(L[j][j], recip_L);
           } else {
             static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
-#pragma hls_waive DBZ
+            #pragma hls_waive DBZ
             ac_math::ac_div(unity, L[j][j], recip_L);
           }
           Linv[j][i] = -(sum * recip_L);
@@ -277,12 +275,12 @@ namespace ac_math
     // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
     for (unsigned i = 0; i < M; i++) {
-#pragma hls_waive CNS
+      #pragma hls_waive CNS
       if (use_pwl2) {
         ac_math::ac_reciprocal_pwl(L[i][i], recip_L);
       } else {
         static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
-#pragma hls_waive DBZ ABR
+        #pragma hls_waive DBZ ABR
         ac_math::ac_div(unity, L[i][i].r(), recip_L.r());
         recip_L.i() = 0.0;
       }
@@ -298,12 +296,12 @@ namespace ac_math
             if (k>=j)
             { break; }
           }
-#pragma hls_waive CNS
+          #pragma hls_waive CNS
           if (use_pwl2) {
             ac_math::ac_reciprocal_pwl(L[j][j], recip_L);
           } else {
             static const ac_fixed<1 + T_out::sign, 1 + T_out::sign, T_out::sign> unity = 1.0;
-#pragma hls_waive DBZ ABR
+            #pragma hls_waive DBZ ABR
             ac_math::ac_div(unity, L[j][j].r(), recip_L.r());
             recip_L.i() = 0.0;
           }

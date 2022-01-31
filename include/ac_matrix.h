@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -335,11 +333,17 @@ public: // Matrix math functions
     return result;
   }
 
-  //Send ac_matrix inputs to cholesky decomposition as 2D arrays instead.
+  //Send ac_matrix<ac_fixed/ac_complex<ac_fixed>> inputs to cholesky decomposition as 2D arrays instead.
   template<bool use_pwl,
-           int del_w, int del_i, ac_q_mode int_Q, ac_o_mode int_O,
+           int del_w, int del_i, ac_q_mode imd_Q, ac_o_mode imd_O,
            class T1, unsigned M1, class T2>
   friend void indirect_chol_d(const ac_matrix<T1, M1, M1> &input, ac_matrix<T2, M1, M1> &output);
+
+  //Send ac_matrix<ac_float/ac_std_float/ac_ieee_float> inputs to cholesky decomposition as 2D arrays instead.
+  template<bool use_pwl,
+           int del_w, int del_i, ac_q_mode imd_Q,
+           class T1, unsigned M1, class T2>
+  friend void indirect_chol_d_float(const ac_matrix<T1, M1, M1> &input, ac_matrix<T2, M1, M1> &output);
 
   //Send ac_matrix inputs to matrix multiplication as 2D arrays instead.
   template<class TA, class TB, class TC>
@@ -352,11 +356,11 @@ public: // Matrix math functions
            class T1, class T2>
   friend void ac_matrix_cholinv(const ac_matrix<T1, M1, M1> &input, ac_matrix<T2, M1, M1> &output);
 
-#ifdef CCS_SCVERIFY
+  #ifdef CCS_SCVERIFY
 public: // Class Member Data (must be public for SCVerify)
-#else
+  #else
 private: // Class Member Data
-#endif
+  #endif
   // Use static memory allocation. If you compile this way
   // for execution on a processor, watch out for stack overflows.
   T m_data[M][N];

@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -35,7 +33,7 @@
 //
 // Description: Provides piece-wise linear implementations of the
 //    reciprocal function for the AC (tm) Datatypes: ac_fixed, ac_float,
-//    ac_complex<ac_fixed> and ac_complex<ac_float>.
+//    ac_complex<ac_fixed>, ac_complex<ac_float>, ac_ieee_float.
 //
 // Usage:
 //    A sample testbench and its implementation look like
@@ -161,9 +159,9 @@ namespace ac_math
     // is encountered.
     // If AC_ASSERT is not activated: the output will saturate when a zero input is encountered.
     // The functionality behind this is taken care of by other sections of the code.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!input, "Reciprocal of zero not supported.");
-#endif
+    #endif
 
     ac_fixed<outW, outI, outS, outQ, outO> output_temp;
 
@@ -188,7 +186,7 @@ namespace ac_math
     ac_fixed<W, 0, false> normalized_fixed;
 
     // If input is signed, take absolute value and assign to intermediate variable.
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (S) {
       input_abs_value = ((input >= 0) ? (ac_fixed <W, I, false>)input : (ac_fixed <W, I, false>)(-input));
     }
@@ -216,7 +214,7 @@ namespace ac_math
 
     if (input != 0) { // If input is non-zero, De-normalize output by shifting right by expret_temp
       // If input and output are signed, change sign of output_pwl based on whether input is positive or negative.
-#pragma hls_waive CNS
+      #pragma hls_waive CNS
       if (S && outS) {output_pwl = (input < 0) ? (output_pwl_type)(-output_pwl) : output_pwl;}
       // ac_shift_right function used for denormalization so as to ensure saturation and rounding.
       ac_math::ac_shift_right(output_pwl, expret_temp, output_temp);
@@ -227,7 +225,7 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input                   = " << input << std::endl;
     std::cout << "input_abs_value         = " << input_abs_value << std::endl;
@@ -238,7 +236,7 @@ namespace ac_math
     std::cout << "output_pwl              = " << output_pwl << std::endl;
     std::cout << "output_temp             = " << output_temp << std::endl;
     std::cout << "output up-scaled by exp = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -301,7 +299,7 @@ namespace ac_math
   {
     // Start of code to be changed if the ac_fixed PWL implementation changes.
 
-    const bool is_sc_constant_po2 = true; // is sc_constant_lut a power of two?
+    const bool is_sc_constant_po2 = true; // is sc_constant_lut used in ac_fixed implementation a power of two?
     const int log2_sc_constant = 4; // log2(sc_constant_lut), if sc_constant_lut is a power-of-two. If not, this value is ignored.
     const int n_frac_bits = 10; // Number of fractional bits used in ac_fixed PWL implementation.
 
@@ -336,7 +334,7 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input                   = " << input << std::endl;
     std::cout << "input.mantissa()        = " << input.mantissa() << std::endl;
@@ -348,7 +346,7 @@ namespace ac_math
     std::cout << "output                  = " << output << std::endl;
     std::cout << "output.mantissa()       = " << output.mantissa() << std::endl;
     std::cout << "output.exp()            = " << output.exp() << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -417,21 +415,26 @@ namespace ac_math
     ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > &output
   )
   {
-    ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > output_temp;
-
-    // The derived type for the reciprocal of the mag_sqr() of the input has its
-    // bitwidths calculated to ensure a lossless return type for said reciprocal.
-    // Note that this is only applicable for a PWL implementation that operates with
-    // 8 segments and uses 10 fractional bits to store the slope and intercept values.
-    // Your own PWL implementation may require a different return type to ensure
-    // losslessness.
     const int W1 = S ? 2*W - 1 : 2*W + 1;
     const int I1 = S ? 2*I - 1 : 2*I + 1;
-    const int W2 = W1 + AC_MAX(1, AC_MIN(10, W1 - 4)) + 10 + int(!S);
+
+    // Start of code to be changed if the ac_fixed PWL implementation changes.
+
+    const bool is_sc_constant_po2 = true; // is sc_constant_lut used in ac_fixed implementation a power of two?
+    const int log2_sc_constant = 4; // log2(sc_constant_lut), if sc_constant_lut is a power-of-two. If not, this value is ignored.
+    const int n_frac_bits = 10; // Number of fractional bits used in ac_fixed PWL implementation.
+
+    // End of code to be changed if the ac_fixed PWL implementation changes.
+
+    const int sc_input_frac_bits = is_sc_constant_po2 ? AC_MAX(1, AC_MIN(n_frac_bits, W1 - log2_sc_constant - int(S))) : n_frac_bits;
+
+    const int W2 = W1 + sc_input_frac_bits + n_frac_bits + int(!S);
     const int I2 = W1 - I1 + 1;
 
     ac_fixed<W2, I2, false, outQ, outO> recip_mag_sqr;
     ac_reciprocal_pwl<pwl_Q>(input.mag_sqr(), recip_mag_sqr);
+
+    ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > output_temp;
 
     if (input.r() != 0 || input.i() != 0) {
       // Use the formula "1/(a+bi) = (a-bi)/(a^2+b^2)" to assign values to the output.
@@ -445,13 +448,13 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input.mag_sqr() = " << input.mag_sqr() << std::endl;
     std::cout << "recip_mag_sqr   = " << recip_mag_sqr << std::endl;
     std::cout << "output_temp     = " << output_temp << std::endl;
     std::cout << "output          = " << output << std::endl;
-#endif
+    #endif
   }
 
 //=========================================================================
@@ -520,7 +523,15 @@ namespace ac_math
     ac_complex<ac_float<outW, outI, outE, outQ> > &output
   )
   {
-    ac_complex<ac_float<outW, outI, outE, outQ> > output_temp;
+    // Start of code to be changed if the ac_fixed PWL implementation changes.
+
+    const bool is_sc_constant_po2 = true; // is sc_constant_lut used in ac_fixed implementation a power of two?
+    const int log2_sc_constant = 4; // log2(sc_constant_lut), if sc_constant_lut is a power-of-two. If not, this value is ignored.
+    const int n_frac_bits = 10; // Number of fractional bits used in ac_fixed PWL implementation.
+
+    // End of code to be changed if the ac_fixed PWL implementation changes.
+
+    const int sc_input_frac_bits = is_sc_constant_po2 ? AC_MAX(1, AC_MIN(n_frac_bits, 2*W + 1 - log2_sc_constant)) : n_frac_bits;
 
     // Calculate real^2 + imag^2
     ac_float<W, I, E, Q> input_real = input.r();
@@ -533,13 +544,8 @@ namespace ac_math
     typedef ac_float<2*W + 1, 2*I + 1, E + 2, Q> i_m_s_type;
     i_m_s_type input_mag_sqr;
 
-    // Calculate bitwidths for the return type of reciprocal of the input magnitude
-    // squared to ensure that there is no loss in precision.
-    // Note that this is only applicable for a PWL implementation that operates with
-    // 8 segments and uses 10 fractional bits to store the slope and intercept values.
-    // Your own PWL implementation may require a different return type to ensure
-    // losslessness.
-    const int W_r_m_s = 2*W + 1 + AC_MAX(1, AC_MIN(10, 2*W + 1 - 4)) + 10 + 1;
+    // Calculate bitwidths for the return type of reciprocal of the input magnitude squared.
+    const int W_r_m_s = 2*W + 1 + sc_input_frac_bits + n_frac_bits + 1;
     const int I_r_m_s = 2*W + 1 - (2*I + 1) + 2;
 
     ac_float<W_r_m_s, I_r_m_s, E + 3, outQ> recip_mag_sqr;
@@ -547,6 +553,8 @@ namespace ac_math
     // Store value of input_mag_sqr to the variable.
     input_mag_sqr.add(input_real*input_real, input_imag*input_imag);
     ac_reciprocal_pwl<pwl_Q>(input_mag_sqr, recip_mag_sqr);
+
+    ac_complex<ac_float<outW, outI, outE, outQ> > output_temp;
 
     if (input_mag_sqr.mantissa() != 0) {
       // 1/(a+bi) = (a-bi)/(a^2+b^2)
@@ -561,7 +569,7 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_RECIPROCAL_PWL_H_DEBUG)
     std::cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << std::endl;
     std::cout << "input                     = " << input << std::endl;
     std::cout << "input_mag_sqr             = " << input_mag_sqr << std::endl;
@@ -572,18 +580,72 @@ namespace ac_math
     std::cout << "output                    = " << output << std::endl;
     std::cout << "output.r().to_double()    = " << output.r().to_double() << std::endl;
     std::cout << "output.i().to_double()    = " << output.i().to_double() << std::endl;
-#endif
+    #endif
   }
 
 // For this section of the code to work, the user must include ac_std_float.h in their testbench before including the reciprocal header,
-// so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
-#ifdef __AC_STD_FLOAT_H
+// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
+  #ifdef __AC_STD_FLOAT_H
+//=========================================================================
+// Function: ac_reciprocal_pwl (for ac_std_float)
+//
+// Description:
+//    Calculation of reciprocal of real inputs, passed as ac_std_float
+//    variables.
+//
+// Usage:
+//    A sample testbench and its implementation looks like this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_reciprocal_pwl.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_reciprocal_pwl.h>
+//    using namespace ac_math;
+//
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_reciprocal_pwl(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(0.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <ac_q_mode pwl_Q = AC_TRN, int W, int E, int outW, int outE>
+  void ac_reciprocal_pwl(
+    const ac_std_float<W, E> &input,
+    ac_std_float<outW, outE> &output
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_reciprocal_pwl<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
+
 //=========================================================================
 // Function: ac_reciprocal_pwl (for ac_ieee_float)
 //
 // Description:
-//    Calculation of reciprocal of real, positive inputs, passed as
-//    ac_ieee_float variables.
+//    Calculation of reciprocal of real inputs, passed as ac_ieee_float
+//    variables.
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
@@ -636,7 +698,7 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
   }
-#endif
+  #endif
 
 //=========================================================================
 // Version that allows returning of values.

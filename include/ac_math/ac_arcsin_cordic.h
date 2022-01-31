@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -238,8 +236,8 @@ namespace ac_math
   {
     MgcAcIarcsinAssert< ZW <= 128 >::test();
     // Assume no more than 130 entries.
-   	  #pragma hls_waive CNS
-	
+    #pragma hls_waive CNS
+
     if (i > 129)
     { return 0.0; }
     return x2_asin_pi_pow2_table[i];
@@ -279,22 +277,22 @@ namespace ac_math
 
     for (int i = 0; i < N_I; i++) {
       bool sel = (y <= tn && x >= 0) || (y > tn && x < 0);
-   	  #pragma hls_waive CNS
+      #pragma hls_waive CNS
       if (P_F > 20) {
         // Exhaustively tested cases for P_F <= 20 pass error criteria without
         // this check.
         sel = sel && (theta <= 0.5);
       }
-	  #pragma hls_waive ISE
+      #pragma hls_waive ISE
       dp_t x_d = y >> (i - 1);
-  	  #pragma hls_waive ISE
+      #pragma hls_waive ISE
       dp_t y_d = x >> (i - 1);
       dp_theta_t theta_d = x2_asin_pi_2mi<P_F>(i);
-   	  #pragma hls_waive ISE
+      #pragma hls_waive ISE
       dp_t tn_d = tn >> (2*i);
-   	  #pragma hls_waive ISE
+      #pragma hls_waive ISE
       x -= x >> (2*i);
-   	  #pragma hls_waive ISE  
+      #pragma hls_waive ISE
       y -= y >> (2*i);
       if (sel) {
         x -= x_d;

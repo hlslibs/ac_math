@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -93,9 +91,9 @@ namespace ac_math
   {
     typedef ac_fixed<1, 1, false> oneBitType;
 
-#pragma hls_waive ABW
+    #pragma hls_waive ABW
     output.r() = assign_unity ? oneBitType(1) : oneBitType(0);
-#pragma hls_waive ABW
+    #pragma hls_waive ABW
     output.i() = 0.0;
   }
 
@@ -128,7 +126,7 @@ namespace ac_math
     for (unsigned i = 0; i < M; i++) {
       SEPARATE_COLUMN:
       for (unsigned j = 0; j < M; j++) {
-#pragma hls_waive CNS
+        #pragma hls_waive CNS
         if (real_diag && i == M - 1) {
           Q(j, i) = A1(i, j + M)*e_coeff;
         } else {
@@ -174,7 +172,7 @@ namespace ac_math
 
     ac_fixed<n_f_b + i_root_I, i_root_I, false> i_root;
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (ispwl) {
       // Use PWL functions.
       ac_math::ac_inverse_sqrt_pwl(sqr, i_root);
@@ -269,11 +267,11 @@ namespace ac_math
       A1(pivot, i)     = row2[1];
     }
 
-#if !defined(__SYNTHESIS__) && defined(AC_QRD_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_QRD_H_DEBUG)
     std::cout << "pivot = " << pivot << std::endl;
     std::cout << "row1 = {" << row1[0] << ", " << row1[1] << std::endl;
     std::cout << "row2 = {" << row2[0] << ", " << row2[1] << std::endl;
-#endif
+    #endif
   }
 
   //=========================================================================
@@ -366,7 +364,7 @@ namespace ac_math
 
     ac_complex<ac_fixed<n_f_b + 2, 2, true> > exp_arg_br_conj;
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (real_diag) {
       // If all diagonals need to be real, an extra stages are required to make the bottom
       // right element real and adjust the last column of the Q matrix accordingly.

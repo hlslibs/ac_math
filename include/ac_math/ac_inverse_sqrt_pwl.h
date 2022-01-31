@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -147,9 +145,9 @@ namespace ac_math
     // is encountered.
     // If AC_ASSERT is not activated: the output will saturate when a zero input is encountered.
     // The functionality behind this is taken care of by other sections of the code.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!input, "Inverse square root of zero not supported.");
-#endif
+    #endif
 
     const ac_fixed <12, 0, false> inverseroot2 = 0.70703125;
     // normalized_input is basically output of the normalized function that is to be given to the PWL.
@@ -158,7 +156,7 @@ namespace ac_math
     int normalized_exp;
     // If call_normalize is set to true, the design does not assume that the input is already normalized and performs normalization by calling ac_normalize().
     // If call_normalize is set to false, the design assumes that the input is already normalized and does not call ac_normalize, thereby saving on hardware.
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (call_normalize) {
       normalized_exp = ac_math::ac_normalize(input, normalized_input);
     } else {
@@ -197,7 +195,7 @@ namespace ac_math
     ac_fixed <sc_input_frac_bits + n_frac_bits + 1, 1, false, q_mode_temp> normalized_output = m_lut[index]*input_sc_frac + c_lut[index];
     // Handling of odd exponents
     ac_fixed <2*n_frac_bits, 0, false, q_mode_temp> normalized_output_temp = normalized_output * inverseroot2;
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     ac_fixed <2*n_frac_bits + 1, 1, false> m1 = (normalized_exp % 2 == 0) ? (ac_fixed <2*n_frac_bits + 1, 1, false>)normalized_output : (ac_fixed <2*n_frac_bits + 1, 1, false>)normalized_output_temp;
     ac_fixed <W2, I2, false, q2, o2> output_temp;
     // "De-normalize" the output by performing a right-shift and cancel out the effects of the previous normalization.
@@ -211,7 +209,7 @@ namespace ac_math
     // on whether a zero was passed or not.
     output = input != 0 ? output_temp : output_temp_max;
 
-#if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
     std::cout << "input                  = " << input << std::endl;
     std::cout << "normalized_input       = " << normalized_input << std::endl;
     std::cout << "normalized_exp         = " << normalized_exp << std::endl;
@@ -223,7 +221,7 @@ namespace ac_math
     std::cout << "m1                     = " << m1 << std::endl;
     std::cout << "normalized_exp         = " << normalized_exp << std::endl;
     std::cout << "output                 = " << output << std::endl;
-#endif
+    #endif
   }
 
 // ===========================================================================
@@ -316,7 +314,7 @@ namespace ac_math
     // on whether a zero was passed or not at the input.
     output.i() = non_zero_input ? (ac_fixed<W2, I2, true, q2, o2>)output_temp.i() : output_temp_max;
 
-#if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
     std::cout << "W1              = " << W1 << std::endl;
     std::cout << "I1              = " << I1 << std::endl;
     std::cout << "input           = " << input << std::endl;
@@ -326,7 +324,7 @@ namespace ac_math
     std::cout << "output_temp_max = " << output_temp_max << std::endl;
     std::cout << "output_temp     = " << output_temp << std::endl;
     std::cout << "output          = " << output << std::endl;
-#endif
+    #endif
   }
 
   // This struct provides parameterized bitwidths to ensure a lossless return type for the monotonous PWL function provided by default,
@@ -398,9 +396,9 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated, the program will stop running as soon as a negative input
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(input >= 0, "Negative input not supported.");
-#endif
+    #endif
 
     // Calculate bitwidths for mantissa of square root.
     const int W_2 = find_rt_inv_sqrt_pwl<W1 - I1, I1 - 1>::W1;
@@ -426,18 +424,72 @@ namespace ac_math
 
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
     std::cout << "input       = " << input << std::endl;
     std::cout << "m1          = " << m1 << std::endl;
     std::cout << "output2     = " << output2 << std::endl;
     std::cout << "output_temp = " << output_temp << std::endl;
     std::cout << "output      = " << output << std::endl;
-#endif
+    #endif
   }
 
-// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the inverse square root header,
-// so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
-#ifdef __AC_STD_FLOAT_H
+// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the inv. sqrt header,
+// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
+  #ifdef __AC_STD_FLOAT_H
+//=========================================================================
+// Function: ac_inverse_sqrt_pwl (for ac_std_float, returns 1/sqrt(input) )
+//
+// Description:
+//    Calculation of inverse square root of real inputs, passed as
+//    ac_std_float variables.
+//
+// Usage:
+//    A sample testbench and its implementation looks like this:
+//
+//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
+//    // before including ac_inverse_sqrt_pwl.h.
+//    #include <ac_std_float.h>
+//    #include <ac_math/ac_inverse_sqrt_pwl.h>
+//    using namespace ac_math;
+//
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output
+//    )
+//    {
+//      ac_inverse_sqrt_pwl(input, output);
+//    }
+//
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(0.25);
+//      output_type output;
+//      CCS_DESIGN(project)(input, output);
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <ac_q_mode q_mode_temp = AC_TRN, int W1, int E1, int W2, int E2>
+  void ac_inverse_sqrt_pwl(
+    const ac_std_float<W1, E1> &input,
+    ac_std_float<W2, E2> &output
+  )
+  {
+    ac_float<W2 - E2 + 1, 2, E2> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_inverse_sqrt_pwl<q_mode_temp>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<W2, E2> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
+
 //=================================================================================
 // Function: ac_inverse_sqrt_pwl (for ac_ieee_float, returns 1/sqrt(input) )
 //
@@ -484,19 +536,19 @@ namespace ac_math
   void ac_inverse_sqrt_pwl(const ac_ieee_float<Format> input, ac_ieee_float<outFormat> &output)
   {
     typedef ac_ieee_float<outFormat> T_out;
-    const int outW = T_out::width;
-    const int outE = T_out::e_width;
-    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    const int W2 = T_out::width;
+    const int E2 = T_out::e_width;
+    ac_float<W2 - E2 + 1, 2, E2> output_ac_fl; // Equivalent ac_float representation for output.
     ac_inverse_sqrt_pwl<q_mode_temp>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
 
-#if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
+    #if !defined(__SYNTHESIS__) && defined(AC_INVERSE_SQRT_PWL_H_DEBUG)
     std::cout << "input.to_ac_float().type_name() : " << input.to_ac_float().type_name() << std::endl;
     std::cout << "output_ac_fl.type_name() : " << output_ac_fl.type_name() << std::endl;
-#endif 
+    #endif
   }
-#endif
+  #endif
 
 // Function definition to enable return by value.
 

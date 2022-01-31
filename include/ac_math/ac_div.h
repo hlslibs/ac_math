@@ -4,14 +4,12 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Sat Jan 23 14:58:27 PST 2021                        *
+ *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.0                                               *
+ *  Release Build   : 3.4.2                                               *
  *                                                                        *
- *  Copyright , Mentor Graphics Corporation,                     *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
- *  All Rights Reserved.                                                  *
- *  
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
  *  you may not use this file except in compliance with the License.      * 
@@ -161,9 +159,9 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!divisor, "Division by zero.");
-#endif
+    #endif
     ac_int<QW,false> Q = 0;
     ac_int<DW+1,true> R = 0;
     ac_int<DW+1,true> neg_divisor = -divisor;
@@ -196,9 +194,9 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!divisor, "Division by zero.");
-#endif
+    #endif
     ac_int<DW, false> remainder;
     ac_div(dividend, divisor, quotient, remainder);
 
@@ -230,16 +228,16 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!divisor, "Division by zero.");
-#endif
+    #endif
     bool neg_dividend = dividend < 0;
     ac_int<NW,false> uN = neg_dividend ? (ac_int<NW,false>) -dividend : (ac_int<NW,false>) dividend;
     bool neg_divisor = divisor < 0;
     ac_int<DW,false> uD = neg_divisor ? (ac_int<DW,false>) -divisor : (ac_int<DW,false>) divisor;
     ac_int<QW,false> uQ;
     ac_int<DW,false> uR;
-#pragma hls_waive DBZ
+    #pragma hls_waive DBZ
     ac_div(uN, uD, uQ, uR);
     ac_int<QW,true> quotient_temp = neg_dividend == neg_divisor ? (ac_int<QW,true>) uQ : (ac_int<QW,true>) -uQ;
 
@@ -268,9 +266,9 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!divisor, "Division by zero.");
-#endif
+    #endif
     ac_int<DW,true> remainder;
     ac_div(dividend, divisor, quotient, remainder);
 
@@ -303,9 +301,9 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!divisor, "Division by zero.");
-#endif
+    #endif
     // relevant bits for Q
 
     const int RBIT = (QQ == AC_TRN || QQ == AC_TRN_ZERO) ? 0 : 1;
@@ -314,7 +312,7 @@ namespace ac_math
 
     ac_fixed<QW,QI,false,QQ,QO> quotient_temp;
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (ZI-1 < -QF) {
       // MSB of result is smaller than LSB of requested output
       quotient_temp = ac_fixed<QW,QI,false,QQ,QO>(0); // Typecast to ac_fixed type in order to avoid FXD violations in CDesignChecker.
@@ -348,7 +346,7 @@ namespace ac_math
 
     ac_fixed<ZW+1,ZW,false> Q_fx = (ac_fixed<ZW+1,ZW,false>)Q;
 
-#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if (QQ == AC_RND_ZERO || QQ == AC_RND_MIN_INF || QQ == AC_RND_CONV || QQ == AC_RND_CONV_ODD)
     { Q_fx[0] = rem; }
 
@@ -385,9 +383,9 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!divisor, "Division by zero.");
-#endif
+    #endif
     const int ZI = (QO == AC_WRAP) ? QI : NI+(DW-DI);
     const int ZW = ZI+(QW-QI);
 
@@ -400,7 +398,7 @@ namespace ac_math
     ac_fixed<DW,DI,false> uD = neg_D ? (ac_fixed<DW,DI,false>) -D : (ac_fixed<DW,DI,false>) D;
 
     bool has_rem;
-	#pragma hls_waive CNS
+    #pragma hls_waive CNS
     if ( QQ == AC_RND_ZERO || QQ == AC_RND_INF ||
          QQ == AC_RND_CONV || QQ == AC_RND_CONV_ODD || QQ == AC_TRN_ZERO ) {
       ac_fixed<ZW,ZI,false,QQ> uQ;
@@ -415,11 +413,11 @@ namespace ac_math
       const int RBIT = (QQ == AC_TRN) ? 0 : 1;
       ac_fixed<ZW+RBIT,ZI,false> uQ;
       ac_fixed<ZW+RBIT+2,ZI+1,true> Q;
-#pragma hls_waive DBZ
+      #pragma hls_waive DBZ
       has_rem = ac_div(uN, uD, uQ);
       if (neg_N == neg_D) {
         Q = uQ;
-		#pragma hls_waive CNS
+        #pragma hls_waive CNS
         if (QQ == AC_RND_MIN_INF)
         { Q[0] = has_rem ? 1 : 0; }
       } else {
@@ -463,14 +461,14 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!divisor, "Division by zero.");
-#endif
+    #endif
     const int STI = NI+(DW-DI);
     const int STW = STI+(QW-QI);
     const int STE = AC_MAX(NE,DE)+1;
     ac_fixed<STW,STI,true> tm;
-#pragma hls_waive DBZ
+    #pragma hls_waive DBZ
     bool has_rem = ac_div(dividend.m, divisor.m, tm);
     ac_int<STE,true> te = dividend.exp()-divisor.exp();
     ac_float<STW,STI,STE> qt(tm, te, true);
@@ -516,17 +514,17 @@ namespace ac_math
     // Use a macro to activate the AC_ASSERT
     // If AC_ASSERT is activated: the program will stop running as soon as a zero divisor
     // is encountered.
-#ifdef ASSERT_ON_INVALID_INPUT
+    #ifdef ASSERT_ON_INVALID_INPUT
     AC_ASSERT(!!D.r() || !!D.i(), "Division by zero.");
-#endif
+    #endif
     // Create signed sum-of-squares result for the following divs.
     ac_fixed<2*DTW+2,2*DTI+2,true> s = D.r()*D.r() + D.i()*D.i();
     typedef typename ac_complex<DT>::rt_unary::neg DCT;
     DCT D_conj(D.r(),-D.i());
     typename ac_complex<QT>::template rt_T<DCT>::mult prod = X*D_conj;
-#pragma hls_waive DBZ
+    #pragma hls_waive DBZ
     bool has_rem = ac_div(prod.r(), s, Q._r);
-#pragma hls_waive DBZ
+    #pragma hls_waive DBZ
     has_rem |= ac_div(prod.i(), s, Q._i);
 
     // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate the real
