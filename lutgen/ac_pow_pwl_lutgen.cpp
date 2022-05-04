@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
+ *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.2                                               *
+ *  Release Build   : 3.4.3                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -175,6 +175,10 @@ int main()
   mstr = mstrstream.str();
   cstr = cstrstream.str();
 
+  // Find out whether the proportionality constant is a power of two, which is only true its log2 value is an integer.
+  double log2_pc = log2(prop_constant);
+  bool pc_is_po2 = (trunc(log2_pc) == log2_pc);
+
   // Find max value in array, and see if it has any negative values. This helps figure out
   // the number of integer bits to use to store array values.
   double m_max_val, c_max_val;
@@ -196,13 +200,21 @@ int main()
   string is_neg_x_max_s = (x_max < 0) ? "true" : "false";
 
   std::ofstream outfile(filename);
-  outfile << "const unsigned n_segments_lut = " << nsegments << ";" <<endl;
-  outfile << "const int n_frac_bits = " << nfrac_bits << ";" << endl;
+  outfile << "const unsigned n_segments_lut = " << nsegments << "; // Number of PWL segments." <<endl;
+  outfile << "const int n_frac_bits = " << nfrac_bits << "; // Number of fractional bits" << endl;
+  if (pc_is_po2) {
+    outfile << "// Since scaling constant is a positive power-of-two, multiplication with it is the same as left-shifting by " << log2_pc << "." << endl;
+    outfile << "// Accordingly, the scaled normalized input will have " << log2_pc << " less fractional bits than the normalized input, provided that this" << endl;
+    outfile << "// number of fractional bits is lesser than n_frac_bits. If not, the number of fractional bits in the scaled input is set to n_frac_bits." << endl;
+    outfile << "const int sc_input_frac_bits = AC_MAX(1, AC_MIN(n_frac_bits, W - I - " << log2_pc << "));" << endl;
+  } else {
+    outfile << "const int sc_input_frac_bits = n_frac_bits; // Number of fractional bits in scaled input" << endl;
+  }
+  outfile << "// Slope and intercept LUT values." << endl;
   outfile << "const ac_fixed<" << m_int_bits << " + n_frac_bits, " << m_int_bits << ", " << is_neg_m_s << "> m_lut[n_segments_lut] = " << mstr << ";" << endl;
   outfile << "const ac_fixed<" << c_int_bits << " + n_frac_bits, " << c_int_bits << ", " << is_neg_c_s << "> c_lut[n_segments_lut] = " << cstr << ";" << endl;
-  outfile << "const ac_fixed<" << x_min_int_bits << " + n_frac_bits, " << x_min_int_bits << ", " << is_neg_x_min_s << "> x_min_lut = " << o_ac_f(x_min, nfrac_bits) << ";" << endl;
-  outfile << "const ac_fixed<" << x_max_int_bits << " + n_frac_bits, " << x_max_int_bits << ", " << is_neg_x_max_s << "> x_max_lut = " << o_ac_f(x_max, nfrac_bits) << ";" << endl;
-  outfile << "const ac_fixed<" << p_c_int_bits << " + n_frac_bits, " << p_c_int_bits << ", false> sc_constant_lut = " << o_ac_f(prop_constant, nfrac_bits) << ";" << endl;
+  outfile << "const ac_fixed<" << x_min_int_bits << " + n_frac_bits, " << x_min_int_bits << ", " << is_neg_x_min_s << "> x_min_lut = " << o_ac_f(x_min, nfrac_bits) << "; // Minimum limit of PWL domain" << endl;
+  outfile << "const ac_fixed<" << p_c_int_bits << " + n_frac_bits, " << p_c_int_bits << ", false> sc_constant_lut = " << o_ac_f(prop_constant, nfrac_bits) << "; // Scaling constant" << endl;
   outfile.close();
 
   cout << endl;

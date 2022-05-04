@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
+ *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.2                                               *
+ *  Release Build   : 3.4.3                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -81,6 +81,7 @@
 //    the ac_shift header file.
 //
 // Revision History:
+//    3.4.3  - dgb - Updated compiler checks to work with MS VS 2019
 //    3.4.1  - Added special input handling for ac_std_float and ac_ieee_float implementations.
 //    25.1.0 - [CAT-28829] Added ac_float, ac_std_float and ac_ieee_float support.
 //    3.3.0  - [CAT-25798] Added CDesignChecker fixes/waivers for code check and Synthesis-simulation mismatch/violations in ac_math PWL and Linear Algebra IPs.
@@ -103,9 +104,11 @@
 
 // The floating point functions use default template parameters, which are only supported by C++11 or
 // later compiler standards. Hence, the user should be informed if they are not using those standards.
-
-#if !(__cplusplus >= 201103L)
+#if (defined(__GNUC__) && (__cplusplus < 201103L))
 #error Please use C++11 or a later standard for compilation.
+#endif
+#if (defined(_MSC_VER) && (_MSC_VER < 1920) && !defined(__EDG__))
+#error Please use Microsoft VS 2019 or a later standard for compilation.
 #endif
 
 namespace ac_math

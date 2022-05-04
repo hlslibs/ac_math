@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
+ *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.2                                               *
+ *  Release Build   : 3.4.3                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -69,6 +69,7 @@
 //    This file uses the ac_normalize() function from ac_normalize.h
 //
 // Revision History:
+//    3.4.3  - dgb - Updated compiler checks to work with MS VS 2019
 //    3.3.0  - [CAT-25797] Added CDesignChecker fixes/waivers for code check violations in ac_math PWL and Linear Algebra IPs.
 //             Waivers added for CNS and CCC violations.
 //             Fixes added for FXD, STF and MXS violations.
@@ -86,9 +87,11 @@
 
 // The functions use default template parameters, which are only supported by C++11 or later
 // compiler standards. Hence, the user should be informed if they are not using those standards.
-
-#if !(__cplusplus >= 201103L)
+#if (defined(__GNUC__) && (__cplusplus < 201103L))
 #error Please use C++11 or a later standard for compilation.
+#endif
+#if (defined(_MSC_VER) && (_MSC_VER < 1920) && !defined(__EDG__))
+#error Please use Microsoft VS 2019 or a later standard for compilation.
 #endif
 
 #include <ac_int.h>
@@ -357,12 +360,10 @@ namespace ac_math
       if (base_val == float_base::base_2) {
         ac_float<outW, outI, outE, outQ> output_temp_b2(output_mant_norm + denorm_sum);
         output_temp = output_temp_b2;
-      } else
-        #pragma hls_waive CNS
-        if (base_val == float_base::base_e) {
-          ac_float<outW, outI, outE, outQ> output_temp_be((output_mant_norm + denorm_sum)*ln2); // Multiply the output by ln(2) if base is e.
-          output_temp = output_temp_be;
-        }
+      } else {
+        ac_float<outW, outI, outE, outQ> output_temp_be((output_mant_norm + denorm_sum)*ln2); // Multiply the output by ln(2) if base is e.
+        output_temp = output_temp_be;
+      }
 
       if (input_mant == 0) {
         output_temp.template set_val<AC_VAL_MIN>(); // If input is 0, set output to the minimum possible value.
@@ -420,17 +421,18 @@ namespace ac_math
 //    #endif
 //
 // Notes:
-//    The ac_float version of ac_log2_pwl relies on the generic_float_log_pwl
-//    helper function for output calculation, which it configures to calculate
-//    base 2 log outputs through a template argument.
+//    The ac_float version of ac_log2_pwl is a friend function to the
+//    ac_generic_float_log_pwl class, and depends on the interface() function in
+//    said class to call the ac_fixed version of the ac_log2_pwl function and
+//    calculate the final output.
 //
 //---------------------------------------------------------------------------------
 
   template <ac_q_mode pwlQ = AC_TRN, int W, int I, int E, ac_q_mode Q, int outW, int outI, int outE, ac_q_mode outQ>
   void ac_log2_pwl(const ac_float<W, I, E, Q> input, ac_float<outW, outI, outE, outQ> &output)
   {
-    ac_generic_float_log_pwl<pwlQ, float_base::base_2> GFLP_obj;
-    GFLP_obj.interface(input, output);
+    ac_generic_float_log_pwl<pwlQ, float_base::base_2> gen_log_obj;
+    gen_log_obj.interface(input, output);
   }
 
 //=================================================================================
@@ -481,8 +483,8 @@ namespace ac_math
   template <ac_q_mode pwlQ = AC_TRN, int W, int I, int E, ac_q_mode Q, int outW, int outI, int outE, ac_q_mode outQ>
   void ac_log_pwl(const ac_float<W, I, E, Q> input, ac_float<outW, outI, outE, outQ> &output)
   {
-    ac_generic_float_log_pwl<pwlQ, float_base::base_e> GFLP_obj;
-    GFLP_obj.interface(input, output);
+    ac_generic_float_log_pwl<pwlQ, float_base::base_e> gen_log_obj;
+    gen_log_obj.interface(input, output);
   }
 
 // For this section of the code to work, the user must include ac_std_float.h in their testbench before including the log header,

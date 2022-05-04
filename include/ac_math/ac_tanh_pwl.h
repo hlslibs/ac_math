@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
+ *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.2                                               *
+ *  Release Build   : 3.4.3                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -70,6 +70,7 @@
 //    result in a compile-time error.
 //
 // Revision History:
+//    3.4.3  - dgb - Updated compiler checks to work with MS VS 2019
 //    3.2.3  - Added ac_float and ieee float support
 //    3.1.0  - The file was renamed from ac_hyperbolic_tan_pwl.h to ac_tanh_pwl.h
 //    2.0.10 - Official open-source release as part of the ac_math library.
@@ -80,9 +81,11 @@
 
 // The below functions use default template parameters, which are only supported by C++11 or later
 // compiler standards. Hence, the user should be informed if they are not using those standards.
-
-#if !(__cplusplus >= 201103L)
+#if (defined(__GNUC__) && (__cplusplus < 201103L))
 #error Please use C++11 or a later standard for compilation.
+#endif
+#if (defined(_MSC_VER) && (_MSC_VER < 1920) && !defined(__EDG__))
+#error Please use Microsoft VS 2019 or a later standard for compilation.
 #endif
 
 #include <ac_int.h>

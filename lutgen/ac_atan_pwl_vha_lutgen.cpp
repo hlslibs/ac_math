@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
+ *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.2                                               *
+ *  Release Build   : 3.4.3                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -28,16 +28,22 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
-// This is another version of the ac_atan_pwl_lutgen file that is accuracy-targeted.
-// The user must supply a target error value, and the lutgen file will iterate over different
-// PWL implementations--each having a set of fixed PWL end points while also having a
-// different number of segments--until it finds one that meets the accuracy requirement.
+//******************************************************************************************
+// Description:
+//  This is another version of the ac_atan_pwl_lutgen file that is accuracy-targeted.
+//  The user must supply a target error value, and the lutgen file will iterate over different
+//  PWL implementations--each having a set of fixed PWL end points while also having a
+//  different number of segments--until it finds one that meets the accuracy requirement.
 //
 // Usage:
 //   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include -O3 ac_atan_pwl_vha_lutgen.cpp -o ac_atan_pwl_vha_lutgen
 //   ./ac_atan_pwl_vha_lutgen
-// results in a text file ac_atan_pwl_vha_lut_values.txt which can be pasted into
-// a locally modified version of ac_atan_pwl_vha.h.
+//  results in a text file ac_atan_pwl_vha_lut_values.txt which can be pasted into
+//  a locally modified version of ac_atan_pwl_vha.h.
+// Notes:
+// Revision History:
+//    3.4.3  - dgb - Updated compiler checks to work with MS VS 2019
+//******************************************************************************************
 
 // ac_reciprocal_pwl_vha.h is a header file that is included by default if the C++ compiler
 // is C++11 or a later version. (earlier C++ versions will result in compilation errors).
@@ -47,7 +53,10 @@
 // (The ac_reciprocal_pwl_vha function is used to calculate input reciprocals and extend the domain
 // of the ac_atan_pwl function from [0, 1) to [1, inf) through the following formula:
 // atan(x) = pi/2 - atan(1/x) )
-#if !(__cplusplus >= 201103L) && !defined(DO_NOT_USE_AC_RECIPROCAL_PWL_VHA)
+#if (defined(__GNUC__) && (__cplusplus < 201103L)) && !defined(DO_NOT_USE_AC_RECIPROCAL_PWL_VHA)
+#define DO_NOT_USE_AC_RECIPROCAL_PWL_VHA
+#endif
+#if (defined(_MSC_VER) && (_MSC_VER < 1920) && !defined(__EDG__)) && !defined(DO_NOT_USE_AC_RECIPROCAL_PWL_VHA)
 #define DO_NOT_USE_AC_RECIPROCAL_PWL_VHA
 #endif
 

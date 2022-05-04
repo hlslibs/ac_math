@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
+ *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.2                                               *
+ *  Release Build   : 3.4.3                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -32,8 +32,8 @@
 // File: ac_hcordic.h
 //
 // Description: Hyperbolic CORDIC implementations of synthesizable
-//              log/exp/log2/exp2/pow functions for AC fixed point
-//              datatypes
+//              log/exp/log2/exp2/pow functions for ac_fixed, ac_float,
+//              ac_std_float and ac_ieee_float datatypes
 // Usage:
 //    A sample testbench and its implementation look like
 //    this:
@@ -71,6 +71,8 @@
 //    with a type that is not implemented will result in a compile error.
 //
 // Revision History:
+//    3.4.3  - dgb - Updated compiler checks to work with MS VS 2019
+//    3.4.2  - [CAT-28828] Added floating point support.
 //    2.0.10 - Official open-source release as part of the ac_math library.
 //
 //*****************************************************************************************
@@ -82,6 +84,15 @@
 #error C++ is required to include this header file
 #endif
 
+// The functions use default template parameters and static_asserts, which are only supported by C++11 or
+// later compiler standards. Hence, the user should be informed if they are not using those standards.
+#if (defined(__GNUC__) && (__cplusplus < 201103L))
+#error Please use C++11 or a later standard for compilation.
+#endif
+#if (defined(_MSC_VER) && (_MSC_VER < 1920) && !defined(__EDG__))
+#error Please use Microsoft VS 2019 or a later standard for compilation.
+#endif
+
 #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
 #include <string.h>
 #include <iostream>
@@ -89,13 +100,23 @@
 
 #include <ac_int.h>
 #include <ac_fixed.h>
+#include <ac_float.h>
+#include <ac_std_float.h>
 #include <ac_math/ac_normalize.h>
+#include <ac_math/ac_shift.h>
 
 namespace ac_math
 {
 
-  template <bool b> struct AcHtrigAssert { /* Compile error, no 'test' symbol. */ };
-  template <> struct AcHtrigAssert<true> { enum { test }; };
+  template <bool b>
+  struct AcHtrigAssert { 
+    //Compile error, no 'test' symbol.
+  };
+  
+  template <>
+  struct AcHtrigAssert<true> {
+    enum { test };
+  };
 
   //  Multi-precision approximation of tanh(2^-j).
   //  53 + 3 + 1 -- double-precision + extra-iters + padding
@@ -236,12 +257,12 @@ namespace ac_math
     static const int valid = AcHtrigAssert<(J <= 60)>::test;
     enum {
       // sum-of-cordic-terms for {i | i > j + 4*B2+2*B1+B0} < ulp(iteration(j))
-      // j >=14 && j <= 60: B0 + B1 + B2 = 3
+      // j >=14 && j <= 60: B0 + B1 + B2 = 5
       // j >= 4 && j <= 13: B0 + B1 + B2 = 2
       // j >= 1 && j <=  3: B0 + B1 + B2 = 1
-      B0 = (1 << 0)*((J >= 1 && J <= 3) || (J >= 14)),
-      B1 = (1 << 1)*(J >= 4 && J <= 13),
-      B2 = (1 << 2)*(J >= 14)
+      B0 = (1 << 0)*int((J >= 1 && J <= 3) || (J >= 14)),
+      B1 = (1 << 1)*int(J >= 4 && J <= 13),
+      B2 = (1 << 2)*int(J >= 14)
     };
   };
 
@@ -324,6 +345,7 @@ namespace ac_math
     const int L = ZW - ZI + (XtraIters<ZW-ZI>::B0 +
                              XtraIters<ZW-ZI>::B1 +
                              XtraIters<ZW-ZI>::B2);
+    
     const int LW = L + ac::nbits<L>::val;
     typedef ac_fixed<LW,I+1,true> dp_t;
     dp_t xi = x;
@@ -423,7 +445,7 @@ namespace ac_math
             int ZW,int ZI,ac_q_mode ZQ,ac_o_mode ZV>
   void ac_exp2_rr(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
   {
-    const int EW = AW > ZW ? AW : ZW;
+    const int EW = AC_MAX(AW, ZW);
     ac_fixed<EW+3,3,true> xc = 1.0;
     ac_fixed<EW+3,3,true> yc = 1.0;
     ac_fixed<EW+3,3,true> ln2 = ln2_function<EW>();
@@ -449,8 +471,8 @@ namespace ac_math
             int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
   void ac_log_(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
-    // BASE_E: RR: ln( m 2^q ) = ln(m) + q*ln(2)
-    // BASE_2: RR: ln( m 2^q ) = log2(m) + q*log2(2) = log2(m) + q
+    // BASE_E: RR: ln(m * 2^q) = ln(m) + q*ln(2)
+    // BASE_2: RR: log2(m * 2^q) = log2(m) + q*log2(2) = log2(m) + q
 
     ac_fixed<AW,0,false,AQ,AV> x_norm;
     int expret = ac_normalize(x, x_norm);
@@ -459,7 +481,7 @@ namespace ac_math
     //   BASE_E: max-offset = S*ln(2)
     //   BASE_2: max-offset = S
 
-    const int OFW = ac::nbits<(AW - AI > AI ? AW - AI : AI)>::val;
+    const int OFW = ac::nbits<AC_MAX(AW - AI, AI)>::val;
 
     if (BASE == AcLogRR::BASE_E) {
       ac_fixed<ZW+1,1,true> zc;
@@ -491,7 +513,7 @@ namespace ac_math
     }
 
     #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
-    string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
+    std::string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
     std::cout << base_string << std::endl;
     std::cout << "x = " << x << std::endl;
     std::cout << "x_norm = " << x_norm << std::endl;
@@ -513,6 +535,204 @@ namespace ac_math
   void ac_log2_cordic(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
     ac_log_<AcLogRR::BASE_2,AW,AI,AQ,AV,ZW,ZI,ZS,ZQ,ZV>(x, z);
+  }
+
+  template <enum AcLogRR::base BASE,
+            bool OR_TF, // Override default fractional bitwidth for temp variables?
+            int TF_, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ, // Rounding mode allocated for x_norm_2 variable.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_log_(const ac_float<AW,AI,AE,AQ> &x, ac_float<ZW,ZI,ZE,ZQ> &z)
+  {
+    // BASE_E: RR: ln(m * 2^q * 2^exp) = ln(m) + (q + exp)*ln(2)
+    // BASE_2: RR: log2(m * 2^q * 2^exp) = log2(m) + (q + exp)*log2(2) = log2(m) + q + exp
+    
+    #ifdef ASSERT_ON_INVALID_INPUT
+    AC_ASSERT(x >= 0, "Negative input not supported.");
+    #endif
+    
+    ac_fixed<AW - 1, AI - 1, false> x_mant = x.mantissa();
+    ac_int<AE, true> x_exp = x.exp();
+
+    ac_fixed<AW - 1, 0, false> x_norm;
+    int x_norm_exp = ac_normalize(x_mant, x_norm);
+    
+    // Both the x_norm variable and the zc variable eventually have to be passed to ac_ln_rr/ac_log2_rr,
+    // and we might need to reduce the fractional variables in both to reduce the chances of the
+    // compiler throwing an error in the shift_dist function. To do so, use the "OR_TF" and "TF_"
+    // template parameters to override the default number of fractional bits assigned to both.
+    
+    const int x_norm_2_f_bits = OR_TF ? TF_ : AW - 1;
+    
+    static_assert(x_norm_2_f_bits <= 44, "Number of fractional bits in x_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    
+    // If the default value is overriden, the user might 
+    ac_fixed<x_norm_2_f_bits, 0, false, TQ> x_norm_2 = x_norm;
+    
+    const int zc_f_bits = OR_TF ? TF_ : ZW;
+    
+    static_assert(zc_f_bits <= 44, "Number of fractional bits in zc must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    
+    const int OFW = ac::nbits<AC_MAX(AI - 1, AW - AI - 1) + (1 << (AE - 1))>::val;
+    
+    ac_float<ZW, ZI, ZE, ZQ> z_inter;
+    
+    if (BASE == AcLogRR::BASE_E) {
+      ac_fixed<zc_f_bits + 1, 1, true> zc;
+      // Range Reduced to: 0.5 <= x < 1, -.69 < z < 0
+      ac_ln_rr(x_norm_2, zc);
+      ac_fixed<ZW + 1 + OFW + 1, OFW + 1, true> offset = ln2_function<ZW + 1>();
+      offset *= (x_exp + x_norm_exp);
+      z_inter = ac_float<ZW, ZI, ZE, ZQ>(offset + zc);
+    }
+    if (BASE == AcLogRR::BASE_2) {
+      ac_fixed<zc_f_bits + 2, 2, true> zc;
+      // Range reduced to 0.5 <= x < 1, -1 <= z < 1
+      ac_log2_rr(x_norm_2, zc);
+      ac_fixed<OFW + 1, OFW + 1, true> offset = x_exp + x_norm_exp;
+      z_inter = ac_float<ZW, ZI, ZE, ZQ>(offset + zc);
+    }
+    
+    z = z_inter;
+    
+    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    std::string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
+    std::cout << base_string << std::endl;
+    std::cout << "x = " << x << std::endl;
+    std::cout << "x_norm = " << x_norm << std::endl;
+    std::cout << "x_norm_exp = " << x_norm_exp << std::endl;
+    std::cout << "x_exp = " << x_exp << std::endl;
+    std::cout << "z = " << z << std::endl;
+    #endif
+  }
+
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_log_cordic(const ac_float<AW, AI, AE, AQ> &x, ac_float<ZW, ZI, ZE, ZQ> &z)
+  {
+    ac_log_<AcLogRR::BASE_E, OR_TF, TF_, TQ>(x, z);
+  }
+
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_log2_cordic(const ac_float<AW, AI, AE, AQ> &x, ac_float<ZW, ZI, ZE, ZQ> &z)
+  {
+    ac_log_<AcLogRR::BASE_2, OR_TF, TF_, TQ>(x, z);
+  }
+  
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
+            int AW, int AE, int ZW, int ZE>
+  void ac_log_cordic(const ac_std_float<AW, AE> &x, ac_std_float<ZW, ZE> &z)
+  {
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_log_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    ac_std_float<ZW, ZE> z_temp(z_ac_fl); // Convert output ac_float to ac_std_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the
+    // log2 library in math.h.
+    //
+    // If the input is negative, output will be +nan, mirroring the math.h log2 library.
+    if (x.isnan() || x.signbit()) {
+      z_temp = z.nan();
+      if (x.isnan()) {
+        z_temp.set_signbit(x.signbit());
+      }
+    }
+    #endif
+    
+    z = z_temp;
+  }
+  
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
+            int AW, int AE, int ZW, int ZE>
+  void ac_log2_cordic(const ac_std_float<AW, AE> &x, ac_std_float<ZW, ZE> &z)
+  {
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_log2_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    ac_std_float<ZW, ZE> z_temp(z_ac_fl); // Convert output ac_float to ac_std_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the
+    // log2 library in math.h.
+    //
+    // If the input is negative, output will be +nan, mirroring the math.h log2 library.
+    if (x.isnan() || x.signbit()) {
+      z_temp = z.nan();
+      if (x.isnan()) {
+        z_temp.set_signbit(x.signbit());
+      }
+    }
+    #endif
+    
+    z = z_temp;
+  }
+  
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
+            ac_ieee_float_format Format, ac_ieee_float_format outFormat>
+  void ac_log_cordic(const ac_ieee_float<Format> &x, ac_ieee_float<outFormat> &z)
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int ZW = T_out::width;
+    const int ZE = T_out::e_width;
+  
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_log_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    T_out z_temp(z_ac_fl); // Convert output ac_float to ac_ieee_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the log2
+    // library in math.h. For the same reason, a negative input will result in a +nan output.
+    if (x.isnan() || x.signbit()) {
+      z_temp = z.nan();
+      if (x.isnan()) {
+        z_temp.set_signbit(x.signbit());
+      }
+    }
+    #endif
+    
+    z = z_temp;
+  }
+  
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
+            ac_ieee_float_format Format, ac_ieee_float_format outFormat>
+  void ac_log2_cordic(const ac_ieee_float<Format> &x, ac_ieee_float<outFormat> &z)
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int ZW = T_out::width;
+    const int ZE = T_out::e_width;
+  
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_log2_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    T_out z_temp(z_ac_fl); // Convert output ac_float to ac_ieee_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the log2
+    // library in math.h. For the same reason, a negative input will result in a +nan output.
+    if (x.isnan() || x.signbit()) {
+      z_temp = z.nan();
+      if (x.isnan()) {
+        z_temp.set_signbit(x.signbit());
+      }
+    }
+    #endif
+    
+    z = z_temp;
   }
 
   // The result is expected to have a range which accomodates all
@@ -546,19 +766,21 @@ namespace ac_math
 
     // There is one corner case where one extra bit is required for QW. That occurs when
     // AI = 1 and the input is signed. The equation for QWE takes that corner case into account.
-    const int QWE = (int)(1.443*(1 << AC_MAX(AI-AS, 0))) + ((AI == 1) && AS ? 1 : 0);
+    const int QWE = (int)(1.4427*(1 << AC_MAX(AI-AS, 0))) + ((AI == 1) && AS ? 1 : 0);
     const int QW = ac::nbits<QWE>::val;
     ac_fixed<ZW-ZI,1,false> inv_ln2 = inv_ln2_function<ZW-ZI>();
     ac_fixed<QW + int(AS), QW + int(AS), AS> q = x*inv_ln2;
     ac_int<QW + int(AS), AS> q_int = q.to_int();
     const int MW = ZW-ZI > AW-AI ? ZW-ZI : AW-AI;
 
-    // Even though there are intermediate calculations being carried out and the result of those intermediate
-    // calculations is stored in m, we can adjust the precision of m to only accomodate the result of x - q*ln(2)
-    // This is due to the fact that wrapping around for m is switched on by default, and the extra bits that result
-    // due to the intermediate calculations can be safely ignored by merely ignoring bits that go beyond the bounds
-    // of the MSB. If, however, m has saturation turned on, the output will be incorrect. Hence, the user is advised
-    // to use AC_WRAP (the default) for the saturation mode of m.
+    // Even though there are intermediate calculations being carried out and the result of those
+    // intermediate calculations is stored in m, we can adjust the precision of m to only accomodate the
+    // result of x - q*ln(2). This is due to the fact that wrapping around for m is switched on by
+    // default, and the extra bits that result due to the intermediate calculations can be safely ignored
+    // by merely ignoring bits that go beyond the bounds of the MSB. If, however, m has saturation turned
+    // on, the output will be incorrect. Hence, the user is advised to use AC_WRAP (the default) for the
+    // saturation mode of m.
+    
     // M = x - Q*ln(2);
     ac_fixed<MW + QWE + 1, 1, true> m = ln2_function<MW+QWE>();
     m *= -q;
@@ -583,7 +805,7 @@ namespace ac_math
     std::cout << "m = " << m << std::endl;
     std::cout << "zc = " << zc << std::endl;
     std::cout << "zs = " << zs << std::endl;
-    std::cout << "x*inv_ln2 = " << x *inv_ln2 << std::endl;
+    std::cout << "x*inv_ln2 = " << x*inv_ln2 << std::endl;
     std::cout << "q_int.type_name() = " << q_int.type_name() << std::endl;
     std::cout << "q.type_name() = " << q.type_name() << std::endl;
     std::cout << "zc.type_name() = " << zc.type_name() << std::endl;
@@ -592,8 +814,8 @@ namespace ac_math
 
   }
 
-  // Example range-reduction algorithm which invokes the ac_exp_rr
-  // routine.
+  // The result is expected to have a range which accomodates all
+  // resulting values exp2(x) for inputs x.
   template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
             int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
   void ac_exp2_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
@@ -631,6 +853,221 @@ namespace ac_math
     const int zs_I = zc_I + x_int_max_ls;
     ac_fixed<zs_W, zs_I, false> zs = ((ac_fixed<zs_W, zs_I, false>)zc) << x_int;
     z = zs;
+  }
+
+  // In order to fully leverage the increased range provided by floating point types, the
+  // floating point implementations for the cordic exponential cordic functions, i.e. ac_exp_cordic and
+  // ac_exp2_cordic, operate differently than their fixed point counterparts. Both of them convert the
+  // floating point input to an intermediate fixed point input, the fractional part of which is passed to
+  // ac_exp2_rr function. The output corresponding to the fractional part is then de-normalized to produce
+  // the final output.
+  //
+  // The floating point ac_exp_cordic function also multiplies the input with 1/ln(2) before it is
+  // normalized and passed to ac_exp2_rr, so as to utilize the change-of-base property,
+  // i.e. exp(x) = exp2(x/ln(2)). The fixed point version does not do that.
+  //
+  // Since the only difference between ac_exp2_cordic and ac_exp_cordic is the above multiplication, the
+  // core code for both can be merged into a single generic function ac_exp_float_ which switches between
+  // multiplying and not multiplying with 1/ln(2) based on the "base" enum.
+
+  template <enum AcLogRR::base BASE,
+            bool OR_TF, // Override default fractional bitwidth for temp variables?
+            int TF_, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ, // Rounding mode allocated for temporary variables.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_exp_float_(const ac_float<AW,AI,AE,AQ> &x, ac_float<ZW,ZI,ZE,ZQ> &z)
+  {
+    const int z_exp_min = 1 << (ZE - 1);
+    const int TI = ac::nbits<z_exp_min + AC_MAX(ZI - 1, ZW - ZI)>::val + 1;
+    // If OR_TF is set to true, fractional bitwidth used in temp variables is set to TF_.
+    const int TF = OR_TF ? TF_ : ZW - ZI;
+    
+    // If TF < 1, it'll cause an issue with bit-slicing operations further down the line.
+    // If TF > 44, (TF + 1) > 45, which will cause a compiler error further down the line, in the
+    // shift_dist function.
+    static_assert(TF >= 1 && TF <= 44, "TF must be a positive integer and lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions.");
+    
+    ac_fixed<AW, AI, true> x_mant = x.mantissa();
+    ac_int<AE, true> x_exp = x.exp();
+    
+    ac_fixed<TF + TI, TI, true, TQ, AC_SAT> input_to_exp2_fxpt;
+    if (BASE == AcLogRR::BASE_2) {
+      // Convert ac_float to ac_fixed variable, through the following left-shift operation:
+      // mantissa << exp. The precision of input_to_exp2_fxpt is such that it will saturate a little
+      // above the input which would cause the floating point output to saturate if we were using an
+      // accurate math function to calculate the exp2 output.
+      ac_math::ac_shift_left(x_mant, x_exp.to_int(), input_to_exp2_fxpt);
+    } else {
+      // This step utilizes almost the same left-shifting operation as the one for base 2 exponentials,
+      // except the input mantissa is also multiplied by 1/ln(2).
+      ac_fixed<TF + 1, 1, false> inv_ln2 = inv_ln2_function<TF + 1>();
+      ac_math::ac_shift_left(x_mant*inv_ln2, x_exp.to_int(), input_to_exp2_fxpt);
+    }
+    
+    ac_fixed<TF, 0, false> input_to_exp2_fxpt_frac;
+    input_to_exp2_fxpt_frac.set_slc(0, input_to_exp2_fxpt.template slc<TF>(0));
+    ac_fixed<TF + 1, 1, false, TQ> output_to_fxpt_frac;
+    ac_exp2_rr(input_to_exp2_fxpt_frac, output_to_fxpt_frac);
+    
+    ac_int<TI, true> input_to_exp2_fxpt_int = input_to_exp2_fxpt.to_int();
+    ac_float<ZW, ZI, ZE, ZQ> z_temp(output_to_fxpt_frac, input_to_exp2_fxpt_int, true);
+    
+    z = z_temp;
+    
+    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    std::cout << "x = " << x << std::endl;
+    std::cout << "input_to_exp2_fxpt.type_name() : " << input_to_exp2_fxpt.type_name() << std::endl;
+    std::cout << "input_to_exp2_fxpt = " << input_to_exp2_fxpt << std::endl;
+    std::cout << "input_to_exp2_fxpt_frac = " << input_to_exp2_fxpt_frac << std::endl;
+    std::cout << "input_to_exp2_fxpt_int = " << input_to_exp2_fxpt_int << std::endl;
+    std::cout << "output_to_fxpt_frac = " << output_to_fxpt_frac << std::endl;
+    std::cout << "z = " << z << std::endl;
+    #endif
+  }
+
+  // The result is expected to have a range which accomodates all resulting values exp(x) for inputs x.
+  //
+  // ac_exp_cordic for ac_float types is a wrapper, the heavy lifting is done by ac_exp_float_, 
+  // ac_exp2_rr and all the other functions called by ac_exp2_rr.
+  
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_exp_cordic(const ac_float<AW,AI,AE,AQ> &x, ac_float<ZW,ZI,ZE,ZQ> &z)
+  {
+    // Reuse the BASE_E enum from the AcLogRR struct, to switch to the base e exponential.
+    ac_exp_float_<AcLogRR::BASE_E, OR_TF, TF_, TQ>(x, z);
+  }
+
+  // The result is expected to have a range which accomodates all resulting values exp2(x) for inputs x.
+  //
+  // ac_exp2_cordic for ac_float types is a wrapper, the heavy lifting is done by ac_exp_float_, 
+  // ac_exp2_rr and all the other functions called by ac_exp2_rr.
+  
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_exp2_cordic(const ac_float<AW,AI,AE,AQ> &x, ac_float<ZW,ZI,ZE,ZQ> &z)
+  {
+    // Reuse the BASE_E enum from the AcLogRR struct, to switch to the base 2 exponential.
+    ac_exp_float_<AcLogRR::BASE_2, OR_TF, TF_, TQ>(x, z);
+  }
+
+  // The result is expected to have a range which accomodates all resulting values exp(x) for inputs x.
+  //
+  // The ac_std_float implementation for ac_exp_cordic uses temporary ac_float variables which are in
+  // turn passed to the ac_float implementation.
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AE, int ZW, int ZE>
+  void ac_exp_cordic(const ac_std_float<AW, AE> &x, ac_std_float<ZW, ZE> &z)
+  {
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_exp_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    ac_std_float<ZW, ZE> z_temp(z_ac_fl); // Convert output ac_float to ac_std_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the
+    // exp library in math.h.
+    if (x.isnan()) {
+      z_temp = z.nan();
+      z_temp.set_signbit(x.signbit());
+    }
+    #endif
+    
+    z = z_temp;
+  }
+
+  // The result is expected to have a range which accomodates all resulting values exp2(x) for inputs x.
+  //
+  // The ac_std_float implementation for ac_exp2_cordic uses temporary ac_float variables which are in
+  // turn passed to the ac_float implementation.
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AE, int ZW, int ZE>
+  void ac_exp2_cordic(const ac_std_float<AW, AE> &x, ac_std_float<ZW, ZE> &z)
+  {
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_exp2_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    ac_std_float<ZW, ZE> z_temp(z_ac_fl); // Convert output ac_float to ac_std_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the
+    // exp2 library in math.h.
+    if (x.isnan()) {
+      z_temp = z.nan();
+      z_temp.set_signbit(x.signbit());
+    }
+    #endif
+    
+    z = z_temp;
+  }
+
+  // The result is expected to have a range which accomodates all resulting values exp(x) for inputs x.
+  //
+  // The ac_ieee_float implementation for ac_exp_cordic uses temporary ac_float variables which are in
+  // turn passed to the ac_float implementation.
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            ac_ieee_float_format Format, ac_ieee_float_format outFormat>
+  void ac_exp_cordic(const ac_ieee_float<Format> &x, ac_ieee_float<outFormat> &z)
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int ZW = T_out::width;
+    const int ZE = T_out::e_width;
+  
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_exp_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    T_out z_temp(z_ac_fl); // Convert output ac_float to ac_ieee_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the
+    // exp2 library in math.h.
+    if (x.isnan()) {
+      z_temp = z.nan();
+      z_temp.set_signbit(x.signbit());
+    }
+    #endif
+    
+    z = z_temp;
+  }
+
+  // The result is expected to have a range which accomodates all resulting values exp2(x) for inputs x.
+  //
+  // The ac_ieee_float implementation for ac_exp2_cordic uses temporary ac_float variables which are in
+  // turn passed to the ac_float implementation.
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            ac_ieee_float_format Format, ac_ieee_float_format outFormat>
+  void ac_exp2_cordic(const ac_ieee_float<Format> &x, ac_ieee_float<outFormat> &z)
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int ZW = T_out::width;
+    const int ZE = T_out::e_width;
+    
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_exp2_cordic<OR_TF, TF_, TQ>(x.to_ac_float(), z_ac_fl); // Call ac_float version.
+    T_out z_temp(z_ac_fl); // Convert output ac_float to ac_ieee_float.
+    
+    #ifdef AC_HCORDIC_NAN_SUPPORTED
+    // If the input is +/-nan, the output will be +/-nan. This mirrors the behavior of the
+    // exp2 library in math.h.
+    if (x.isnan()) {
+      z_temp = z.nan();
+      z_temp.set_signbit(x.signbit());
+    }
+    #endif
+    
+    z = z_temp;
   }
 
   // This implementation tries to be as general as possible without
@@ -698,6 +1135,128 @@ namespace ac_math
     #endif
   }
 
+  // ac_float implementation of the ac_pow_cordic() function.
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int BW, int BI, int BE, ac_q_mode BQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_pow_cordic(const ac_float<AW, AI, AE, AQ> &a,
+                     const ac_float<BW, BI, BE, BQ> &b,
+                     ac_float<ZW, ZI, ZE, ZQ> &z)
+  {
+    #ifdef ASSERT_ON_INVALID_INPUT
+    AC_ASSERT(a >= 0, "Negative base input not supported.");
+    #endif
+    
+    ac_fixed<AW - 1, AI - 1, false> a_mant = a.mantissa();
+    ac_int<AE, true> a_exp = a.exp();
+
+    ac_fixed<AW - 1, 0, false> a_norm;
+    int a_norm_exp = ac_normalize(a_mant, a_norm);
+    
+    // Both the a_norm variable and the log2_a variable eventually have to be passed to ac_log2_rr,
+    // and we might need to reduce the fractional variables in both to reduce the chances of the
+    // compiler throwing an error in the shift_dist function. To do so, use the "OR_TF" and "TF_"
+    // template parameters to override the default number of fractional bits assigned to both.
+    
+    const int a_norm_2_f_bits = OR_TF ? TF_ : AW - 1;
+    
+    static_assert(a_norm_2_f_bits <= 44, "Number of fractional bits in a_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    
+    ac_fixed<a_norm_2_f_bits, 0, false, TQ> a_norm_2 = a_norm;
+    
+    const int log2_a_I = ac::nbits<AC_MAX(AI - 1, AW - AI - 1) + (1 << (AE - 1)) + 1>::val + 1;
+    const int log2_a_F = OR_TF ? TF_ : ZW;
+    
+    static_assert(log2_a_F <= 44, "Number of fractional bits in log2_a must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    
+    ac_fixed<log2_a_F + 2, 2, true> log2_a_norm;
+    // Range reduced to 0.5 <= a_norm_2 < 1, -1 <= log2_a_norm < 1
+    ac_log2_rr(a_norm_2, log2_a_norm);
+    ac_fixed<log2_a_I, log2_a_I, true> offset = a_exp + a_norm_exp;
+    ac_fixed<log2_a_I + log2_a_F, log2_a_I, true> log2_a = log2_a_norm + offset;
+    
+    const int z_exp_min = 1 << (ZE - 1);
+    const int TI = ac::nbits<z_exp_min + AC_MAX(ZI - 1, ZW - ZI)>::val + 1;
+    
+    const int TF = OR_TF ? TF_ : ZW - ZI;
+    
+    // If TF < 1, it'll cause an issue with bit-slicing operations further down the line.
+    // If TF > 44, (TF + 1) > 45, which will cause a compiler error further down the line, in the
+    // shift_dist function.
+    static_assert(TF >= 1 && TF <= 44, "TF must be a positive integer and lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions.");
+    
+    ac_fixed<BW, BI, true> b_mant = b.mantissa();
+    ac_int<BE, true> b_exp = b.exp();
+    
+    ac_fixed<TF + TI, TI, true, TQ, AC_SAT> input_to_exp2_fxpt;
+    // Multiply the mantissa of b with log2(a) and then convert the product to an ac_fixed variable
+    // through the following left-shift operation: mantissa << exp.
+    // The precision of input_to_exp2_fxpt is such that it will saturate a little
+    // above the input which would cause the floating point output to saturate if we were using an
+    // accurate math function to calculate the exp2 output.
+    ac_math::ac_shift_left(b_mant*log2_a, b_exp.to_int(), input_to_exp2_fxpt);
+    
+    ac_fixed<TF, 0, false> input_to_exp2_fxpt_frac;
+    input_to_exp2_fxpt_frac.set_slc(0, input_to_exp2_fxpt.template slc<TF>(0));
+    ac_fixed<TF + 1, 1, false, TQ> output_to_fxpt_frac;
+    ac_exp2_rr(input_to_exp2_fxpt_frac, output_to_fxpt_frac);
+    
+    ac_int<TI, true> input_to_exp2_fxpt_int = input_to_exp2_fxpt.to_int();
+    ac_float<ZW, ZI, ZE, ZQ> z_temp(output_to_fxpt_frac, input_to_exp2_fxpt_int, true);
+    
+    if (a == 1) {
+      z = 1;
+    } else if (a == 0) {
+      z = (b == 0) ? 1 : 0;
+    } else {
+      z = z_temp;
+    }
+    
+    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+    std::cout << "a = " << a << std::endl;
+    std::cout << "log2_a = " << log2_a << std::endl;
+    std::cout << "b = " << b << std::endl;
+    std::cout << "input_to_exp2_fxpt = " << input_to_exp2_fxpt << std::endl;
+    std::cout << "z_temp = " << z_temp << std::endl;
+    std::cout << "z = " << z << std::endl;
+    #endif
+  }
+
+  // ac_std_float implementation of the ac_pow_cordic() function.
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AE, int BW, int BE, int ZW, int ZE>
+  void ac_pow_cordic(const ac_std_float<AW, AE> &a,
+                     const ac_std_float<BW, BE> &b,
+                     ac_std_float<ZW, ZE> &z)
+  {
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_pow_cordic<OR_TF, TF_, TQ>(a.to_ac_float(), b.to_ac_float(), z_ac_fl);
+    ac_std_float<ZW, ZE> z_temp(z_ac_fl); // Convert output ac_float to ac_std_float.
+    z = z_temp;
+  }
+
+  // ac_ieee_float implementation of the ac_pow_cordic() function.
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            ac_ieee_float_format aFormat, ac_ieee_float_format bFormat, ac_ieee_float_format outFormat>
+  void ac_pow_cordic(const ac_ieee_float<aFormat> &a,
+                     const ac_ieee_float<bFormat> &b,
+                     ac_ieee_float<outFormat> &z)
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int ZW = T_out::width;
+    const int ZE = T_out::e_width;
+    ac_float<ZW - ZE + 1, 2, ZE> z_ac_fl; // Equivalent ac_float representation for output.
+    ac_pow_cordic<OR_TF, TF_, TQ>(a.to_ac_float(), b.to_ac_float(), z_ac_fl);
+    T_out z_temp(z_ac_fl); // Convert output ac_float to ac_ieee_float.
+    z = z_temp;
+  }
 }
 
 #endif // _INCLUDED_AC_HCORDIC_H_

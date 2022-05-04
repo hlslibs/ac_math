@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Mon Jan 31 11:05:01 PST 2022                        *
+ *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.2                                               *
+ *  Release Build   : 3.4.3                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -28,11 +28,22 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+//******************************************************************************************
+// Description:
+// Usage:
+// Notes:
+// Revision History:
+//    3.4.3  - dgb - Updated compiler checks to work with MS VS 2019
+//******************************************************************************************
+
 #ifndef _INCLUDED_AC_LEADING_H_
 #define _INCLUDED_AC_LEADING_H_
 
-#if !(__cplusplus >= 201103L)
+#if (defined(__GNUC__) && (__cplusplus < 201103L))
 #error Please use C++11 or a later standard for compilation.
+#endif
+#if (defined(_MSC_VER) && (_MSC_VER < 1920) && !defined(__EDG__))
+#error Please use Microsoft VS 2019 or a later standard for compilation.
 #endif
 
 #include <ac_int.h>
