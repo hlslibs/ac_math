@@ -188,7 +188,7 @@ namespace ac_math
     T_out L_imd_1D[L_IMD_SIZE];
     // Define type for the intermediate variables
     // Add an extra bit to W and I for intermediate variable type if the output is unsigned, and make sure that i_s_t is signed.
-    typedef class ac_fixed<outW + delta_w, outI + delta_i, true, imd_Q, imd_O> i_s_t;
+    typedef typename ac_fixed<outW + delta_w, outI + delta_i, true, imd_Q, imd_O> i_s_t;
     // Unsigned versions of i_s_t and T_out
     typedef ac_fixed<outW, outI, false, outQ, outO> T_out_u;
     typedef ac_fixed<i_s_t::width, i_s_t::i_width, false, i_s_t::q_mode, i_s_t::o_mode> i_s_t_u;
@@ -354,7 +354,7 @@ namespace ac_math
     typedef ac_int<ac::nbits<L_IMD_SIZE - 1>::val, false> t_1D;
     T_out L_imd_1D[L_IMD_SIZE];
     // Define type for the intermediate variables
-    typedef class ac_float<outW + delta_w, outI + delta_i, outE + delta_e, imd_Q> T_imd;
+    typedef typename ac_float<outW + delta_w, outI + delta_i, outE + delta_e, imd_Q> T_imd;
 
     ARRAY_AC_FLOAT_L_COL:
     for (index_type j = 0; j < M; j++) {
