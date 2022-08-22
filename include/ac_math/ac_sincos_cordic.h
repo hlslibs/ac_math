@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
+ *  Release Date    : Wed Aug 17 19:00:33 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.3                                               *
+ *  Release Build   : 3.4.4                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -84,6 +84,9 @@
 #endif
 
 #include <ac_fixed.h>
+#include <ac_float.h>
+#include <ac_std_float.h>
+#include <ac_math/ac_shift.h>
 
 // The computation of the K table using double arithmetic
 //  limits what practical TE could be chosen.
@@ -261,7 +264,7 @@ namespace ac_math
   }
 
   //============================================================================
-  // Function:  C*sin(a*PI), C*cos(a*PI)
+  // Function:  C*sin(a*PI), C*cos(a*PI) (for ac_fixed)
   //
   // Description:
   //     -  Inputs:
@@ -347,7 +350,7 @@ namespace ac_math
   template< int AW, int AI, ac_q_mode AQ, ac_o_mode AO,
             int OW, int OI, ac_q_mode OQ, ac_o_mode OO >
   void ac_sin_cordic(
-    ac_fixed<AW,AI,true,AQ,AO> angle_over_pi,
+    const ac_fixed<AW,AI,true,AQ,AO> angle_over_pi,
     ac_fixed<OW,OI,true,OQ,OO> &sin
   )
   {
@@ -359,13 +362,153 @@ namespace ac_math
   template< int AW, int AI, ac_q_mode AQ, ac_o_mode AO,
             int OW, int OI, ac_q_mode OQ, ac_o_mode OO >
   void ac_cos_cordic(
-    ac_fixed<AW,AI,true,AQ,AO> angle_over_pi,
+    const ac_fixed<AW,AI,true,AQ,AO> angle_over_pi,
     ac_fixed<OW,OI,true,OQ,OO> &cos
   )
   {
     ac_fixed<OW,OI,true,OQ,OO> scale = 1.0;
     ac_fixed<OW,OI,true,OQ,OO> sin;
     ac_sincos_cordic(angle_over_pi, scale, sin, cos);
+  }
+
+  //============================================================================
+  // Function:  C*sin(a*PI), C*cos(a*PI) (for ac_float)
+  //
+  // Description:
+  //     -  Inputs:
+  //          - angle scaled by PI,
+  //          - scaling factor C
+  //     -  Outputs:
+  //          - sin
+  //          - cos
+  //
+  //     Angle is expected as radians scaled by 1/PI
+  //     This assumption makes it easy to determine what quadrant
+  //     the angle is in. Also it saves a multiplication in
+  //     a typical call.  For instance instead of 2*PI*i/n,
+  //     we call it with 2*i/n.
+  //-------------------------------------------------------------------------
+
+  template< int AW, int AI, int AE, ac_q_mode AQ,
+            int OW, int OI, int OE, ac_q_mode OQ >
+  void ac_sin_cordic(
+    const ac_float<AW,AI,AE,AQ> &angle_over_pi,
+    ac_float<OW,OI,OE,OQ> &sin
+  )
+  {
+    ac_fixed<AW, AI, true> mantVal = angle_over_pi.mantissa();
+    int exp_val = angle_over_pi.exp().to_int();
+    // Intermediate ac_fixed variables to store the value of inputs and outputs
+    // and enable compatibility with ac_fixed implementation.
+    ac_fixed<40, 15, true, AC_RND> angle_input_fi;
+    // Use ac_shift_left instead of "<<" operator to ensure rounding.
+    ac_math::ac_shift_left(mantVal, exp_val, angle_input_fi);
+    ac_fixed<35, 7, true> sin_output_fi;
+    ac_sin_cordic(angle_input_fi, sin_output_fi);
+    // Convert ac_fixed output to ac_float by using a constructor.
+    ac_float<OW,OI,OE,OQ> output_temp(sin_output_fi);
+
+    sin = output_temp;
+  }
+
+  template< int AW, int AI, int AE, ac_q_mode AQ,
+            int OW, int OI, int OE, ac_q_mode OQ >
+  void ac_cos_cordic(
+    const ac_float<AW,AI,AE,AQ> &angle_over_pi,
+    ac_float<OW,OI,OE,OQ> &cos
+  )
+  {
+    // Input is always assumed to be positive -> sign bit is unnecessary.
+    ac_fixed<AW, AI, true> mantVal = angle_over_pi.mantissa();
+    int exp_val = angle_over_pi.exp().to_int();
+    // Intermediate ac_fixed variables to store the value of inputs and outputs
+    // and enable compatibility with ac_fixed implementation.
+    ac_fixed<40, 15, true, AC_RND> angle_input_fi;
+    // Use ac_shift_left instead of "<<" operator to ensure rounding.
+    ac_math::ac_shift_left(mantVal, exp_val, angle_input_fi);
+    ac_fixed<35, 7, true> cos_output_fi;
+    ac_cos_cordic(angle_input_fi, cos_output_fi);
+    // Convert ac_fixed output to ac_float by using a constructor.
+    ac_float<OW,OI,OE,OQ> output_temp(cos_output_fi);
+
+    cos = output_temp;
+  }
+
+
+//=========================================================================
+// Function: ac_sin_cordic (for ac_std_float)
+//
+//-------------------------------------------------------------------------
+
+  template <int W, int E, int outW, int outE>
+  void ac_sin_cordic(
+    const ac_std_float<W, E> &angle_over_pi,
+    ac_std_float<outW, outE> &sin
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> sin_ac_fl; // Equivalent ac_float representation for output.
+    ac_sin_cordic(angle_over_pi.to_ac_float(), sin_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(sin_ac_fl); // Convert output ac_float to ac_std_float.
+    sin = output_temp;
+  }
+
+//=========================================================================
+// Function: ac_cos_cordic (for ac_std_float)
+//
+//-------------------------------------------------------------------------
+
+  template <int W, int E, int outW, int outE>
+  void ac_cos_cordic(
+    const ac_std_float<W, E> &angle_over_pi,
+    ac_std_float<outW, outE> &cos
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> cos_ac_fl; // Equivalent ac_float representation for output.
+    ac_cos_cordic(angle_over_pi.to_ac_float(), cos_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(cos_ac_fl); // Convert output ac_float to ac_std_float.
+    cos = output_temp;
+  }
+
+//=========================================================================
+// Function: ac_sin_cordic (for ac_ieee_float)
+//
+//-------------------------------------------------------------------------
+
+  template<ac_ieee_float_format Format,
+           ac_ieee_float_format outFormat>
+  void ac_sin_cordic(
+    const ac_ieee_float<Format> &angle_over_pi,
+    ac_ieee_float<outFormat> &sin
+  )
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int outW = T_out::width;
+    const int outE = T_out::e_width;
+    ac_float<outW - outE + 1, 2, outE> sin_ac_fl; // Equivalent ac_float representation for output.
+    ac_sin_cordic(angle_over_pi.to_ac_float(), sin_ac_fl); // Call ac_float version.
+    ac_ieee_float<outFormat> output_temp(sin_ac_fl); // Convert output ac_float to ac_ieee_float.
+    sin = output_temp;
+  }
+
+//=========================================================================
+// Function: ac_cos_cordic (for ac_ieee_float)
+//
+//-------------------------------------------------------------------------
+
+  template<ac_ieee_float_format Format,
+           ac_ieee_float_format outFormat>
+  void ac_cos_cordic(
+    const ac_ieee_float<Format> &angle_over_pi,
+    ac_ieee_float<outFormat> &cos
+  )
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int outW = T_out::width;
+    const int outE = T_out::e_width;
+    ac_float<outW - outE + 1, 2, outE> cos_ac_fl; // Equivalent ac_float representation for output.
+    ac_cos_cordic(angle_over_pi.to_ac_float(), cos_ac_fl); // Call ac_float version.
+    ac_ieee_float<outFormat> output_temp(cos_ac_fl); // Convert output ac_float to ac_ieee_float.
+    cos = output_temp;
   }
 
 } // namespace ac_math

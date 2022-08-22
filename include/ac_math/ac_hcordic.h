@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
+ *  Release Date    : Wed Aug 17 19:00:33 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.3                                               *
+ *  Release Build   : 3.4.4                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -40,19 +40,31 @@
 //
 //    #include <ac_math/ac_hcordic.h>
 //    using namespace ac_math;
-//
+//    
 //    typedef ac_fixed<16,  8, false, AC_RND, AC_SAT> input_type;
-//    typedef ac_fixed<32, 16,  true, AC_RND, AC_SAT> output_type;
-//
+//    typedef ac_fixed<32, 10,  true, AC_RND, AC_SAT> output_type;
+//    
+//    typedef ac_fixed<50,  8, false, AC_RND, AC_SAT> input_2_type;
+//    typedef ac_fixed<55, 10,  true, AC_RND, AC_SAT> output_2_type;
+//    
 //    #pragma hls_design top
 //    void project(
 //      const input_type &input,
-//      output_type &output
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
 //    )
 //    {
 //      ac_log2_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2 are so large
+//      // that they would trigger static_asserts in the code if used as-is, on
+//      // account of the default type widths for the temp. variables in
+//      // ac_log_. To avoid this, we override the default type widths
+//      // by setting the "OR_TF" template parameter to "true" and the "TF_"
+//      // parameter to 30. Refer to the documentation for more details.
+//      ac_log2_cordic<true, 30>(input_2, output_2);
 //    }
-//
+//    
 //    #ifndef __SYNTHESIS__
 //    #include <mc_scverify.h>
 //
@@ -60,7 +72,11 @@
 //    {
 //      input_type input = 2.5;
 //      output_type output;
-//      CCS_DESIGN(project)(input, output);
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
 //      CCS_RETURN (0);
 //    }
 //    #endif
@@ -71,6 +87,7 @@
 //    with a type that is not implemented will result in a compile error.
 //
 // Revision History:
+//    3.4.4  - [CAT-30998] Added comment examples, improved compiler warnings and input range.
 //    3.4.3  - dgb - Updated compiler checks to work with MS VS 2019
 //    3.4.2  - [CAT-28828] Added floating point support.
 //    2.0.10 - Official open-source release as part of the ac_math library.
@@ -347,6 +364,7 @@ namespace ac_math
                              XtraIters<ZW-ZI>::B2);
     
     const int LW = L + ac::nbits<L>::val;
+    
     typedef ac_fixed<LW,I+1,true> dp_t;
     dp_t xi = x;
     dp_t yi = y;
@@ -467,6 +485,9 @@ namespace ac_math
   };
 
   template <enum AcLogRR::base BASE,
+            bool OR_TF, // Override default fractional bitwidth for temp variables?
+            int TF_, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ, // Rounding mode allocated for x_norm_2 variable.
             int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
             int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
   void ac_log_(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
@@ -476,65 +497,178 @@ namespace ac_math
 
     ac_fixed<AW,0,false,AQ,AV> x_norm;
     int expret = ac_normalize(x, x_norm);
+    
+    // Both the x_norm variable and the zc variable eventually have to be passed to ac_ln_rr/ac_log2_rr,
+    // and we might need to reduce the fractional variables in both to reduce the chances of the
+    // compiler throwing an error in the shift_dist function. To do so, use the "OR_TF" and "TF_"
+    // template parameters to override the default number of fractional bits assigned to both.
+    const int x_norm_2_f_bits = OR_TF ? TF_ : AW;
+    
+    static_assert(x_norm_2_f_bits <= 44, "Number of fractional bits in x_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
+    
+    ac_fixed<x_norm_2_f_bits, 0, false, TQ> x_norm_2 = x_norm;
+    
+    const int zc_f_bits = OR_TF ? TF_ : ZW - ZI;
+    
+    static_assert(zc_f_bits <= 44, "Number of fractional bits in zc must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
 
     // Max shift-distance is S = max(AW-AI,AI).
     //   BASE_E: max-offset = S*ln(2)
     //   BASE_2: max-offset = S
 
     const int OFW = ac::nbits<AC_MAX(AW - AI, AI)>::val;
+    
+    // The intermediate variable in this case has to account for the fact that
+    // for inputs of unity, the magnitude of "zc" can slightly exceed that for
+    // "offset", with "zc" being negative. Hence, the addition of "zc" and "offset"
+    // results in a slightly negative value, which is enough to cause a highly
+    // undesirable output if the output type is unsigned.
+    // To take that into account, the intermediate variable storing the addition result
+    // is of a saturating type if the output type is unsigned, in order to saturate to 0
+    // when negative values are assigned to it.
+    const ac_o_mode z_inter_o_mode = ZS ? AC_WRAP : AC_SAT;
+    ac_fixed<ZW,ZI,ZS,ZQ,z_inter_o_mode> z_inter;
 
     if (BASE == AcLogRR::BASE_E) {
-      ac_fixed<ZW+1,1,true> zc;
+      ac_fixed<zc_f_bits+1,1,true> zc;
       // Range Reduced to: 0.5 <= x < 1, -.69 < z < 0
-      ac_ln_rr(x_norm, zc);
-      ac_fixed<ZW+1+OFW+1,OFW+1,true> offset;
-      offset = ln2_function<ZW+1>();
+      ac_ln_rr(x_norm_2, zc);
+      ac_fixed<zc_f_bits+1+OFW+1,OFW+1,true> offset = ln2_function<zc_f_bits+1>();
       offset *= expret;
-      // The intermediate variable in this case has to account for the fact that
-      // for inputs of unity, the magnitude of "zc" can slightly exceed that for
-      // "offset", with "zc" being negative. Hence, the addition of "zc" and "offset"
-      // results in a slightly negative value, which is enough to cause a highly
-      // undesirable output if the output type is unsigned.
-      // To take that into account, the intermediate variable storing the addition result
-      // is of a saturating type if the output type is unsigned, in order to saturate when
-      // encountering negative values.
-      const ac_o_mode z_inter_o_mode = ZS ? AC_WRAP : AC_SAT;
-      ac_fixed<ZW,ZI,ZS,ZQ,z_inter_o_mode> z_inter;
       z_inter = offset + zc;
-      z = z_inter;
+      
+      #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+      std::string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
+      std::cout << base_string << std::endl;
+      std::cout << "x = " << x << std::endl;
+      std::cout << "x_norm = " << x_norm << std::endl;
+      std::cout << "x_norm_2 = " << x_norm_2 << std::endl;
+      std::cout << "zc = " << zc << std::endl;
+      std::cout << "offset = " << offset << std::endl;
+      std::cout << "z_inter = " << z_inter << std::endl;
+      #endif
     }
     if (BASE == AcLogRR::BASE_2) {
-      ac_fixed<ZW+2,2,true> zc;
+      ac_fixed<zc_f_bits+2,2,true> zc;
       // Range reduced to 0.5 <= x < 1, -1 <= z < 1
-      ac_log2_rr(x_norm, zc);
-      ac_fixed<OFW+1,OFW+1,true> offset;
-      offset = expret;
-      z = offset + zc;
+      ac_log2_rr(x_norm_2, zc);
+      ac_fixed<OFW+1,OFW+1,true> offset = expret;
+      z_inter = offset + zc;
+      
+      #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
+      std::string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
+      std::cout << base_string << std::endl;
+      std::cout << "x = " << x << std::endl;
+      std::cout << "x_norm = " << x_norm << std::endl;
+      std::cout << "x_norm_2 = " << x_norm_2 << std::endl;
+      std::cout << "zc = " << zc << std::endl;
+      std::cout << "offset = " << offset << std::endl;
+      std::cout << "z_inter = " << z_inter << std::endl;
+      #endif
     }
+    
+    z = z_inter;
 
     #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
-    std::string base_string = (BASE == AcLogRR::BASE_E) ? "Base e logarithm" : "Base 2 logarithm";
-    std::cout << base_string << std::endl;
-    std::cout << "x = " << x << std::endl;
-    std::cout << "x_norm = " << x_norm << std::endl;
-    std::cout << "expret = " << expret << std::endl;
     std::cout << "z = " << z << std::endl;
     #endif
 
   }
 
-  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
-            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_log_cordic(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
-  {
-    ac_log_<AcLogRR::BASE_E,AW,AI,AQ,AV,ZW,ZI,ZS,ZQ,ZV>(x, z);
-  }
+//=========================================================================
+// Function: ac_log2_cordic (for ac_fixed)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log2 function for
+//    ac_fixed datatypes.
+//
+//    This serves as a wrapper around the ac_log_ function for ac_fixed
+//    types, calling it with the AcLogRR::BASE_2 enum as a template
+//    parameter to select log2 computations.
+//
+// Usage:
+//    See example code at the beginning of this header file for usage.
+//
+//-------------------------------------------------------------------------
 
-  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable.
+            int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
             int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
   void ac_log2_cordic(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
   {
-    ac_log_<AcLogRR::BASE_2,AW,AI,AQ,AV,ZW,ZI,ZS,ZQ,ZV>(x, z);
+    ac_log_<AcLogRR::BASE_2,OR_TF,TF_,TQ,AW,AI,AQ,AV,ZW,ZI,ZS,ZQ,ZV>(x, z);
+  }
+
+//=========================================================================
+// Function: ac_log_cordic (for ac_fixed)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log function for
+//    ac_fixed datatypes.
+//
+//    This serves as a wrapper around the ac_log_ function for ac_fixed
+//    types, calling it with the AcLogRR::BASE_E enum as a template
+//    parameter to select loge computations.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_fixed<16,  8, false, AC_RND, AC_SAT> input_type;
+//    typedef ac_fixed<32, 10,  true, AC_RND, AC_SAT> output_type;
+//    
+//    typedef ac_fixed<50,  8, false, AC_RND, AC_SAT> input_2_type;
+//    typedef ac_fixed<55, 10,  true, AC_RND, AC_SAT> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_log_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2 are so large
+//      // that they would trigger static_asserts in the code if used as-is, on
+//      // account of the default type widths for the temp. variables in
+//      // ac_log_. To avoid this, we override the default type widths
+//      // by setting the "OR_TF" template parameter to "true" and the "TF_"
+//      // parameter to 30. Refer to the documentation for more details.
+//      ac_log_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input = 2.5;
+//      output_type output;
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable.
+            int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
+            int ZW, int ZI, bool ZS, ac_q_mode ZQ, ac_o_mode ZV>
+  void ac_log_cordic(const ac_fixed<AW,AI,false,AQ,AV> &x, ac_fixed<ZW,ZI,ZS,ZQ,ZV> &z)
+  {
+    ac_log_<AcLogRR::BASE_E,OR_TF,TF_,TQ,AW,AI,AQ,AV,ZW,ZI,ZS,ZQ,ZV>(x, z);
   }
 
   template <enum AcLogRR::base BASE,
@@ -565,14 +699,13 @@ namespace ac_math
     
     const int x_norm_2_f_bits = OR_TF ? TF_ : AW - 1;
     
-    static_assert(x_norm_2_f_bits <= 44, "Number of fractional bits in x_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    static_assert(x_norm_2_f_bits <= 44, "Number of fractional bits in x_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
     
-    // If the default value is overriden, the user might 
     ac_fixed<x_norm_2_f_bits, 0, false, TQ> x_norm_2 = x_norm;
     
-    const int zc_f_bits = OR_TF ? TF_ : ZW;
+    const int zc_f_bits = OR_TF ? TF_ : ZW - ZI;
     
-    static_assert(zc_f_bits <= 44, "Number of fractional bits in zc must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    static_assert(zc_f_bits <= 44, "Number of fractional bits in zc must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
     
     const int OFW = ac::nbits<AC_MAX(AI - 1, AW - AI - 1) + (1 << (AE - 1))>::val;
     
@@ -582,7 +715,7 @@ namespace ac_math
       ac_fixed<zc_f_bits + 1, 1, true> zc;
       // Range Reduced to: 0.5 <= x < 1, -.69 < z < 0
       ac_ln_rr(x_norm_2, zc);
-      ac_fixed<ZW + 1 + OFW + 1, OFW + 1, true> offset = ln2_function<ZW + 1>();
+      ac_fixed<zc_f_bits + 1 + OFW + 1, OFW + 1, true> offset = ln2_function<zc_f_bits + 1>();
       offset *= (x_exp + x_norm_exp);
       z_inter = ac_float<ZW, ZI, ZE, ZQ>(offset + zc);
     }
@@ -607,15 +740,65 @@ namespace ac_math
     #endif
   }
 
-  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
-            int TF_ = 32, // Template argument for fractional bitwidth to override with.
-            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
-            int AW, int AI, int AE, ac_q_mode AQ,
-            int ZW, int ZI, int ZE, ac_q_mode ZQ>
-  void ac_log_cordic(const ac_float<AW, AI, AE, AQ> &x, ac_float<ZW, ZI, ZE, ZQ> &z)
-  {
-    ac_log_<AcLogRR::BASE_E, OR_TF, TF_, TQ>(x, z);
-  }
+//=========================================================================
+// Function: ac_log2_cordic (for ac_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log2 function for
+//    ac_float datatypes.
+//
+//    This serves as a wrapper around the ac_log_ function for ac_float
+//    types, calling it with the AcLogRR::BASE_2 enum as a template
+//    parameter to select log2 computations.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_float<16, 2, 5, AC_RND> input_type;
+//    typedef ac_float<32, 2, 8, AC_RND> output_type;
+//    
+//    typedef ac_float<50, 2, 8, AC_RND> input_2_type;
+//    typedef ac_float<64, 2, 10, AC_RND> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_log2_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2's mantissa
+//      // are so large that they would trigger static_asserts in the code if
+//      // used as-is, on account of the default type widths for the temp.
+//      // variables in ac_log_. To avoid this, we override the default type
+//      // widths by setting the "OR_TF" template parameter to "true" and the
+//      // "TF_" parameter to 30. Refer to the documentation for more details.
+//      ac_log2_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input = 2.5;
+//      output_type output;
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
 
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
@@ -626,6 +809,131 @@ namespace ac_math
   {
     ac_log_<AcLogRR::BASE_2, OR_TF, TF_, TQ>(x, z);
   }
+
+//=========================================================================
+// Function: ac_log_cordic (for ac_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log function for
+//    ac_float datatypes.
+//
+//    This serves as a wrapper around the ac_log_ function for ac_float
+//    types, calling it with the AcLogRR::BASE_E enum as a template
+//    parameter to select log computations.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_float<16, 2, 5, AC_RND> input_type;
+//    typedef ac_float<32, 2, 8, AC_RND> output_type;
+//    
+//    typedef ac_float<50, 2, 8, AC_RND> input_2_type;
+//    typedef ac_float<64, 2, 10, AC_RND> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_log_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2's mantissa
+//      // are so large that they would trigger static_asserts in the code if
+//      // used as-is, on account of the default type widths for the temp.
+//      // variables in ac_log_. To avoid this, we override the default type
+//      // widths by setting the "OR_TF" template parameter to "true" and the
+//      // "TF_" parameter to 30. Refer to the documentation for more details.
+//      ac_log_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input = 2.5;
+//      output_type output;
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
+            int AW, int AI, int AE, ac_q_mode AQ,
+            int ZW, int ZI, int ZE, ac_q_mode ZQ>
+  void ac_log_cordic(const ac_float<AW, AI, AE, AQ> &x, ac_float<ZW, ZI, ZE, ZQ> &z)
+  {
+    ac_log_<AcLogRR::BASE_E, OR_TF, TF_, TQ>(x, z);
+  }
+
+//=========================================================================
+// Function: ac_log_cordic (for ac_std_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log function for
+//    ac_std_float datatypes.
+//
+// Usage:
+//    A sample testbench and its implementation look like this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//    
+//    typedef ac_std_float<64, 11> input_2_type;
+//    typedef ac_std_float<64, 11> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_log_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2's mantissa
+//      // are so large that they would trigger static_asserts in the code if
+//      // used as-is, on account of the default type widths for the temp.
+//      // variables in ac_log_. To avoid this, we override the default type
+//      // widths by setting the "OR_TF" template parameter to "true" and the
+//      // "TF_" parameter to 30. Refer to the documentation for more details.
+//      ac_log_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
   
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
@@ -652,7 +960,62 @@ namespace ac_math
     
     z = z_temp;
   }
-  
+
+//=========================================================================
+// Function: ac_log2_cordic (for ac_std_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log2 function for
+//    ac_std_float datatypes.
+//
+// Usage:
+//    A sample testbench and its implementation look like this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//    
+//    typedef ac_std_float<64, 11> input_2_type;
+//    typedef ac_std_float<64, 11> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_log2_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2's mantissa
+//      // are so large that they would trigger static_asserts in the code if
+//      // used as-is, on account of the default type widths for the temp.
+//      // variables in ac_log_. To avoid this, we override the default type
+//      // widths by setting the "OR_TF" template parameter to "true" and the
+//      // "TF_" parameter to 30. Refer to the documentation for more details.
+//      ac_log2_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
             ac_q_mode TQ = AC_TRN, // Rounding mode allocated for x_norm_2 variable in ac_log_.
@@ -678,6 +1041,61 @@ namespace ac_math
     
     z = z_temp;
   }
+
+//=========================================================================
+// Function: ac_log_cordic (for ac_ieee_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log function for
+//    ac_ieee_float datatypes.
+//
+// Usage:
+//    A sample testbench and its implementation look like this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_ieee_float<binary32> input_type;
+//    typedef ac_ieee_float<binary32> output_type;
+//    
+//    typedef ac_ieee_float<binary64> input_2_type;
+//    typedef ac_ieee_float<binary64> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_log_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2's mantissa
+//      // are so large that they would trigger static_asserts in the code if
+//      // used as-is, on account of the default type widths for the temp.
+//      // variables in ac_log_. To avoid this, we override the default type
+//      // widths by setting the "OR_TF" template parameter to "true" and the
+//      // "TF_" parameter to 30. Refer to the documentation for more details.
+//      ac_log_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
   
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
@@ -706,6 +1124,61 @@ namespace ac_math
     
     z = z_temp;
   }
+
+//=========================================================================
+// Function: ac_log2_cordic (for ac_ieee_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable log2 function for
+//    ac_ieee_float datatypes.
+//
+// Usage:
+//    A sample testbench and its implementation look like this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_ieee_float<binary32> input_type;
+//    typedef ac_ieee_float<binary32> output_type;
+//    
+//    typedef ac_ieee_float<binary64> input_2_type;
+//    typedef ac_ieee_float<binary64> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_log2_cordic(input, output);
+//      // The bitwidth of input_2 and fractional width of output_2's mantissa
+//      // are so large that they would trigger static_asserts in the code if
+//      // used as-is, on account of the default type widths for the temp.
+//      // variables in ac_log_. To avoid this, we override the default type
+//      // widths by setting the "OR_TF" template parameter to "true" and the
+//      // "TF_" parameter to 30. Refer to the documentation for more details.
+//      ac_log2_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
   
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
@@ -735,132 +1208,191 @@ namespace ac_math
     z = z_temp;
   }
 
-  // The result is expected to have a range which accomodates all
-  // resulting values exp(x) for inputs x.
-  template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
+//=========================================================================
+// Function: ac_exp2_cordic (for ac_fixed)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp2 function for
+//    ac_fixed datatypes.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_fixed<16,  8, true, AC_RND, AC_SAT> input_type;
+//    typedef ac_fixed<32, 16, false, AC_RND, AC_SAT> output_type;
+//    
+//    // Input fractional bits must not exceed 45.
+//    typedef ac_fixed<55, 10, true, AC_RND, AC_SAT> input_2_type;
+//    typedef ac_fixed<65, 20, false, AC_RND, AC_SAT> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp2_cordic(input, output);
+//      // output_2 has a large number of fractional bits, so large that
+//      // it would trigger a static_assert in the code if used as-is, on
+//      // account of the default fractional width for a temp. variable in
+//      // ac_exp2_cordic. To avoid this, we override the default width
+//      // by setting the "OR_TF" template parameter to "true" and the "TF_"
+//      // parameter to 30. Refer to the documentation for more details.
+//      ac_exp2_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input = 2.5;
+//      output_type output;
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variable?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variable.
+            int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
+            int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
+  void ac_exp2_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
+  {    
+    // Split the input into integer (xI) and fractional (xF) parts.
+    // 2^(xI + xF) = (2^xI)*(2^xF)
+    // 2^xF is computed using ac_exp2_rr.
+    // Multiplying with 2^xI can be done merely by left-shifting.
+    
+    // If (AW - AI) > 45, we'll get a compiler error further down the line, in the shift_dist function.
+    static_assert(AW - AI <= 45, "Number of input fraction bits must not exceed 45.");
+
+    ac_fixed<AC_MAX(AW - AI, 1), 0, false> xF = 0.0;
+    
+    if (AW > AI) {
+      xF.set_slc(0, x.template slc<AC_MAX(AW - AI, 1)>(0));
+    }
+    
+    // If OR_TF is set to true, fractional bitwidth used in temp variables (EXP2_TF) is set to TF_.
+    // By default, however, EXP2_TF is set to the number of fractional bits in the output.
+    const int EXP2_TF = OR_TF ? TF_ : ZW - ZI;
+    
+    // If EXP2_TF > 44, (EXP2_TF + 1) > 45, which will cause a compiler error further down the line, in
+    // the shift_dist function.
+    static_assert(EXP2_TF <= 44, "EXP2_TF must be lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions. Refer to the documentation for more information.");
+    
+    // Caclculating 2^xF
+    ac_fixed<EXP2_TF + 1, 1, false, TQ> exp2_xF;
+    ac_exp2_rr(xF, exp2_xF);
+    
+    ac_fixed<ZW,ZI,false,ZQ,ZV> z_temp;
+    // Multiply (2^xF) with (2^xI) by left-shifting.
+    ac_math::ac_shift_left(exp2_xF, x.to_int(), z_temp);
+    
+    z = z_temp;
+  }
+
+//=========================================================================
+// Function: ac_exp_cordic (for ac_fixed)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp function for
+//    ac_fixed datatypes.
+//
+//    This function multiplies the input by 1/ln(2) and passes the product
+//    to ac_exp2_cordic. The exp2 output of this product is the exp output
+//    of the input, on account of the change of base property for exponentials.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_fixed<16,  8, true, AC_RND, AC_SAT> input_type;
+//    typedef ac_fixed<32, 16, false, AC_RND, AC_SAT> output_type;
+//    
+//    typedef ac_fixed<32, 16, true, AC_RND, AC_SAT> input_2_type;
+//    typedef ac_fixed<65, 20, false, AC_RND, AC_SAT> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp_cordic(input, output);
+//      // output_2 has a large number of fractional bits, so large that
+//      // it would trigger a static_assert in the code if used as-is, on
+//      // account of the default fractional width for temp. variables in
+//      // ac_exp2_cordic. To avoid this, we override the default width
+//      // by setting the "OR_TF" template parameter to "true" and the
+//      // "TF_" parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_exp_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input = 2.5;
+//      output_type output;
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
             int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
   void ac_exp_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
   {
-    // Range reduction: prescale x by 1/ln(2)
-    // Let R = trunc(1/ln(2), 2^-(AW - AI))
-    // Q = trunc(R*x)
-    // Then x = Q*ln(2) + M, where |M| < ln(2)
-    //
-    // exp(Q*ln(2) + M) = cosh(Q*ln(2) + M) + sinh(Q*ln(2) + M)
-    //                  = [exp(Q*ln(2) + M) + exp(-Q*ln(2) - M)]/2 +
-    //                    [exp(Q*ln(2) + M) - exp(-Q*ln(2) - M)]/2
-    //                  = [exp(M)exp(Q*ln(2) + exp(-M)*exp(-Q*ln(2))]/2 +
-    //                    [exp(M)exp(Q*ln(2) - exp(-M)*exp(-Q*ln(2))]/2
-    // Given exp(Q*ln(2)) = (exp(ln(2)))^Q = 2^Q
-    //                  = [2^Q*exp(M) + 2^-Q*exp(-M)]/2 + [2^Q*exp(M) - 2^-Q*exp(-M)]/2
-    // Cancel terms 2^-Q*exp(M)/2 and -2^-Q*exp(-M)/2.
-    // Add 2^Q*exp(-M)/2 - 2^Q*exp(-M)/2 = 0
-    //                  = [2^Q*exp(M) + 2^Q*exp(-M)]/2 + [2^Q*exp(M) - 2^Q*exp(-M)]/2
-    //                  = 2^Q[cosh(M) + sinh(M)]
-    //
-    // and exp(x) = 2^Q exp(M), |M| < 0.69
-
-    // Output should be at least wide enough to represent exp(2^(AI-AS)), i.e.,
-    //  log2(exp(2^(AI-AS)))
-    //  = 2^(AI-AS)*log2(exp(1))
-
-    // There is one corner case where one extra bit is required for QW. That occurs when
-    // AI = 1 and the input is signed. The equation for QWE takes that corner case into account.
-    const int QWE = (int)(1.4427*(1 << AC_MAX(AI-AS, 0))) + ((AI == 1) && AS ? 1 : 0);
-    const int QW = ac::nbits<QWE>::val;
-    ac_fixed<ZW-ZI,1,false> inv_ln2 = inv_ln2_function<ZW-ZI>();
-    ac_fixed<QW + int(AS), QW + int(AS), AS> q = x*inv_ln2;
-    ac_int<QW + int(AS), AS> q_int = q.to_int();
-    const int MW = ZW-ZI > AW-AI ? ZW-ZI : AW-AI;
-
-    // Even though there are intermediate calculations being carried out and the result of those
-    // intermediate calculations is stored in m, we can adjust the precision of m to only accomodate the
-    // result of x - q*ln(2). This is due to the fact that wrapping around for m is switched on by
-    // default, and the extra bits that result due to the intermediate calculations can be safely ignored
-    // by merely ignoring bits that go beyond the bounds of the MSB. If, however, m has saturation turned
-    // on, the output will be incorrect. Hence, the user is advised to use AC_WRAP (the default) for the
-    // saturation mode of m.
+    // If OR_TF is set to true, fractional bitwidth used in temp variables (EXP_TF) is set to TF_.
+    // By default, however, EXP_TF is set to the number of fractional bits in the output.
+    const int EXP_TF = OR_TF ? TF_ : ZW - ZI;
     
-    // M = x - Q*ln(2);
-    ac_fixed<MW + QWE + 1, 1, true> m = ln2_function<MW+QWE>();
-    m *= -q;
-    m += x;
-    const int zc_I = 2;
-    const int zc_W = ZW - ZI + QWE + zc_I;
-    ac_fixed<zc_W, zc_I, false> zc;
-    ac_exp_rr(m, zc);
-    // Find the maximum amount of right/left-shifting that q_int can cause.
-    const int q_int_max_rs = AS ? 1 << (AC_MAX(QW, 0) - 1) : 0;
-    const int q_int_max_ls = QWE;
-    const int zs_W = zc_W + q_int_max_ls + q_int_max_rs;
-    const int zs_I = zc_I + q_int_max_ls;
-    ac_fixed<zs_W, zs_I, false> zs = ((ac_fixed<zs_W, zs_I, false>)zc) << q_int;
-
-    z = zs;
-
-    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
-    std::cout << "x = " << x << std::endl;
-    std::cout << "q_int = " << q_int << std::endl;
-    std::cout << "q = " << q << std::endl;
-    std::cout << "m = " << m << std::endl;
-    std::cout << "zc = " << zc << std::endl;
-    std::cout << "zs = " << zs << std::endl;
-    std::cout << "x*inv_ln2 = " << x*inv_ln2 << std::endl;
-    std::cout << "q_int.type_name() = " << q_int.type_name() << std::endl;
-    std::cout << "q.type_name() = " << q.type_name() << std::endl;
-    std::cout << "zc.type_name() = " << zc.type_name() << std::endl;
-    std::cout << "zs.type_name() = " << zs.type_name() << std::endl;
-    #endif
-
-  }
-
-  // The result is expected to have a range which accomodates all
-  // resulting values exp2(x) for inputs x.
-  template <int AW, int AI, bool AS, ac_q_mode AQ, ac_o_mode AV,
-            int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
-  void ac_exp2_cordic(const ac_fixed<AW,AI,AS,AQ,AV> &x, ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
-  {
-    // If exp(t) = 2^x, then t = x ln(2), i.e., we can compute 2^x
-    // using exp(x ln(2)).
-    //
-    // Recalling our original range reduction form, x = Qln(2) + M.
-    // We see that t = x ln(2) = (xI + xF) ln(2), where xI is the
-    // integer part of x and xF is the fractional part.
-    //
-    // Therefore t = xI ln(2) + xF ln(2), i.e., our Q value is
-    // directly obtained from xI. Similarly our M value is obtained
-    // from multiplying xF by ln(2), i.e., M = xF*ln(2).
-    const int QW = AC_MAX(AI-AS, 0);
-    const int QWE = (1<<QW) + 1;
-    // Find the maximum amount of right/left-shifting that x_int can cause.
-    const int x_int_max_rs = AS ? 1 << (AC_MAX(AI, 1) - 1) : 0;
-    const int x_int_max_ls = (1<<QW) - 1;
-    ac_int<AC_MAX(AI, 1 + int(AS)), AS> x_int = x.to_int();
-    // m stores the fractional part of the input. By default it is set to 0
-    ac_fixed<AC_MAX(AW - AI, 1), 0, false> m = 0;
-    // Only slice out the fractional part if the input has a fractional component.
-    // If the input doesn't have a fractional part, the default value of m, i.e. 0,
-    // is suitable to be used in later calculations.
-    if (AW > AI) {m.set_slc(0, x.template slc<AC_MAX(AW - AI, 1)>(0));}
-    const int MW = ZW-ZI > AW-AI ? ZW-ZI : AW-AI;
-    ac_fixed<MW + QWE, 0, false> mw = m; // Widen m if required.
-    mw *= ln2_function<MW+QWE>();
-    const int zc_I = 2;
-    const int zc_W = ZW - ZI + QWE + zc_I;
-    ac_fixed<zc_W, zc_I, false> zc;
-    ac_exp_rr(mw, zc);
-    const int zs_W = zc_W + x_int_max_ls + x_int_max_rs;
-    const int zs_I = zc_I + x_int_max_ls;
-    ac_fixed<zs_W, zs_I, false> zs = ((ac_fixed<zs_W, zs_I, false>)zc) << x_int;
-    z = zs;
+    // If EXP_TF > 44, (EXP_TF + 1) > 45, which will cause a compiler error further down the line, in the
+    // shift_dist function.
+    static_assert(EXP_TF <= 44, "EXP_TF must be lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions. Refer to the documentation for more information.");
+    
+    // Multiply input with 1/ln(2), and pass the product to ac_exp2_cordic.
+    ac_fixed<EXP_TF + 1, 1, false> inv_ln2 = inv_ln2_function<EXP_TF + 1>();
+    ac_fixed<EXP_TF + AI + 1, AI + 1, AS, TQ> x_to_exp2 = x*inv_ln2;
+    ac_exp2_cordic<OR_TF, TF_, TQ>(x_to_exp2, z);
   }
 
   // In order to fully leverage the increased range provided by floating point types, the
   // floating point implementations for the cordic exponential cordic functions, i.e. ac_exp_cordic and
   // ac_exp2_cordic, operate differently than their fixed point counterparts. Both of them convert the
   // floating point input to an intermediate fixed point input, the fractional part of which is passed to
-  // ac_exp2_rr function. The output corresponding to the fractional part is then de-normalized to produce
-  // the final output.
+  // ac_exp2_rr function. The output corresponding to the fractional part is then de-normalized to
+  // produce the final output.
   //
   // The floating point ac_exp_cordic function also multiplies the input with 1/ln(2) before it is
   // normalized and passed to ac_exp2_rr, so as to utilize the change-of-base property,
@@ -873,7 +1405,7 @@ namespace ac_math
   template <enum AcLogRR::base BASE,
             bool OR_TF, // Override default fractional bitwidth for temp variables?
             int TF_, // Template argument for fractional bitwidth to override with.
-            ac_q_mode TQ, // Rounding mode allocated for temporary variables.
+            ac_q_mode TQ, // Rounding mode allocated for temporary variable.
             int AW, int AI, int AE, ac_q_mode AQ,
             int ZW, int ZI, int ZE, ac_q_mode ZQ>
   void ac_exp_float_(const ac_float<AW,AI,AE,AQ> &x, ac_float<ZW,ZI,ZE,ZQ> &z)
@@ -886,7 +1418,7 @@ namespace ac_math
     // If TF < 1, it'll cause an issue with bit-slicing operations further down the line.
     // If TF > 44, (TF + 1) > 45, which will cause a compiler error further down the line, in the
     // shift_dist function.
-    static_assert(TF >= 1 && TF <= 44, "TF must be a positive integer and lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions.");
+    static_assert(TF >= 1 && TF <= 44, "TF must be a positive integer and lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions. Refer to the documentation for more information.");
     
     ac_fixed<AW, AI, true> x_mant = x.mantissa();
     ac_int<AE, true> x_exp = x.exp();
@@ -926,11 +1458,67 @@ namespace ac_math
     #endif
   }
 
-  // The result is expected to have a range which accomodates all resulting values exp(x) for inputs x.
-  //
-  // ac_exp_cordic for ac_float types is a wrapper, the heavy lifting is done by ac_exp_float_, 
-  // ac_exp2_rr and all the other functions called by ac_exp2_rr.
-  
+//=========================================================================
+// Function: ac_exp_cordic (for ac_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp function for
+//    ac_float datatypes.
+//
+//    ac_exp_cordic for ac_float types is a wrapper, the heavy lifting is
+//    done by ac_exp_float_, ac_exp2_rr and all the other functions called
+//    by ac_exp2_rr.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_float<16, 2, 5, AC_RND> input_type;
+//    typedef ac_float<32, 2, 7, AC_RND> output_type;
+//    
+//    typedef ac_float<32, 2,  8, AC_RND> input_2_type;
+//    typedef ac_float<50, 2, 10, AC_RND> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp_cordic(input, output);
+//      // output_2's mantissa has a large number of fractional bits, so
+//      // large that it would trigger a static_assert in the code if used
+//      // as-is, on account of the default fractional width for temp.
+//      // variables in ac_exp_float_. To avoid this, we override the
+//      // default width by setting the "OR_TF" template parameter to
+//      // "true" and the "TF_" parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_exp_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input = 2.5;
+//      output_type output;
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
             ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
@@ -942,8 +1530,67 @@ namespace ac_math
     ac_exp_float_<AcLogRR::BASE_E, OR_TF, TF_, TQ>(x, z);
   }
 
-  // The result is expected to have a range which accomodates all resulting values exp2(x) for inputs x.
-  //
+//=========================================================================
+// Function: ac_exp2_cordic (for ac_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp2 function for
+//    ac_float datatypes.
+//
+//    ac_exp2_cordic for ac_float types is a wrapper, the heavy lifting is
+//    done by ac_exp_float_, ac_exp2_rr and all the other functions called
+//    by ac_exp2_rr.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_float<16, 2, 5, AC_RND> input_type;
+//    typedef ac_float<32, 2, 7, AC_RND> output_type;
+//    
+//    typedef ac_float<32, 2,  8, AC_RND> input_2_type;
+//    typedef ac_float<50, 2, 10, AC_RND> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp2_cordic(input, output);
+//      // output_2's mantissa has a large number of fractional bits, so
+//      // large that it would trigger a static_assert in the code if used
+//      // as-is, on account of the default fractional width for temp.
+//      // variables in ac_exp_float_. To avoid this, we override the
+//      // default width by setting the "OR_TF" template parameter to
+//      // "true" and the "TF_" parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_exp2_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input = 2.5;
+//      output_type output;
+//      input_2_type input_2 = 3.5;
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   // ac_exp2_cordic for ac_float types is a wrapper, the heavy lifting is done by ac_exp_float_, 
   // ac_exp2_rr and all the other functions called by ac_exp2_rr.
   
@@ -958,8 +1605,67 @@ namespace ac_math
     ac_exp_float_<AcLogRR::BASE_2, OR_TF, TF_, TQ>(x, z);
   }
 
-  // The result is expected to have a range which accomodates all resulting values exp(x) for inputs x.
-  //
+//=========================================================================
+// Function: ac_exp_cordic (for ac_std_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp function for
+//    ac_std_float datatypes.
+//
+//    ac_exp_cordic for ac_std_float types is a wrapper, the heavy lifting is
+//    done by ac_exp_float_, ac_exp2_rr and all the other functions called
+//    by ac_exp2_rr.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//    
+//    typedef ac_std_float<64, 11> input_2_type;
+//    typedef ac_std_float<64, 11> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp_cordic(input, output);
+//      // output_2's mantissa has a large number of fractional bits, so
+//      // large that it would trigger a static_assert in the code if used
+//      // as-is, on account of the default fractional width for temp.
+//      // variables in ac_exp_float_. To avoid this, we override the
+//      // default width by setting the "OR_TF" template parameter to
+//      // "true" and the "TF_" parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_exp_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   // The ac_std_float implementation for ac_exp_cordic uses temporary ac_float variables which are in
   // turn passed to the ac_float implementation.
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
@@ -984,8 +1690,67 @@ namespace ac_math
     z = z_temp;
   }
 
-  // The result is expected to have a range which accomodates all resulting values exp2(x) for inputs x.
-  //
+//=========================================================================
+// Function: ac_exp2_cordic (for ac_std_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp2 function for
+//    ac_std_float datatypes.
+//
+//    ac_exp2_cordic for ac_std_float types is a wrapper, the heavy lifting is
+//    done by ac_exp_float_, ac_exp2_rr and all the other functions called
+//    by ac_exp2_rr.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
+//    
+//    typedef ac_std_float<64, 11> input_2_type;
+//    typedef ac_std_float<64, 11> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp2_cordic(input, output);
+//      // output_2's mantissa has a large number of fractional bits, so
+//      // large that it would trigger a static_assert in the code if used
+//      // as-is, on account of the default fractional width for temp.
+//      // variables in ac_exp_float_. To avoid this, we override the
+//      // default width by setting the "OR_TF" template parameter to
+//      // "true" and the "TF_" parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_exp2_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   // The ac_std_float implementation for ac_exp2_cordic uses temporary ac_float variables which are in
   // turn passed to the ac_float implementation.
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
@@ -1010,8 +1775,67 @@ namespace ac_math
     z = z_temp;
   }
 
-  // The result is expected to have a range which accomodates all resulting values exp(x) for inputs x.
-  //
+//=========================================================================
+// Function: ac_exp_cordic (for ac_ieee_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp function for
+//    ac_ieee_float datatypes.
+//
+//    ac_exp_cordic for ac_ieee_float types is a wrapper, the heavy lifting is
+//    done by ac_exp_float_, ac_exp2_rr and all the other functions called
+//    by ac_exp2_rr.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_ieee_float<binary32> input_type;
+//    typedef ac_ieee_float<binary32> output_type;
+//    
+//    typedef ac_ieee_float<binary64> input_2_type;
+//    typedef ac_ieee_float<binary64> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp_cordic(input, output);
+//      // output_2's mantissa has a large number of fractional bits, so
+//      // large that it would trigger a static_assert in the code if used
+//      // as-is, on account of the default fractional width for temp.
+//      // variables in ac_exp_float_. To avoid this, we override the
+//      // default width by setting the "OR_TF" template parameter to
+//      // "true" and the "TF_" parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_exp_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   // The ac_ieee_float implementation for ac_exp_cordic uses temporary ac_float variables which are in
   // turn passed to the ac_float implementation.
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
@@ -1040,8 +1864,67 @@ namespace ac_math
     z = z_temp;
   }
 
-  // The result is expected to have a range which accomodates all resulting values exp2(x) for inputs x.
-  //
+//=========================================================================
+// Function: ac_exp2_cordic (for ac_ieee_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable exp2 function for
+//    ac_ieee_float datatypes.
+//
+//    ac_exp2_cordic for ac_ieee_float types is a wrapper, the heavy lifting is
+//    done by ac_exp_float_, ac_exp2_rr and all the other functions called
+//    by ac_exp2_rr.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_ieee_float<binary32> input_type;
+//    typedef ac_ieee_float<binary32> output_type;
+//    
+//    typedef ac_ieee_float<binary64> input_2_type;
+//    typedef ac_ieee_float<binary64> output_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type &input,
+//      output_type &output,
+//      const input_2_type &input_2,
+//      output_2_type &output_2
+//    )
+//    {
+//      ac_exp2_cordic(input, output);
+//      // output_2's mantissa has a large number of fractional bits, so
+//      // large that it would trigger a static_assert in the code if used
+//      // as-is, on account of the default fractional width for temp.
+//      // variables in ac_exp_float_. To avoid this, we override the
+//      // default width by setting the "OR_TF" template parameter to
+//      // "true" and the "TF_" parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_exp2_cordic<true, 30>(input_2, output_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      input_type input(2.5);
+//      output_type output;
+//      input_2_type input_2(3.5);
+//      output_2_type output_2;
+//      
+//      CCS_DESIGN(project)(input, output, input_2, output_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   // The ac_ieee_float implementation for ac_exp2_cordic uses temporary ac_float variables which are in
   // turn passed to the ac_float implementation.
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
@@ -1070,72 +1953,186 @@ namespace ac_math
     z = z_temp;
   }
 
-  // This implementation tries to be as general as possible without
-  // taking into account the actual range of arguments 'a', and 'b'. A
-  // specific implementation should take full advantage of argument
-  // ranges to size the intermediate results of the computation.
-  //
-  // The following function implements pow(a,b)=a^b using the following
-  // decomposition.
-  //
-  // a^b = exp2(log2(a^b)) = exp2(b*log2(a))
-  // t = log(a)
-  // q = qI + qF = b*t
-  // z = exp2(qI + qF) = exp2(qI)*exp2(qF)
-  //
-  // This bounds the argument qF of exp2(qF) between 0 and 1.
-  // Factor exp2(qI) is accounted for with a final shift.
-  template <int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
+//=========================================================================
+// Function: ac_pow_cordic (for ac_fixed)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable pow function for
+//    ac_fixed datatypes.
+//
+//    This implementation tries to be as general as possible without
+//    taking into account the actual range of arguments 'a', and 'b'.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_fixed<11,  3, false, AC_RND, AC_SAT> a_type;
+//    typedef ac_fixed<12,  4,  true, AC_RND, AC_SAT> b_type;
+//    typedef ac_fixed<32, 16, false, AC_RND, AC_SAT> z_type;
+//    
+//    typedef ac_fixed<50,  5, false, AC_RND, AC_SAT> a_2_type;
+//    typedef ac_fixed<32,  5,  true, AC_RND, AC_SAT> b_2_type;
+//    typedef ac_fixed<65, 20, false, AC_RND, AC_SAT> z_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const a_type &a,
+//      const b_type &b,
+//      z_type &z,
+//      const a_2_type &a_2,
+//      const b_2_type &b_2,
+//      z_2_type &z_2
+//    )
+//    {
+//      ac_pow_cordic(a, b, z);
+//      // The bitwidth of a_2, b_2 and z_2 are so large that using them
+//      // would trigger static_asserts in the code on account of 
+//      // the default width assignments for temp variables.
+//      // To avoid this, we override the default widths by setting 
+//      // the "OR_TF" template parameter to "true" and the "TF_"
+//      // parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_pow_cordic<true, 30>(a_2, b_2, z_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      a_type a = 1.5;
+//      b_type b = 2.5;
+//      z_type z;
+//      a_2_type a_2 = 3.5;
+//      b_2_type b_2 = 4.5;
+//      z_2_type z_2;
+//      
+//      CCS_DESIGN(project)(a, b, z, a_2, b_2, z_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+  
+  template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
+            int TF_ = 32, // Template argument for fractional bitwidth to override with.
+            ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
+            int AW, int AI, ac_q_mode AQ, ac_o_mode AV,
             int BW, int BI, bool BS, ac_q_mode BQ, ac_o_mode BV,
             int ZW, int ZI, ac_q_mode ZQ, ac_o_mode ZV>
   void ac_pow_cordic(const ac_fixed<AW,AI,false,AQ,AV> &a,
                      const ac_fixed<BW,BI,BS,BQ,BV> &b,
                      ac_fixed<ZW,ZI,false,ZQ,ZV> &z)
   {
-    // log2(min(a)) = log(2^-(AW-AI))
-    const int TI_MIN = ac::nbits<AW-AI>::val;
-    // log2(max(a)) = log(2^AI)
-    const int TI_MAX = ac::nbits<AI>::val;
-    const int TI = (TI_MIN < TI_MAX ? TI_MAX : TI_MIN)+1;
-    const int TW = ZW-ZI+TI;
-    ac_fixed<TW,TI,true> t;
-    ac_log2_cordic(a, t);
-    const int QI = TI+BI-BS;
-    const int QW = TW+BW-BS;
-    // A left shift results in loss of precision if the bits to be shifted-in
-    // aren't computed. This is possible when 'a' has a large number of fractional
-    // positions and 'b' can be negative.
-    //
-    // * Case b < 0: If TI is obtained from TI_MIN, i.e.,
-    //   log2(ulp(a)) < 0, then log2(a)*b can produce a 2^(QI-1) shift distance.
-    //
-    // * Case b >= 0: If TI is obtained from TI_MAX, i.e.,
-    //   log2(max(a)), then b*log2(a) <=  b*max(log2(a)) <= b*2^TI_MAX can produce
-    //   a 2^(BI+TI_MAX) shift distance.
-    //
-    // When argument 'b' is an unsigned value, then the maximum shift distance is
-    // dependent on the maximum value of 'a', and not on its number of fractional
-    // bits.
-    const int SHIFT_W = BS?(1<<(QI-1)):(1<<(BI+TI_MAX));
-    ac_fixed<QW,QI,true> q = b*t;
-    ac_fixed<QW-QI,0,false> q_f = 0;
-    q_f.set_slc(0, q.template slc<QW-QI>(0));
-    ac_int<QI,true> q_int;
-    q_int = q.to_int();
-    // 0 <= q_f < 1
-    const int ZCI = 2;
-    const int ZCW = QW-QI+2;
-    ac_fixed<ZCW,ZCI,false> zc;
-    ac_exp2_cordic(q_f, zc);
-    ac_fixed<ZCW+SHIFT_W,SHIFT_W+2,false> zc_shift = ((ac_fixed<ZCW+SHIFT_W,SHIFT_W+2,false>)zc) << q_int;
-    z = zc_shift;
-
-    #if defined(AC_HCORDIC_H_DEBUG) && !defined(__SYNTHESIS__)
-    std::cout << "zc_shift.type_name() = " << zc_shift.type_name() << std::endl;
-    #endif
+    ac_fixed<AW, 0, false, AQ, AV> a_norm;
+    int a_exp = ac_normalize(a, a_norm);
+    
+    // By default, the number of fractional bits in a_norm_2 are set to the number of input bits.
+    // The user can, however, override this default assignment by using the OR_TF and TF_ template parameters.
+    const int a_norm_2_f_bits = OR_TF ? TF_ : AW;
+    
+    static_assert(a_norm_2_f_bits <= 44, "Number of fractional bits in a_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
+    
+    ac_fixed<a_norm_2_f_bits, 0, false, TQ> a_norm_2 = a_norm;
+    
+    // By default, the number of fractional bits in log2_a are set to the number of output bits.
+    // The user can, however, override this default assignment by using the OR_TF and TF_ template parameters.
+    const int log2_a_F = OR_TF ? TF_ : ZW;
+    
+    static_assert(log2_a_F <= 44, "Number of fractional bits in log2_a must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
+    
+    ac_fixed<log2_a_F + 2, 2, true> log2_a_norm;
+    // Range reduced to 0.5 <= a_norm_2 < 1, -1 <= log2_a_norm < 1
+    ac_log2_rr(a_norm_2, log2_a_norm);
+    
+    const int log2_a_I = AC_MAX(int(ac::nbits<AW-AI>::val), int(ac::nbits<AI>::val)) + 1;
+    
+    typedef ac_fixed<log2_a_F, log2_a_I, true> log2_a_type;
+    log2_a_type log2_a = log2_a_norm + a_exp;
+    
+    // Find number of integer and fractional bits in product of b and log2_a.
+    typedef ac_fixed<BW,BI,BS,BQ,BV> b_type;
+    typedef typename ac::rt_2T<log2_a_type, b_type>::mult prod_type;
+    const int prod_i_bits = prod_type::i_width;
+    // Limit the number of frac. bits in the product to 45, avoiding a static_assert in ac_exp2_cordic.
+    const int prod_f_bits = AC_MIN(prod_type::width - prod_i_bits, 45);
+    
+    // Multiply b by log2(a) and pass the product to the ac_exp2_cordic function.
+    ac_fixed<prod_f_bits + prod_i_bits, prod_i_bits, true> prod = b*log2_a;
+    ac_exp2_cordic<OR_TF, TF_, TQ>(prod, z);
   }
 
-  // ac_float implementation of the ac_pow_cordic() function.
+//=========================================================================
+// Function: ac_pow_cordic (for ac_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable pow function for
+//    ac_float datatypes.
+//
+//    This implementation tries to be as general as possible without
+//    taking into account the actual range of arguments 'a', and 'b'.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_float<16, 2, 5, AC_RND> a_type;
+//    typedef ac_float<16, 2, 6, AC_RND> b_type;
+//    typedef ac_float<32, 2, 8, AC_RND> z_type;
+//    
+//    typedef ac_float<50, 2,  7, AC_RND> a_2_type;
+//    typedef ac_float<51, 2,  7, AC_RND> b_2_type;
+//    typedef ac_float<60, 2, 10, AC_RND> z_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const a_type &a,
+//      const b_type &b,
+//      z_type &z,
+//      const a_2_type &a_2,
+//      const b_2_type &b_2,
+//      z_2_type &z_2
+//    )
+//    {
+//      ac_pow_cordic(a, b, z);
+//      // The bitwidth of a_2, b_2 and z_2 are so large that using them
+//      // would trigger static_asserts in the code on account of 
+//      // the default width assignments for temp variables.
+//      // To avoid this, we override the default widths by setting 
+//      // the "OR_TF" template parameter to "true" and the "TF_"
+//      // parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_pow_cordic<true, 30>(a_2, b_2, z_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      a_type a = 1.5;
+//      b_type b = 2.5;
+//      z_type z;
+//      a_2_type a_2 = 3.5;
+//      b_2_type b_2 = 4.5;
+//      z_2_type z_2;
+//      
+//      CCS_DESIGN(project)(a, b, z, a_2, b_2, z_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
             ac_q_mode TQ = AC_TRN, // Rounding mode allocated for temporary variables.
@@ -1163,14 +2160,14 @@ namespace ac_math
     
     const int a_norm_2_f_bits = OR_TF ? TF_ : AW - 1;
     
-    static_assert(a_norm_2_f_bits <= 44, "Number of fractional bits in a_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    static_assert(a_norm_2_f_bits <= 44, "Number of fractional bits in a_norm_2 must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
     
     ac_fixed<a_norm_2_f_bits, 0, false, TQ> a_norm_2 = a_norm;
     
     const int log2_a_I = ac::nbits<AC_MAX(AI - 1, AW - AI - 1) + (1 << (AE - 1)) + 1>::val + 1;
     const int log2_a_F = OR_TF ? TF_ : ZW;
     
-    static_assert(log2_a_F <= 44, "Number of fractional bits in log2_a must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition.");
+    static_assert(log2_a_F <= 44, "Number of fractional bits in log2_a must be no more than 44. Consider overriding the default fractional bits allocated with the OR_TF and TF_ template parameters, so as to satisfy this condition. Refer to the documentation for more information.");
     
     ac_fixed<log2_a_F + 2, 2, true> log2_a_norm;
     // Range reduced to 0.5 <= a_norm_2 < 1, -1 <= log2_a_norm < 1
@@ -1186,7 +2183,7 @@ namespace ac_math
     // If TF < 1, it'll cause an issue with bit-slicing operations further down the line.
     // If TF > 44, (TF + 1) > 45, which will cause a compiler error further down the line, in the
     // shift_dist function.
-    static_assert(TF >= 1 && TF <= 44, "TF must be a positive integer and lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions.");
+    static_assert(TF >= 1 && TF <= 44, "TF must be a positive integer and lesser than 45. Consider overriding the default value with the OR_TF and TF_ template parameters in your function call, to satisfy these conditions. Refer to the documentation for more information.");
     
     ac_fixed<BW, BI, true> b_mant = b.mantissa();
     ac_int<BE, true> b_exp = b.exp();
@@ -1225,6 +2222,72 @@ namespace ac_math
     #endif
   }
 
+//=========================================================================
+// Function: ac_pow_cordic (for ac_std_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable pow function for
+//    ac_std_float datatypes.
+//
+//    This implementation tries to be as general as possible without
+//    taking into account the actual range of arguments 'a', and 'b'.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//        
+//    typedef ac_std_float<32, 8> a_type;
+//    typedef ac_std_float<32, 8> b_type;
+//    typedef ac_std_float<32, 8> z_type;
+//        
+//    typedef ac_std_float<64, 11> a_2_type;
+//    typedef ac_std_float<64, 11> b_2_type;
+//    typedef ac_std_float<64, 11> z_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const a_type &a,
+//      const b_type &b,
+//      z_type &z,
+//      const a_2_type &a_2,
+//      const b_2_type &b_2,
+//      z_2_type &z_2
+//    )
+//    {
+//      ac_pow_cordic(a, b, z);
+//      // The bitwidth of a_2, b_2 and z_2 are so large that using them
+//      // would trigger static_asserts in the code on account of 
+//      // the default width assignments for temp variables.
+//      // To avoid this, we override the default widths by setting 
+//      // the "OR_TF" template parameter to "true" and the "TF_"
+//      // parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_pow_cordic<true, 30>(a_2, b_2, z_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      a_type a(1.5);
+//      b_type b(2.5);
+//      z_type z;
+//      a_2_type a_2(3.5);
+//      b_2_type b_2(4.5);
+//      z_2_type z_2;
+//      
+//      CCS_DESIGN(project)(a, b, z, a_2, b_2, z_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
+
   // ac_std_float implementation of the ac_pow_cordic() function.
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?
             int TF_ = 32, // Template argument for fractional bitwidth to override with.
@@ -1239,6 +2302,72 @@ namespace ac_math
     ac_std_float<ZW, ZE> z_temp(z_ac_fl); // Convert output ac_float to ac_std_float.
     z = z_temp;
   }
+
+//=========================================================================
+// Function: ac_pow_cordic (for ac_ieee_float)
+//
+// Description:
+//    Hyperbolic CORDIC implementation of synthesizable pow function for
+//    ac_ieee_float datatypes.
+//
+//    This implementation tries to be as general as possible without
+//    taking into account the actual range of arguments 'a', and 'b'.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_math/ac_hcordic.h>
+//    using namespace ac_math;
+//        
+//    typedef ac_ieee_float<binary32> a_type;
+//    typedef ac_ieee_float<binary32> b_type;
+//    typedef ac_ieee_float<binary32> z_type;
+//        
+//    typedef ac_ieee_float<binary64> a_2_type;
+//    typedef ac_ieee_float<binary64> b_2_type;
+//    typedef ac_ieee_float<binary64> z_2_type;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const a_type &a,
+//      const b_type &b,
+//      z_type &z,
+//      const a_2_type &a_2,
+//      const b_2_type &b_2,
+//      z_2_type &z_2
+//    )
+//    {
+//      ac_pow_cordic(a, b, z);
+//      // The bitwidth of a_2, b_2 and z_2 are so large that using them
+//      // would trigger static_asserts in the code on account of 
+//      // the default width assignments for temp variables.
+//      // To avoid this, we override the default widths by setting 
+//      // the "OR_TF" template parameter to "true" and the "TF_"
+//      // parameter to 30.
+//      // Refer to the documentation for more details.
+//      ac_pow_cordic<true, 30>(a_2, b_2, z_2);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int arg, char **argc)
+//    {
+//      a_type a(1.5);
+//      b_type b(2.5);
+//      z_type z;
+//      a_2_type a_2(3.5);
+//      b_2_type b_2(4.5);
+//      z_2_type z_2;
+//      
+//      CCS_DESIGN(project)(a, b, z, a_2, b_2, z_2);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+//-------------------------------------------------------------------------
 
   // ac_ieee_float implementation of the ac_pow_cordic() function.
   template <bool OR_TF = false, // Override default fractional bitwidth for temp variables?

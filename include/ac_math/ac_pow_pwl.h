@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
+ *  Release Date    : Wed Aug 17 19:00:33 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.3                                               *
+ *  Release Build   : 3.4.4                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -293,7 +293,7 @@ namespace ac_math
     // Find type of intermediate variable used to store output of x*log2(e)
     typedef class comp_pii_exp<W, I, S, n_f_b>::pit_t input_inter_type;
     #else
-    const bool is_n_seg_po2 = !bool(n_segments_lut & n_segments_lut - 1);
+    const bool is_n_seg_po2 = !bool(n_segments_lut & (n_segments_lut - 1));
     const int extra_f_bits = is_n_seg_po2 ? ac::nbits<n_segments_lut - 1>::val : 0;
     // Find type of intermediate variable used to store output of x*log2(e)
     typedef class comp_pii_exp<W, I, S, n_frac_bits + extra_f_bits>::pit_t input_inter_type;
@@ -362,7 +362,7 @@ namespace ac_math
       const unsigned n_segments_lut = 4;
       const int n_frac_bits = 10;
       
-      const bool is_n_seg_po2 = !bool(n_segments_lut & n_segments_lut - 1);
+      const bool is_n_seg_po2 = !bool(n_segments_lut & (n_segments_lut - 1));
       const int extra_f_bits = is_n_seg_po2 ? ac::nbits<n_segments_lut - 1>::val : 0;
       const int W_fxpt = I_fxpt + n_frac_bits + extra_f_bits;
 

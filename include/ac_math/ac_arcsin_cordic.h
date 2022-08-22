@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Wed May  4 10:47:29 PDT 2022                        *
+ *  Release Date    : Wed Aug 17 19:00:33 PDT 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.3                                               *
+ *  Release Build   : 3.4.4                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -82,6 +82,9 @@
 #endif
 
 #include <ac_fixed.h>
+#include <ac_float.h>
+#include <ac_std_float.h>
+#include <ac_math/ac_shift.h>
 
 // The computation of the K table using double arithmetic
 //  limits what practical TE could be chosen.
@@ -244,7 +247,7 @@ namespace ac_math
   }
 
   //============================================================================
-  // Function:  theta = arcsin(t)
+  // Function:  theta = arcsin(t) (for ac_fixed)
   // Inputs:
   //   - argument t in range [-1, 1]
   // Outputs:
@@ -310,6 +313,74 @@ namespace ac_math
     } else {
       arcsin = theta;
     }
+  }
+
+  //============================================================================
+  // Function:  theta = arcsin(t) (for ac_float)
+  // Inputs:
+  //   - argument t in range [-1, 1]
+  // Outputs:
+  //   - arcsin, inverse sine angle in radians, scaled by 1/Pi
+  //-------------------------------------------------------------------------
+
+  template< int AW, int AI, int AE, ac_q_mode AQ,
+            int OW, int OI, int OE, ac_q_mode OQ >
+  void ac_arcsin_cordic(
+    const ac_float<AW,AI,AE,AQ> &t,
+    ac_float<OW,OI,OE,OQ> &arcsin
+  )
+  {
+    ac_fixed<AW, AI, true> mantVal = t.mantissa();
+    int exp_val = t.exp().to_int();
+    // Intermediate ac_fixed variables to store the value of inputs and outputs
+    // and enable compatibility with ac_fixed implementation.
+    ac_fixed<20, 2, true, AC_RND> input_fi;
+    // Use ac_shift_left instead of "<<" operator to ensure rounding.
+    ac_math::ac_shift_left(mantVal, exp_val, input_fi);
+    ac_fixed<35, 5, true> arcsin_output_fi;
+    ac_arcsin_cordic(input_fi, arcsin_output_fi);
+    // Convert ac_fixed output to ac_float by using a constructor.
+    ac_float<OW,OI,OE,OQ> output_temp(arcsin_output_fi);
+
+    arcsin = output_temp;
+  }
+
+//=========================================================================
+// Function: ac_arcsin_cordic (for ac_std_float)
+//
+//-------------------------------------------------------------------------
+
+  template <int W, int E, int outW, int outE>
+  void ac_arcsin_cordic(
+    const ac_std_float<W, E> &t,
+    ac_std_float<outW, outE> &arcsin
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> arcsin_ac_fl; // Equivalent ac_float representation for output.
+    ac_arcsin_cordic(t.to_ac_float(), arcsin_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(arcsin_ac_fl); // Convert output ac_float to ac_std_float.
+    arcsin = output_temp;
+  }
+
+//=========================================================================
+// Function: ac_arcsin_cordic (for ac_ieee_float)
+//
+//-------------------------------------------------------------------------
+
+  template<ac_ieee_float_format Format,
+           ac_ieee_float_format outFormat>
+  void ac_arcsin_cordic(
+    const ac_ieee_float<Format> &t,
+    ac_ieee_float<outFormat> &arcsin
+  )
+  {
+    typedef ac_ieee_float<outFormat> T_out;
+    const int outW = T_out::width;
+    const int outE = T_out::e_width;
+    ac_float<outW - outE + 1, 2, outE> arcsin_ac_fl; // Equivalent ac_float representation for output.
+    ac_arcsin_cordic(t.to_ac_float(), arcsin_ac_fl); // Call ac_float version.
+    ac_ieee_float<outFormat> output_temp(arcsin_ac_fl); // Convert output ac_float to ac_ieee_float.
+    arcsin = output_temp;
   }
 
 } // namespace ac_math
