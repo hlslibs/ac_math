@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Wed Aug 17 19:00:33 PDT 2022                        *
+ *  Release Date    : Thu Nov 17 21:43:31 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.4                                               *
+ *  Release Build   : 3.4.5                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *

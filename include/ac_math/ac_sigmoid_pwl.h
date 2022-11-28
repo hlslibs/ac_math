@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Wed Aug 17 19:00:33 PDT 2022                        *
+ *  Release Date    : Thu Nov 17 21:43:31 PST 2022                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.4                                               *
+ *  Release Build   : 3.4.5                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -232,6 +232,17 @@ namespace ac_math
     output = output_temp;
   }
 
+  template <ac_q_mode pwl_Q = AC_TRN, int W, int E, int outW, int outE>
+  void ac_sigmoid_pwl(
+    const ac_std_float<W, E> &input,
+    ac_std_float<outW, outE> &output
+  )
+  {
+    ac_float<outW - outE + 1, 2, outE> output_ac_fl; // Equivalent ac_float representation for output.
+    ac_sigmoid_pwl<pwl_Q>(input.to_ac_float(), output_ac_fl); // Call ac_float version.
+    ac_std_float<outW, outE> output_temp(output_ac_fl); // Convert output ac_float to ac_std_float.
+    output = output_temp;
+  }
 
 // For this section of the code to work, the user must include ac_std_float.h in their testbench before including the sigmoid header,
 // so as to have the code import the ac_ieee_float datatype and define the __AC_STD_FLOAT_H macro.
