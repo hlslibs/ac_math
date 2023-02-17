@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Thu Nov 17 21:43:31 PST 2022                        *
+ *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.5                                               *
+ *  Release Build   : 3.4.6                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -93,7 +93,7 @@ namespace ac_math
     ac_int< ac::nbits< NUM_BITS -1 >::val,false> s = s_in;
     ac_int<NUM_BITS,false> din_tmp = 0;
     din_tmp = din;
-#pragma unroll yes
+#pragma hls_unroll yes
     for (int i=0; i< ac::nbits< NUM_BITS -1 >::val; i++) {
       shift_layer(din_tmp,din_tmp,s, i);
     }

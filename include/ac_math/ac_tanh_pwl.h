@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Thu Nov 17 21:43:31 PST 2022                        *
+ *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.5                                               *
+ *  Release Build   : 3.4.6                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -91,6 +91,8 @@
 #include <ac_int.h>
 // Include headers for data types supported by these implementations
 #include <ac_fixed.h>
+#include <ac_float.h>
+#include <ac_std_float.h>
 
 #if !defined(__SYNTHESIS__) && defined(AC_TANH_PWL_H_DEBUG)
 #include <iostream>

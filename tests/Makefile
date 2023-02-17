@@ -73,7 +73,9 @@ SOURCES_CPP = \
   rtest_ac_softmax_pwl.cpp \
   rtest_ac_sqrt.cpp \
   rtest_ac_sqrt_pwl.cpp \
-  rtest_ac_leading.cpp
+  rtest_ac_leading.cpp\
+  rtest_signed_ac_div_v2.cpp\
+  rtest_unsigned_ac_div_v2.cpp
 
 OBJS = $(SOURCES_CPP:.cpp=.o)
 

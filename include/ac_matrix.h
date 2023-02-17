@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 3.4                                                 *
  *                                                                        *
- *  Release Date    : Thu Nov 17 21:43:31 PST 2022                        *
+ *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.5                                               *
+ *  Release Build   : 3.4.6                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -356,7 +356,7 @@ public: // Matrix math functions
            class T1, class T2>
   friend void ac_matrix_cholinv(const ac_matrix<T1, M1, M1> &input, ac_matrix<T2, M1, M1> &output);
 
-  #ifdef CCS_SCVERIFY
+  #if defined(CCS_SCVERIFY) || defined(__MATLAB_CATAPULT__)
 public: // Class Member Data (must be public for SCVerify)
   #else
 private: // Class Member Data
