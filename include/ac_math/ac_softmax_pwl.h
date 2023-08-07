@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -129,7 +129,7 @@ namespace ac_math
     const ac_q_mode exp_Q = or_e ? ac_q_mode(iQ_e) : ac_q_mode(AC_TRN);
     const ac_o_mode exp_O = or_e ? ac_o_mode(iO_e) : ac_o_mode(AC_WRAP);
     // The below static_assert limits the size the integer width of the exponent variable can reach.
-    static_assert(exp_int_bits <= 64, "imediate bitwidth calculation gives a very large value for integer bits. Consider reducing the number of input integer bits.");
+    static_assert(exp_int_bits <= 64, "Intermediate bitwidth calculation gives a very large value for integer bits. Consider reducing the number of input integer bits.");
     typedef ac_fixed<exp_frac_bits + exp_int_bits, exp_int_bits, false, exp_Q, exp_O> T_exp;
     typedef ac_fixed<T_exp::width + ac::log2_ceil<K>::val, T_exp::i_width + ac::log2_ceil<K>::val, false> T_sum;
 

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -343,7 +343,7 @@ int test_driver_float(
       // Set the bit adjacent to the sign bit to 1 to ensure a normalized mantissa
       input_mant[Wfl - 2] = 1;
       // Set the remaining bits to the bit pattern stored in the last (Wfl - 2) bits in mant_i.
-      input_mant.template set_slc(0, mant_i.template slc<Wfl - 2>(0));
+      input_mant.set_slc(0, mant_i.template slc<Wfl - 2>(0));
       // Use a parameterized ac_float constructor to set the mantissa and exponent of the floating point input.
       T_in input_float(input_mant, sample_exponent_array[i]);
       // Make sure that input_mant was normalized and that the mantissa and exponent values haven't changed after calling the constructor.
@@ -496,7 +496,7 @@ int test_driver_stfloat(
       ac_fixed<W2acfl, I2acfl, true> input_mant = 0;
       input_mant[W2acfl - 1] = 0;
       input_mant[W2acfl - 2] = 1; // Bit next to sign bit is set to 1 to ensure normalization.
-      input_mant.template set_slc(0, mant_i.template slc<W2acfl - 2>(0));
+      input_mant.set_slc(0, mant_i.template slc<W2acfl - 2>(0));
       T_in_acfl input_acfl_norm(input_mant, sample_exponent_array_stfloat[i]);
       // If mantissa and exponent values have changed after normalization, that means that we didn't normalize the
       // input value correctly to begin with.
@@ -669,7 +669,7 @@ int test_driver_ifloat(
       ac_fixed<W2acfl, I2acfl, true> input_mant = 0;
       input_mant[W2acfl - 1] = 0;
       input_mant[W2acfl - 2] = 1; // Bit next to sign bit is set to 1 to ensure normalization.
-      input_mant.template set_slc(0, mant_i.template slc<W2acfl - 2>(0));
+      input_mant.set_slc(0, mant_i.template slc<W2acfl - 2>(0));
       T_in_acfl input_acfl_norm(input_mant, sample_exponent_array_ifloat[i]);
       // If mantissa and exponent values have changed after normalization, that means that we didn't normalize the
       // input value correctly to begin with.

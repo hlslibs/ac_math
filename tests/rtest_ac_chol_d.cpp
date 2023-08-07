@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -48,7 +48,7 @@ using namespace ac_math;
 //   used to configure the bit-widths of the types.
 
 // Test Design for real and complex fixed point values.
-template <bool use_pwl, unsigned M, int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
+template <unsigned M, bool use_pwl, int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
 void test_ac_chol_d_fixed(
   const ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP> A1[M][M],
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> L1[M][M],
@@ -60,14 +60,19 @@ void test_ac_chol_d_fixed(
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> &L4
 )
 {
-  ac_chol_d<use_pwl>(A1, L1);
-  ac_chol_d<use_pwl>(A2, L2);
+  #ifdef _WIN32 
+    ac_chol_d<M, use_pwl>(A1, L1);
+    ac_chol_d<M, use_pwl>(A2, L2);
+  #else
+    ac_chol_d<use_pwl>(A1, L1);
+    ac_chol_d<use_pwl>(A2, L2);
+  #endif
   ac_chol_d<use_pwl>(A3, L3);
   ac_chol_d<use_pwl>(A4, L4);
 }
 
 // Test Design for real ac_float values.
-template <bool use_pwl, unsigned M, int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
+template <unsigned M, bool use_pwl,int Wfl, int Ifl, int Efl, int outWfl, int outIfl, int outEfl>
 void test_ac_chol_d_float(
   const ac_float<Wfl, Ifl, Efl, AC_TRN> A1[M][M],
   ac_float<outWfl, outIfl, outEfl, AC_TRN> L1[M][M],
@@ -75,12 +80,16 @@ void test_ac_chol_d_float(
   ac_matrix<ac_float<outWfl, outIfl, outEfl, AC_TRN>, M, M> &L2
 )
 {
+  #ifdef _WIN32 
+  ac_chol_d<M, use_pwl>(A1, L1);
+  #else
   ac_chol_d<use_pwl>(A1, L1);
+  #endif
   ac_chol_d<use_pwl>(A2, L2);
 }
 
 // Test Design for real ac_std_float values.
-template <bool use_pwl, unsigned M, int Wstfl, int Estfl, int outWstfl, int outEstfl>
+template <unsigned M, bool use_pwl,int Wstfl, int Estfl, int outWstfl, int outEstfl>
 void test_ac_chol_d_stfloat(
   const ac_std_float<Wstfl, Estfl> A1[M][M],
   ac_std_float<outWstfl, outEstfl> L1[M][M],
@@ -88,12 +97,16 @@ void test_ac_chol_d_stfloat(
   ac_matrix<ac_std_float<outWstfl, outEstfl>, M, M> &L2
 )
 {
+  #ifdef _WIN32 
+  ac_chol_d<M, use_pwl>(A1, L1);
+  #else
   ac_chol_d<use_pwl>(A1, L1);
+  #endif
   ac_chol_d<use_pwl>(A2, L2);
 }
 
 // Test Design for real ac_ieee_float values.
-template <bool use_pwl, unsigned M, ac_ieee_float_format in_format, ac_ieee_float_format out_format>
+template <unsigned M, bool use_pwl,ac_ieee_float_format in_format, ac_ieee_float_format out_format>
 void test_ac_chol_d_ifloat(
   const ac_ieee_float<in_format> A1[M][M],
   ac_ieee_float<out_format> L1[M][M],
@@ -101,7 +114,11 @@ void test_ac_chol_d_ifloat(
   ac_matrix<ac_ieee_float<out_format>, M, M> &L2
 )
 {
+  #ifdef _WIN32 
+  ac_chol_d<M, use_pwl>(A1, L1);
+  #else
   ac_chol_d<use_pwl>(A1, L1);
+  #endif
   ac_chol_d<use_pwl>(A2, L2);
 }
 
@@ -220,9 +237,9 @@ void gen_matrix(ac_fixed<W, I, S, Q, O> A[M][M])
 
   #ifdef DEBUG
   cout << "tbmat is : " << endl;
-  print_matrix(tbmat);
+  print_matrix<M>(tbmat);
   cout << "tbmatT is : " << endl;
-  print_matrix(tbmatT);
+  print_matrix<M>(tbmatT);
   #endif
 
   // Multiply tbmat by its transpose to get the positive definite input matrix
@@ -237,7 +254,7 @@ void gen_matrix(ac_fixed<W, I, S, Q, O> A[M][M])
   
   #ifdef DEBUG
   cout << "A in gen_matrix function is : " << endl;
-  print_matrix(A);
+  print_matrix<M>(A);
   #endif
 }
 
@@ -272,9 +289,9 @@ void gen_matrix(ac_complex<ac_fixed<W, I, S, Q, O> > A[M][M])
 
   #ifdef DEBUG
   cout << "tbmat is : " << endl;
-  print_matrix(tbmat);
+  print_matrix<M>(tbmat);
   cout << "tbmatT is : " << endl;
-  print_matrix(tbmatT);
+  print_matrix<M>(tbmatT);
   #endif
 
   // Multiply tbmat by its transpose to get the positive definite input matrix
@@ -289,7 +306,7 @@ void gen_matrix(ac_complex<ac_fixed<W, I, S, Q, O> > A[M][M])
 
   #ifdef DEBUG
   cout << "A in gen_matrix function is : " << endl;
-  print_matrix(A);
+  print_matrix<M>(A);
   #endif
 }
 
@@ -343,11 +360,11 @@ void gen_matrix(ac_float<W, I, E, Q> A[M][M]) {
 
   #ifdef DEBUG
   cout << "tbmat:" << endl;
-  print_matrix(tbmat);
+  print_matrix<M>(tbmat);
   cout << "tbmatT:" << endl;
-  print_matrix(tbmatT);
+  print_matrix<M>(tbmatT);
   cout << "A:" << endl;
-  print_matrix(A);
+  print_matrix<M>(A);
   #endif
 }
 
@@ -400,11 +417,11 @@ void gen_matrix(ac_std_float<W, E> A[M][M])
 
   #ifdef DEBUG
   cout << "tbmat:" << endl;
-  print_matrix(tbmat);
+  print_matrix<M>(tbmat);
   cout << "tbmatT:" << endl;
-  print_matrix(tbmatT);
+  print_matrix<M>(tbmatT);
   cout << "A_ac_fl:" << endl;
-  print_matrix(A_ac_fl);
+  print_matrix<M>(A);
   #endif
 }
 
@@ -454,11 +471,11 @@ void gen_matrix(ac_ieee_float<Format> A[M][M])
 
   #ifdef DEBUG
   cout << "tbmat:" << endl;
-  print_matrix(tbmat);
+  print_matrix<M>(tbmat);
   cout << "tbmatT:" << endl;
-  print_matrix(tbmatT);
+  print_matrix<M>(tbmatT);
   cout << "A_ac_fl:" << endl;
-  print_matrix(A_ac_fl);
+  print_matrix<M>(A);
   #endif
 }
 
@@ -763,7 +780,7 @@ double compare_matrices(
   double this_error, max_error = 0, max_val;
   // Find the max. abs. value in the matrix. In case of complex matrices, this is the max.
   // mag_sqr value. For real matrices, it's the max. absolute value stored in the matrix.
-  max_val = abs_mat_max(L_tb);
+  max_val = abs_mat_max<M>(L_tb);
 
   #ifdef DEBUG
   cout << "max_val = " << max_val << endl;
@@ -972,37 +989,37 @@ int test_driver_fixed(
 
   // The gen_matrix function takes an MxM matrix, and multiplies it by its
   // conjugate transpose to obtain a positive definite input matrix
-  gen_matrix(A_C_array);
-  gen_matrix(cmplx_A_C_array);
+  gen_matrix<M>(A_C_array);
+  gen_matrix<M>(cmplx_A_C_array);
 
-  copy_to_ac_matrix(A_C_array, A_ac_matrix);
-  copy_to_ac_matrix(cmplx_A_C_array, cmplx_A_ac_matrix);
+  copy_to_ac_matrix<M>(A_C_array, A_ac_matrix);
+  copy_to_ac_matrix<M>(cmplx_A_C_array, cmplx_A_ac_matrix);
 
-  test_ac_chol_d_fixed<use_pwl>(A_C_array, L_C_array, cmplx_A_C_array, cmplx_L_C_array, A_ac_matrix, L_ac_matrix, cmplx_A_ac_matrix, cmplx_L_ac_matrix);
+  test_ac_chol_d_fixed<M, use_pwl>(A_C_array, L_C_array, cmplx_A_C_array, cmplx_L_C_array, A_ac_matrix, L_ac_matrix, cmplx_A_ac_matrix, cmplx_L_ac_matrix);
 
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> L_ac_matrix_converted[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > L_cmplx_ac_matrix_converted[M][M];
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
-  copy_to_array_2D(cmplx_L_ac_matrix, L_cmplx_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(cmplx_L_ac_matrix, L_cmplx_ac_matrix_converted);
 
   // Get output of testbench function for cholesky decomposition.
-  chol_d_tb(A_C_array, L_tb);
-  chol_d_tb(cmplx_A_C_array, cmplx_L_tb);
+  chol_d_tb<M>(A_C_array, L_tb);
+  chol_d_tb<M>(cmplx_A_C_array, cmplx_L_tb);
 
   #ifdef DEBUG
   cout << "A_C_array = " << endl;
-  print_matrix(A_C_array);
+  print_matrix<M>(A_C_array);
   cout << "L_C_array = " << endl;
-  print_matrix(L_C_array);
+  print_matrix<M>(L_C_array);
   cout << "L_tb = " << endl;
-  print_matrix(L_tb);
+  print_matrix<M>(L_tb);
   cout << "cmplx_A_C_array = " << endl;
-  print_matrix(cmplx_A_C_array);
+  print_matrix<M>(cmplx_A_C_array);
   cout << "cmplx_L_C_array = " << endl;
-  print_matrix(cmplx_L_C_array);
+  print_matrix<M>(cmplx_L_C_array);
   cout << "cmplx_L_tb = " << endl;
-  print_matrix(cmplx_L_tb);
+  print_matrix<M>(cmplx_L_tb);
   cout << "A_ac_matrix = " << endl;
   cout << A_ac_matrix << endl;
   cout << "L_ac_matrix = " << endl;
@@ -1014,10 +1031,10 @@ int test_driver_fixed(
   #endif
 
   // Compare matrices and get the max error
-  double max_error = compare_matrices(L_C_array, L_tb, allowed_error);
-  double max_error_cmplx = compare_matrices(cmplx_L_C_array, cmplx_L_tb, allowed_error);
-  double max_error_ac_matrix = compare_matrices(L_ac_matrix_converted, L_tb, allowed_error);
-  double max_error_cmplx_ac_matrix = compare_matrices(L_cmplx_ac_matrix_converted, cmplx_L_tb, allowed_error);
+  double max_error = compare_matrices<M>(L_C_array, L_tb, allowed_error);
+  double max_error_cmplx = compare_matrices<M>(cmplx_L_C_array, cmplx_L_tb, allowed_error);
+  double max_error_ac_matrix = compare_matrices<M>(L_ac_matrix_converted, L_tb, allowed_error);
+  double max_error_cmplx_ac_matrix = compare_matrices<M>(L_cmplx_ac_matrix_converted, cmplx_L_tb, allowed_error);
 
   // Put max overall error in a separate variable.
   double max_error_overall = max_error > max_error_ac_matrix ? max_error : max_error_ac_matrix;
@@ -1034,16 +1051,16 @@ int test_driver_fixed(
   cmplx_A_ac_matrix = ac_complex_quantum_value;
 
   // Copy over a non-positive definite matrix to the standard C array inputs.
-  copy_to_array_2D(A_ac_matrix, A_C_array);
-  copy_to_array_2D(cmplx_A_ac_matrix, cmplx_A_C_array);
+  copy_to_array_2D<M>(A_ac_matrix, A_C_array);
+  copy_to_array_2D<M>(cmplx_A_ac_matrix, cmplx_A_C_array);
 
-  test_ac_chol_d_fixed<use_pwl>(A_C_array, L_C_array, cmplx_A_C_array, cmplx_L_C_array, A_ac_matrix, L_ac_matrix, cmplx_A_ac_matrix, cmplx_L_ac_matrix);
+  test_ac_chol_d_fixed<M, use_pwl>(A_C_array, L_C_array, cmplx_A_C_array, cmplx_L_C_array, A_ac_matrix, L_ac_matrix, cmplx_A_ac_matrix, cmplx_L_ac_matrix);
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
-  copy_to_array_2D(cmplx_L_ac_matrix, L_cmplx_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(cmplx_L_ac_matrix, L_cmplx_ac_matrix_converted);
 
   // Make sure that a zero matrix is returned at the output.
-  passed = passed && check_if_zero_matrix(L_C_array) && check_if_zero_matrix(cmplx_L_C_array) && check_if_zero_matrix(L_ac_matrix_converted) && check_if_zero_matrix(L_cmplx_ac_matrix_converted);
+  passed = passed && check_if_zero_matrix<M>(L_C_array) && check_if_zero_matrix<M>(cmplx_L_C_array) && check_if_zero_matrix<M>(L_ac_matrix_converted) && check_if_zero_matrix<M>(L_cmplx_ac_matrix_converted);
 
   if (passed) { printf("PASSED , max err (%f) (%f complex)\n", max_error_overall, max_error_cmplx_overall); }
   else        { printf("FAILED , max err (%f) (%f complex)\n", max_error_overall, max_error_cmplx_overall); } // LCOV_EXCL_LINE
@@ -1101,25 +1118,25 @@ int test_driver_float(
 
   // The gen_matrix function takes an MxM matrix, and multiplies it by its
   // transpose to obtain a positive definite input matrix
-  gen_matrix(A_C_array);
-  copy_to_ac_matrix(A_C_array, A_ac_matrix);
+  gen_matrix<M>(A_C_array);
+  copy_to_ac_matrix<M>(A_C_array, A_ac_matrix);
 
-  test_ac_chol_d_float<use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
+  test_ac_chol_d_float<M, use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
 
   ac_float<outWfl, outIfl, outEfl, AC_TRN> L_ac_matrix_converted[M][M];
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
 
   // Get output of testbench function for cholesky decomposition.
-  chol_d_tb(A_C_array, L_tb);
+  chol_d_tb<M>(A_C_array, L_tb);
 
   #ifdef DEBUG
   cout << "A_C_array = " << endl;
-  print_matrix(A_C_array);
+  print_matrix<M>(A_C_array);
   cout << "L_C_array = " << endl;
-  print_matrix(L_C_array);
+  print_matrix<M>(L_C_array);
   cout << "L_tb = " << endl;
-  print_matrix(L_tb);
+  print_matrix<M>(L_tb);
   cout << "A_ac_matrix = " << endl;
   cout << A_ac_matrix << endl;
   cout << "L_ac_matrix = " << endl;
@@ -1127,8 +1144,8 @@ int test_driver_float(
   #endif
 
   // Compare matrices and get the max error
-  double max_error = compare_matrices(L_C_array, L_tb, allowed_error);
-  double max_error_ac_matrix = compare_matrices(L_ac_matrix_converted, L_tb, allowed_error);
+  double max_error = compare_matrices<M>(L_C_array, L_tb, allowed_error);
+  double max_error_ac_matrix = compare_matrices<M>(L_ac_matrix_converted, L_tb, allowed_error);
 
   // Put max overall error in a separate variable.
   double max_error_overall = max_error > max_error_ac_matrix ? max_error : max_error_ac_matrix;
@@ -1142,14 +1159,14 @@ int test_driver_float(
   A_ac_matrix = ac_float_quantum_value;
 
   // Copy over a non-positive definite matrix to the standard C array inputs.
-  copy_to_array_2D(A_ac_matrix, A_C_array);
+  copy_to_array_2D<M>(A_ac_matrix, A_C_array);
 
-  test_ac_chol_d_float<use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
+  test_ac_chol_d_float<M, use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
 
   // Make sure that a zero matrix is returned at the output.
-  passed = passed && check_if_zero_matrix(L_C_array) && check_if_zero_matrix(L_ac_matrix_converted);
+  passed = passed && check_if_zero_matrix<M>(L_C_array) && check_if_zero_matrix<M>(L_ac_matrix_converted);
 
   if (passed) { printf("PASSED , max err (%f)\n", max_error_overall); }
   else        { printf("FAILED , max err (%f)\n", max_error_overall); } // LCOV_EXCL_LINE
@@ -1207,25 +1224,25 @@ int test_driver_stfloat(
 
   // The gen_matrix function takes an MxN matrix, and multiplies it by its
   // transpose to obtain a positive definite input matrix
-  gen_matrix(A_C_array);
-  copy_to_ac_matrix(A_C_array, A_ac_matrix);
+  gen_matrix<M>(A_C_array);
+  copy_to_ac_matrix<M>(A_C_array, A_ac_matrix);
 
-  test_ac_chol_d_stfloat<use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
+  test_ac_chol_d_stfloat<M, use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
 
   T_out L_ac_matrix_converted[M][M];
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
 
   // Get output of testbench function for cholesky decomposition.
-  chol_d_tb(A_C_array, L_tb);
+  chol_d_tb<M>(A_C_array, L_tb);
 
   #ifdef DEBUG
   cout << "A_C_array = " << endl;
-  print_matrix(A_C_array);
+  print_matrix<M>(A_C_array);
   cout << "L_C_array = " << endl;
-  print_matrix(L_C_array);
+  print_matrix<M>(L_C_array);
   cout << "L_tb = " << endl;
-  print_matrix(L_tb);
+  print_matrix<M>(L_tb);
   cout << "A_ac_matrix = " << endl;
   cout << A_ac_matrix << endl;
   cout << "L_ac_matrix = " << endl;
@@ -1233,8 +1250,8 @@ int test_driver_stfloat(
   #endif
 
   // Compare matrices and get the max error
-  double max_error = compare_matrices(L_C_array, L_tb, allowed_error);
-  double max_error_ac_matrix = compare_matrices(L_ac_matrix_converted, L_tb, allowed_error);
+  double max_error = compare_matrices<M>(L_C_array, L_tb, allowed_error);
+  double max_error_ac_matrix = compare_matrices<M>(L_ac_matrix_converted, L_tb, allowed_error);
 
   // Put max overall error in a separate variable.
   double max_error_overall = max_error > max_error_ac_matrix ? max_error : max_error_ac_matrix;
@@ -1246,14 +1263,14 @@ int test_driver_stfloat(
   A_ac_matrix = T_in::one();
 
   // Copy over a non-positive definite matrix to the standard C array inputs.
-  copy_to_array_2D(A_ac_matrix, A_C_array);
+  copy_to_array_2D<M>(A_ac_matrix, A_C_array);
 
-  test_ac_chol_d_stfloat<use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
+  test_ac_chol_d_stfloat<M, use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
 
   // Make sure that a zero matrix is returned at the output.
-  passed = passed && check_if_zero_matrix(L_C_array) && check_if_zero_matrix(L_ac_matrix_converted);
+  passed = passed && check_if_zero_matrix<M>(L_C_array) && check_if_zero_matrix<M>(L_ac_matrix_converted);
 
   if (passed) { printf("PASSED , max err (%f)\n", max_error_overall); }
   else        { printf("FAILED , max err (%f)\n", max_error_overall); } // LCOV_EXCL_LINE
@@ -1302,25 +1319,25 @@ int test_driver_ifloat(
 
   // The gen_matrix function takes an MxN matrix, and multiplies it by its
   // transpose to obtain a positive definite input matrix
-  gen_matrix(A_C_array);
-  copy_to_ac_matrix(A_C_array, A_ac_matrix);
+  gen_matrix<M>(A_C_array);
+  copy_to_ac_matrix<M>(A_C_array, A_ac_matrix);
 
-  test_ac_chol_d_ifloat<use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
+  test_ac_chol_d_ifloat<M, use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
 
   T_out L_ac_matrix_converted[M][M];
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
 
   // Get output of testbench function for cholesky decomposition.
-  chol_d_tb(A_C_array, L_tb);
+  chol_d_tb<M>(A_C_array, L_tb);
 
   #ifdef DEBUG
   cout << "A_C_array = " << endl;
-  print_matrix(A_C_array);
+  print_matrix<M>(A_C_array);
   cout << "L_C_array = " << endl;
-  print_matrix(L_C_array);
+  print_matrix<M>(L_C_array);
   cout << "L_tb = " << endl;
-  print_matrix(L_tb);
+  print_matrix<M>(L_tb);
   cout << "A_ac_matrix = " << endl;
   cout << A_ac_matrix << endl;
   cout << "L_ac_matrix = " << endl;
@@ -1328,8 +1345,8 @@ int test_driver_ifloat(
   #endif
 
   // Compare matrices and get the max error
-  double max_error = compare_matrices(L_C_array, L_tb, allowed_error);
-  double max_error_ac_matrix = compare_matrices(L_ac_matrix_converted, L_tb, allowed_error);
+  double max_error = compare_matrices<M>(L_C_array, L_tb, allowed_error);
+  double max_error_ac_matrix = compare_matrices<M>(L_ac_matrix_converted, L_tb, allowed_error);
 
   // Put max overall error in a separate variable.
   double max_error_overall = max_error > max_error_ac_matrix ? max_error : max_error_ac_matrix;
@@ -1341,14 +1358,14 @@ int test_driver_ifloat(
   A_ac_matrix = T_in::one();
 
   // Copy over a non-positive definite matrix to the standard C array inputs.
-  copy_to_array_2D(A_ac_matrix, A_C_array);
+  copy_to_array_2D<M>(A_ac_matrix, A_C_array);
 
-  test_ac_chol_d_ifloat<use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
+  test_ac_chol_d_ifloat<M, use_pwl>(A_C_array, L_C_array, A_ac_matrix, L_ac_matrix);
 
-  copy_to_array_2D(L_ac_matrix, L_ac_matrix_converted);
+  copy_to_array_2D<M>(L_ac_matrix, L_ac_matrix_converted);
 
   // Make sure that a zero matrix is returned at the output.
-  passed = passed && check_if_zero_matrix(L_C_array) && check_if_zero_matrix(L_ac_matrix_converted);
+  passed = passed && check_if_zero_matrix<M>(L_C_array) && check_if_zero_matrix<M>(L_ac_matrix_converted);
 
   if (passed) { printf("PASSED , max err (%f)\n", max_error_overall); }
   else        { printf("FAILED , max err (%f)\n", max_error_overall); } // LCOV_EXCL_LINE
@@ -1371,10 +1388,7 @@ int main(int argc, char *argv[])
   test_driver_fixed< true,  7, 16, 64, 32, true>(max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
   test_driver_fixed< true,  8, 16, 64, 32, true>(max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
   test_driver_fixed< true, 10, 16, 64, 32, true>(max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_fixed< true, 11, 16, 64, 32, true>(max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
   test_driver_fixed< true, 12, 16, 64, 32, true>(max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_fixed< true, 13, 16, 64, 32, true>(max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver_fixed< true, 14, 16, 64, 32, true>(max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
 
   test_driver_fixed<false,  7, 16, 64, 32, true>(max_error_acc, cmplx_max_error_acc, allowed_error_acc);
   test_driver_fixed<false,  8, 16, 64, 32, true>(max_error_acc, cmplx_max_error_acc, allowed_error_acc);
@@ -1410,7 +1424,6 @@ int main(int argc, char *argv[])
   test_driver_stfloat< true, 11, 23, 64, 11>(max_error_pwl, allowed_error_pwl);
   test_driver_stfloat< true, 12, 23, 64, 11>(max_error_pwl, allowed_error_pwl);
   test_driver_stfloat< true, 13, 23, 64, 11>(max_error_pwl, allowed_error_pwl);
-  test_driver_stfloat< true, 14, 23, 64, 11>(max_error_pwl, allowed_error_pwl);
   
   test_driver_stfloat<false,  7, 23, 64, 11>(max_error_acc, allowed_error_acc);
   test_driver_stfloat<false,  8, 23, 64, 11>(max_error_acc, allowed_error_acc);
@@ -1428,7 +1441,6 @@ int main(int argc, char *argv[])
   test_driver_ifloat< true, 11, binary32, binary64>(max_error_pwl, allowed_error_pwl);
   test_driver_ifloat< true, 12, binary32, binary64>(max_error_pwl, allowed_error_pwl);
   test_driver_ifloat< true, 13, binary32, binary64>(max_error_pwl, allowed_error_pwl);
-  test_driver_ifloat< true, 14, binary32, binary64>(max_error_pwl, allowed_error_pwl);
   
   test_driver_ifloat<false,  7, binary32, binary64>(max_error_acc, allowed_error_acc);
   test_driver_ifloat<false,  8, binary32, binary64>(max_error_acc, allowed_error_acc);

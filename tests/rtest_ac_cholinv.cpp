@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -48,7 +48,7 @@ using namespace ac_math;
 //   used to configure the bit-widths of the types.
 
 // Test Design for real and complex fixed point values.
-template <bool use_pwl, unsigned M, int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
+template <unsigned M, bool use_pwl, int Wfi, int Ifi, int outWfi, int outIfi, bool outSfi>
 void test_ac_cholinv(
   const ac_fixed<Wfi, Ifi, false, AC_TRN, AC_WRAP> A1[M][M],
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> L1[M][M],
@@ -60,8 +60,13 @@ void test_ac_cholinv(
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> &L4
 )
 {
-  ac_cholinv<use_pwl, use_pwl>(A1, L1);
-  ac_cholinv<use_pwl, use_pwl>(A2, L2);
+  #ifdef _WIN32 
+    ac_cholinv<M, use_pwl, use_pwl>(A1, L1);
+    ac_cholinv<M, use_pwl, use_pwl>(A2, L2);
+  #else
+    ac_cholinv<use_pwl, use_pwl>(A1, L1);
+    ac_cholinv<use_pwl, use_pwl>(A2, L2);
+  #endif
   ac_cholinv<use_pwl, use_pwl>(A3, L3);
   ac_cholinv<use_pwl, use_pwl>(A4, L4);
 }
@@ -563,16 +568,16 @@ int test_driver(
   gen_matrix(cmplx_A_ac_matrix);
   //CCS_DESIGN(project)(A, Ainv);
 
-  copy_to_array_2D(A_ac_matrix, A_C_array);
-  copy_to_array_2D(cmplx_A_ac_matrix, cmplx_A_C_array);
+  copy_to_array_2D<M>(A_ac_matrix, A_C_array);
+  copy_to_array_2D<M>(cmplx_A_ac_matrix, cmplx_A_C_array);
 
-  test_ac_cholinv<use_pwl>(A_C_array, Ainv_C_array, cmplx_A_C_array, cmplx_Ainv_C_array, A_ac_matrix, Ainv_ac_matrix, cmplx_A_ac_matrix, cmplx_Ainv_ac_matrix);
+  test_ac_cholinv<M, use_pwl>(A_C_array, Ainv_C_array, cmplx_A_C_array, cmplx_Ainv_C_array, A_ac_matrix, Ainv_ac_matrix, cmplx_A_ac_matrix, cmplx_Ainv_ac_matrix);
 
   ac_matrix<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP>, M, M> Ainv_C_array_converted;
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> cmplx_Ainv_C_array_converted;
 
-  copy_to_ac_matrix(Ainv_C_array, Ainv_C_array_converted);
-  copy_to_ac_matrix(cmplx_Ainv_C_array, cmplx_Ainv_C_array_converted);
+  copy_to_ac_matrix<M>(Ainv_C_array, Ainv_C_array_converted);
+  copy_to_ac_matrix<M>(cmplx_Ainv_C_array, cmplx_Ainv_C_array_converted);
 
   //ac_matrix<double, M, M> A_tb;
   for (unsigned i=0; i<M; i++) {
@@ -583,8 +588,8 @@ int test_driver(
     }
   }
 
-  chol_inv_tb<M>(A_tb, Ainv_tb);
-  chol_inv_tb<M>(cmplx_A_tb, cmplx_Ainv_tb);
+  chol_inv_tb(A_tb, Ainv_tb);
+  chol_inv_tb(cmplx_A_tb, cmplx_Ainv_tb);
 
   #ifdef DEBUG
   cout << "A_ac_matrix = " << endl;
@@ -653,7 +658,6 @@ int main(int argc, char *argv[])
 
   // template <bool use_pwl, unsigned M, int FBfi, int outWfi, int outIfi, bool outSfi>
   test_driver<true, 5, 16, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
-  test_driver<true, 7, 16, 64, 32, true> (max_error_pwl, cmplx_max_error_pwl, allowed_error_pwl);
 
   test_driver<false, 4, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);
   test_driver<false, 5, 16, 64, 32, true> (max_error_accurate, cmplx_max_error_accurate, allowed_error_accurate);

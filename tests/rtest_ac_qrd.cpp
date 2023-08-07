@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -49,7 +49,7 @@ using namespace ac_math;
 
 // Test Design for real and complex fixed point values, using PWL functions
 // for QR decomposition.
-template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <unsigned M, bool real_diag, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 void test_ac_qrd_pwl(
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M],
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M],
@@ -65,15 +65,20 @@ void test_ac_qrd_pwl(
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> &R_cmplx_matrix
 )
 {
-  ac_qrd<true>(in_arr, Q_arr, R_arr);
-  ac_qrd<real_diag, true>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  #ifdef _WIN32
+    ac_qrd<M, true>(in_arr, Q_arr, R_arr);
+    ac_qrd<M, real_diag, true>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  #else
+    ac_qrd<true>(in_arr, Q_arr, R_arr);
+    ac_qrd<real_diag, true>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  #endif
   ac_qrd<true>(in_matrix, Q_matrix, R_matrix);
   ac_qrd<real_diag, true>(in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 }
 
 // Test Design for real and complex fixed point values, using the accurate
 // functions for QR decomposition.
-template <bool real_diag, unsigned M, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
+template <unsigned M, bool real_diag, int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
 void test_ac_qrd_accurate(
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> in_arr[M][M],
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_arr[M][M],
@@ -89,8 +94,13 @@ void test_ac_qrd_accurate(
   ac_matrix<ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> >, M, M> &R_cmplx_matrix
 )
 {
-  ac_qrd<false>(in_arr, Q_arr, R_arr);
-  ac_qrd<real_diag, false>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  #ifdef _WIN32
+    ac_qrd<M, false>(in_arr, Q_arr, R_arr);
+    ac_qrd<M, real_diag, false>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  #else
+    ac_qrd<false>(in_arr, Q_arr, R_arr);
+    ac_qrd<real_diag, false>(in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr);
+  #endif
   ac_qrd<false>(in_matrix, Q_matrix, R_matrix);
   ac_qrd<real_diag, false>(in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 }
@@ -330,11 +340,11 @@ int test_driver_pwl(
   ac_complex<double> recovered_cmplx_matrix_double[M][M];
 
   //initialize the matrix elements using ac_random
-  gen_matrix(in_arr);
-  gen_matrix(in_cmplx_arr);
+  gen_matrix<M>(in_arr);
+  gen_matrix<M>(in_cmplx_arr);
 
-  copy_to_input_ac_matrix(in_arr, in_matrix);
-  copy_to_input_ac_matrix(in_cmplx_arr, in_cmplx_matrix);
+  copy_to_input_ac_matrix<M>(in_arr, in_matrix);
+  copy_to_input_ac_matrix<M>(in_cmplx_arr, in_cmplx_matrix);
 
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
@@ -343,17 +353,17 @@ int test_driver_pwl(
     }
   }
 
-  test_ac_qrd_pwl<real_diag>(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
+  test_ac_qrd_pwl<M, real_diag>(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_ac_matrix_converted[M][M];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_ac_matrix_converted[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > Q_cmplx_ac_matrix_converted[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > R_cmplx_ac_matrix_converted[M][M];
 
-  copy_to_C_array_2D(Q_matrix, Q_ac_matrix_converted);
-  copy_to_C_array_2D(R_matrix, R_ac_matrix_converted);
-  copy_to_C_array_2D(Q_cmplx_matrix, Q_cmplx_ac_matrix_converted);
-  copy_to_C_array_2D(R_cmplx_matrix, R_cmplx_ac_matrix_converted);
+  copy_to_C_array_2D<M>(Q_matrix, Q_ac_matrix_converted);
+  copy_to_C_array_2D<M>(R_matrix, R_ac_matrix_converted);
+  copy_to_C_array_2D<M>(Q_cmplx_matrix, Q_cmplx_ac_matrix_converted);
+  copy_to_C_array_2D<M>(R_cmplx_matrix, R_cmplx_ac_matrix_converted);
 
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
@@ -369,16 +379,16 @@ int test_driver_pwl(
   }
 
   // Recover the original matrix value
-  matrixmul_double (Q_actual_double, R_actual_double, recovered_double);
-  matrixmul_double (Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
-  matrixmul_double (Q_actual_matrix_double, R_actual_matrix_double, recovered_matrix_double);
-  matrixmul_double (Q_actual_matrix_cmplx_double, R_actual_matrix_cmplx_double, recovered_cmplx_matrix_double);
+  matrixmul_double<M>(Q_actual_double, R_actual_double, recovered_double);
+  matrixmul_double<M>(Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
+  matrixmul_double<M>(Q_actual_matrix_double, R_actual_matrix_double, recovered_matrix_double);
+  matrixmul_double<M>(Q_actual_matrix_cmplx_double, R_actual_matrix_cmplx_double, recovered_cmplx_matrix_double);
 
   // Compare matrices and get the max error
-  double max_error = compare_matrices(recovered_double, input_double, allowed_error);
-  double max_error_cmplx = compare_matrices(recovered_cmplx_double, input_cmplx_double, allowed_error);
-  double max_error_ac_matrix = compare_matrices(recovered_matrix_double, input_double, allowed_error);
-  double max_error_cmplx_ac_matrix = compare_matrices(recovered_cmplx_matrix_double, input_cmplx_double, allowed_error);
+  double max_error = compare_matrices<M>(recovered_double, input_double, allowed_error);
+  double max_error_cmplx = compare_matrices<M>(recovered_cmplx_double, input_cmplx_double, allowed_error);
+  double max_error_ac_matrix = compare_matrices<M>(recovered_matrix_double, input_double, allowed_error);
+  double max_error_cmplx_ac_matrix = compare_matrices<M>(recovered_cmplx_matrix_double, input_cmplx_double, allowed_error);
 
   // Put max overall error in a separate variable.
   double max_error_overall = max_error > max_error_ac_matrix ? max_error : max_error_ac_matrix;
@@ -450,11 +460,11 @@ int test_driver_accurate(
   ac_complex<double> recovered_cmplx_matrix_double[M][M];
 
   //initialize the matrix elements using ac_random
-  gen_matrix(in_arr);
-  gen_matrix(in_cmplx_arr);
+  gen_matrix<M>(in_arr);
+  gen_matrix<M>(in_cmplx_arr);
 
-  copy_to_input_ac_matrix(in_arr, in_matrix);
-  copy_to_input_ac_matrix(in_cmplx_arr, in_cmplx_matrix);
+  copy_to_input_ac_matrix<M>(in_arr, in_matrix);
+  copy_to_input_ac_matrix<M>(in_cmplx_arr, in_cmplx_matrix);
 
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
@@ -463,17 +473,17 @@ int test_driver_accurate(
     }
   }
 
-  test_ac_qrd_accurate<real_diag>(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
+  test_ac_qrd_accurate<M, real_diag>(in_arr, Q_arr, R_arr, in_cmplx_arr, Q_cmplx_arr, R_cmplx_arr, in_matrix, Q_matrix, R_matrix, in_cmplx_matrix, Q_cmplx_matrix, R_cmplx_matrix);
 
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> Q_ac_matrix_converted[M][M];
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> R_ac_matrix_converted[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > Q_cmplx_ac_matrix_converted[M][M];
   ac_complex<ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> > R_cmplx_ac_matrix_converted[M][M];
 
-  copy_to_C_array_2D(Q_matrix, Q_ac_matrix_converted);
-  copy_to_C_array_2D(R_matrix, R_ac_matrix_converted);
-  copy_to_C_array_2D(Q_cmplx_matrix, Q_cmplx_ac_matrix_converted);
-  copy_to_C_array_2D(R_cmplx_matrix, R_cmplx_ac_matrix_converted);
+  copy_to_C_array_2D<M>(Q_matrix, Q_ac_matrix_converted);
+  copy_to_C_array_2D<M>(R_matrix, R_ac_matrix_converted);
+  copy_to_C_array_2D<M>(Q_cmplx_matrix, Q_cmplx_ac_matrix_converted);
+  copy_to_C_array_2D<M>(R_cmplx_matrix, R_cmplx_ac_matrix_converted);
 
   for (int i = 0; i < (int)M; i++) {
     for (int j = 0; j < (int)M; j++) {
@@ -489,16 +499,16 @@ int test_driver_accurate(
   }
 
   // Recover the original matrix value
-  matrixmul_double (Q_actual_double, R_actual_double, recovered_double);
-  matrixmul_double (Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
-  matrixmul_double (Q_actual_matrix_double, R_actual_matrix_double, recovered_matrix_double);
-  matrixmul_double (Q_actual_matrix_cmplx_double, R_actual_matrix_cmplx_double, recovered_cmplx_matrix_double);
+  matrixmul_double<M>(Q_actual_double, R_actual_double, recovered_double);
+  matrixmul_double<M>(Q_actual_cmplx_double, R_actual_cmplx_double, recovered_cmplx_double);
+  matrixmul_double<M>(Q_actual_matrix_double, R_actual_matrix_double, recovered_matrix_double);
+  matrixmul_double<M>(Q_actual_matrix_cmplx_double, R_actual_matrix_cmplx_double, recovered_cmplx_matrix_double);
 
   // Compare matrices and get the max error
-  double max_error = compare_matrices(recovered_double, input_double, allowed_error);
-  double max_error_cmplx = compare_matrices(recovered_cmplx_double, input_cmplx_double, allowed_error);
-  double max_error_ac_matrix = compare_matrices(recovered_matrix_double, input_double, allowed_error);
-  double max_error_cmplx_ac_matrix = compare_matrices(recovered_cmplx_matrix_double, input_cmplx_double, allowed_error);
+  double max_error = compare_matrices<M>(recovered_double, input_double, allowed_error);
+  double max_error_cmplx = compare_matrices<M>(recovered_cmplx_double, input_cmplx_double, allowed_error);
+  double max_error_ac_matrix = compare_matrices<M>(recovered_matrix_double, input_double, allowed_error);
+  double max_error_cmplx_ac_matrix = compare_matrices<M>(recovered_cmplx_matrix_double, input_cmplx_double, allowed_error);
 
   // Put max overall error in a separate variable.
   double max_error_overall = max_error > max_error_ac_matrix ? max_error : max_error_ac_matrix;

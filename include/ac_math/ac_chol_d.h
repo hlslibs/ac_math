@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -161,12 +161,18 @@ namespace ac_math
     T_out index = ((i*(i + 1))>>1) + j;
     return index;
   }
-
-  template<bool use_pwl = false,
+  #ifdef _WIN32
+  template<unsigned M, bool use_pwl = false,
            int delta_w = 0, int delta_i = 0, ac_q_mode imd_Q = AC_RND, ac_o_mode imd_O = AC_SAT,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
-           int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO,
-           unsigned M>
+           int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>  
+  #else
+  template<bool use_pwl = false,
+         int delta_w = 0, int delta_i = 0, ac_q_mode imd_Q = AC_RND, ac_o_mode imd_O = AC_SAT,
+         int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
+         int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO,
+         unsigned M>
+  #endif
   void ac_chol_d(
     const ac_fixed<W, I, S, Q, O> A[M][M],
     ac_fixed<outW, outI, outS, outQ, outO> L[M][M]
@@ -328,12 +334,18 @@ namespace ac_math
 //    the AC_ASSERT cannot provide an indication of that.
 //
 // -------------------------------------------------------------------------
-
+  #ifdef _WIN32
+  template<unsigned M, bool use_pwl = false,
+           int delta_w = 0, int delta_i = 0, int delta_e = 0, ac_q_mode imd_Q = AC_RND,
+           int W, int I, int E, ac_q_mode Q,
+           int outW, int outI, int outE, ac_q_mode outQ>  
+  #else
   template<bool use_pwl = false,
            int delta_w = 0, int delta_i = 0, int delta_e = 0, ac_q_mode imd_Q = AC_RND,
            int W, int I, int E, ac_q_mode Q,
            int outW, int outI, int outE, ac_q_mode outQ,
            unsigned M>
+  #endif
   void ac_chol_d(
     const ac_float<W, I, E, Q> A[M][M],
     ac_float<outW, outI, outE, outQ> L[M][M]
@@ -491,12 +503,18 @@ namespace ac_math
 //    the AC_ASSERT cannot provide an indication of that.
 //
 // -------------------------------------------------------------------------
-
+  #ifdef _WIN32
+  template<unsigned M, bool use_pwl = false,
+           int delta_w = 0, int delta_i = 0, int delta_e = 0, ac_q_mode imd_Q = AC_RND,
+           int W, int E,
+           int outW, int outE>  
+  #else
   template<bool use_pwl = false,
            int delta_w = 0, int delta_i = 0, int delta_e = 0, ac_q_mode imd_Q = AC_RND,
            int W, int E,
            int outW, int outE,
            unsigned M>
+  #endif
   void ac_chol_d(
     const ac_std_float<W, E> A[M][M],
     ac_std_float<outW, outE> L[M][M]
@@ -514,8 +532,12 @@ namespace ac_math
       }
     }
 
-    ac_chol_d<use_pwl, delta_w, delta_i, delta_e, imd_Q>(A_ac_fl, L_ac_fl);
 
+  #ifdef _WIN32 
+    ac_chol_d<M, use_pwl, delta_w, delta_i, delta_e, imd_Q>(A_ac_fl, L_ac_fl);
+  #else
+    ac_chol_d<use_pwl, delta_w, delta_i, delta_e, imd_Q>(A_ac_fl, L_ac_fl);
+  #endif
     ARRAY_AC_STD_FLOAT_OUTPUT_COPY_ROW:
     for (int i = 0; i < M; i++) {
       ARRAY_AC_STD_FLOAT_OUTPUT_COPY_COL:
@@ -587,11 +609,18 @@ namespace ac_math
 //
 // -------------------------------------------------------------------------
 
+  #ifdef _WIN32
+  template<unsigned M, bool use_pwl = false,
+           int delta_w = 0, int delta_i = 0, int delta_e = 0, ac_q_mode imd_Q = AC_RND,
+           ac_ieee_float_format Format,
+           ac_ieee_float_format outFormat>  
+  #else
   template<bool use_pwl = false,
            int delta_w = 0, int delta_i = 0, int delta_e = 0, ac_q_mode imd_Q = AC_RND,
            ac_ieee_float_format Format,
            ac_ieee_float_format outFormat,
            unsigned M>
+  #endif
   void ac_chol_d(
     const ac_ieee_float<Format> A[M][M],
     ac_ieee_float<outFormat> L[M][M]
@@ -615,7 +644,11 @@ namespace ac_math
       }
     }
 
+#ifdef _WIN32
+    ac_chol_d<M, use_pwl, delta_w, delta_i, delta_e, imd_Q>(A_ac_fl, L_ac_fl);
+#else
     ac_chol_d<use_pwl, delta_w, delta_i, delta_e, imd_Q>(A_ac_fl, L_ac_fl);
+#endif
 
     ARRAY_AC_IEEE_FLOAT_OUTPUT_COPY_ROW:
     for (int i = 0; i < M; i++) {
@@ -682,11 +715,18 @@ namespace ac_math
 //
 // ----------------------------------------------------------------------------------------------
 
-  template<bool use_pwl = false,
+  #ifdef _WIN32
+  template<unsigned M, bool use_pwl = false,
            int delta_w = 0, int delta_i = 0, ac_q_mode imd_Q = AC_RND, ac_o_mode imd_O = AC_SAT,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
-           int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO,
-           unsigned M>
+           int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>  
+  #else
+  template<bool use_pwl = false,
+         int delta_w = 0, int delta_i = 0, ac_q_mode imd_Q = AC_RND, ac_o_mode imd_O = AC_SAT,
+         int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
+         int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO,
+         unsigned M>
+  #endif
   void ac_chol_d(
     const ac_complex<ac_fixed<W, I, S, Q, O> > A[M][M],
     ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > L[M][M]
@@ -822,7 +862,12 @@ template<bool use_pwl = false,
 void indirect_chol_d(const ac_matrix<T1, M1, M1> &input, ac_matrix<T2, M1, M1> &output)
 {
   // Extract 2D array member data, and pass it over to the 2D array implementation.
+#ifdef _WIN32
+  ac_math::ac_chol_d<M1, use_pwl, delta_w, delta_i, imd_Q, imd_O>(input.m_data, output.m_data);
+#else
   ac_math::ac_chol_d<use_pwl, delta_w, delta_i, imd_Q, imd_O>(input.m_data, output.m_data);
+#endif
+
 }
 
 // =============================================================================================
@@ -835,7 +880,11 @@ template<bool use_pwl = false,
 void indirect_chol_d_float(const ac_matrix<T1, M1, M1> &input, ac_matrix<T2, M1, M1> &output)
 {
   // Extract 2D array member data, and pass it over to the 2D array implementation.
-  ac_math::ac_chol_d<use_pwl, delta_w, delta_i, imd_Q>(input.m_data, output.m_data);
+#ifdef _WIN32
+  ac_math::ac_chol_d<M1, use_pwl, delta_w, delta_i, imd_Q>(input.m_data, output.m_data);
+#else
+  ac_math::ac_chol_d<use_pwl, delta_w, delta_i, 0, imd_Q>(input.m_data, output.m_data);
+#endif
 }
 
 namespace ac_math

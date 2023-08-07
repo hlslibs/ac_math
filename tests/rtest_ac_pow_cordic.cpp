@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -415,8 +415,8 @@ int test_driver_stfloat(
       // Range of base_e values: 0 to bias*2.
       ac_int<baseE, false> base_e = rand()%(2*T_base::exp_bias + 1);
       ac_int<baseW, true> base_data = 0;
-      base_data.template set_slc(0, base_m);
-      base_data.template set_slc(baseW - baseE - 1, base_e);
+      base_data.set_slc(0, base_m);
+      base_data.set_slc(baseW - baseE - 1, base_e);
       base_stfloat.set_data(base_data);
     }
     T_expon sp_vals_expon[] = {
@@ -437,8 +437,8 @@ int test_driver_stfloat(
         ac_int<expE, false> expon_e = rand()%(2*T_expon::exp_bias + 1);
         ac_int<expW, true> expon_data;
         expon_data[expW - 1] = rand()%2; // Randomly negate exponent value.
-        expon_data.template set_slc(0, expon_m);
-        expon_data.template set_slc(expW - expE - 1, expon_e);
+        expon_data.set_slc(0, expon_m);
+        expon_data.set_slc(expW - expE - 1, expon_e);
         expon_stfloat.set_data(expon_data);
       }
       if (base_stfloat == T_base::zero() && expon_stfloat <= T_expon::zero()) {
@@ -564,8 +564,8 @@ int test_driver_ifloat(
       // Range of base_e values: 0 to bias*2.
       ac_int<baseE, false> base_e = rand()%(2*T_base::exp_bias + 1);
       ac_int<baseW, true> base_data = 0;
-      base_data.template set_slc(0, base_m);
-      base_data.template set_slc(baseW - baseE - 1, base_e);
+      base_data.set_slc(0, base_m);
+      base_data.set_slc(baseW - baseE - 1, base_e);
       base_ifloat.set_data(base_data);
     }
     T_expon sp_vals_expon[] = {
@@ -585,8 +585,8 @@ int test_driver_ifloat(
         ac_int<expE, false> expon_e = rand()%(2*T_expon::exp_bias + 1);
         ac_int<expW, true> expon_data;
         expon_data[expW - 1] = rand()%2; // Randomly negate exponent value.
-        expon_data.template set_slc(0, expon_m);
-        expon_data.template set_slc(expW - expE - 1, expon_e);
+        expon_data.set_slc(0, expon_m);
+        expon_data.set_slc(expW - expE - 1, expon_e);
         expon_ifloat.set_data(expon_data);
       }
       if (base_ifloat == T_base::zero() && expon_ifloat <= T_expon::zero()) {

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -138,11 +138,18 @@
 
 namespace ac_math
 {
-  template<bool use_pwl1 = false, bool use_pwl2 = false,
-           int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,
-           unsigned M,
+  #ifdef _WIN32
+  template<unsigned M, bool use_pwl1 = false, bool use_pwl2 = false,
+           int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,           
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
+  #else
+  template<bool use_pwl1 = false, bool use_pwl2 = false,
+         int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,
+         unsigned M,
+         int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
+         int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
+  #endif         
   void ac_cholinv(
     const ac_fixed<W, I, S, Q, O> A[M][M],
     ac_fixed<outW, outI, outS, outQ, outO> Ainv[M][M]
@@ -156,7 +163,11 @@ namespace ac_math
     Tout sum;
     Tout Linv[M][M];
     Tout L[M][M];
-    ac_math::ac_chol_d<use_pwl1>(A, L);
+    #ifdef _WIN32
+      ac_math::ac_chol_d<M, use_pwl1>(A, L);
+    #else
+      ac_math::ac_chol_d<use_pwl1>(A, L);
+    #endif
 
     // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
@@ -257,11 +268,18 @@ namespace ac_math
 //
 //--------------------------------------------------------------------------------------
 
+  #ifdef _WIN32
+  template<unsigned M, bool use_pwl1 = false, bool use_pwl2 = false,
+           int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,
+           int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
+           int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
+  #else
   template<bool use_pwl1 = false, bool use_pwl2 = false,
            int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,
            unsigned M,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
+  #endif  
   void ac_cholinv(
     const ac_complex<ac_fixed<W, I, S, Q, O> > A[M][M],
     ac_complex<ac_fixed<outW, outI, outS, outQ, outO> > Ainv[M][M]
@@ -274,7 +292,11 @@ namespace ac_math
     Tout sum;
     Tout Linv[M][M];
     Tout L[M][M];
-    ac_math::ac_chol_d<use_pwl1>(A, L);
+    #ifdef _WIN32
+      ac_math::ac_chol_d<M, use_pwl1>(A, L);
+    #else
+      ac_math::ac_chol_d<use_pwl1>(A, L);
+    #endif
 
     // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
@@ -334,13 +356,17 @@ namespace ac_math
 // Helper function for using ac_cholinv on ac_matrix objects
 
 template<bool use_pwl1 = false, bool use_pwl2 = false,
-         int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,
-         unsigned M1,
+         int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,         
+         unsigned M1, 
          class T1, class T2>
 void ac_matrix_cholinv(const ac_matrix<T1, M1, M1> &input, ac_matrix<T2, M1, M1> &output)
 {
   // Extract 2D array member data, and pass it over to the 2D array implementation.
-  ac_math::ac_cholinv<use_pwl1, use_pwl2, add2w, add2i, temp_Q, temp_O>(input.m_data, output.m_data);
+  #ifdef _WIN32
+    ac_math::ac_cholinv<M1, use_pwl1, use_pwl2, add2w, add2i, temp_Q, temp_O>(input.m_data, output.m_data);
+  #else
+    ac_math::ac_cholinv<use_pwl1, use_pwl2, add2w, add2i, temp_Q, temp_O>(input.m_data, output.m_data);
+  #endif    
 }
 
 namespace ac_math
@@ -394,7 +420,7 @@ namespace ac_math
 //-----------------------------------------------------------------------------
 
   template<bool use_pwl1 = false, bool use_pwl2 = false,
-           int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,
+           int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,           
            unsigned M,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
@@ -454,7 +480,7 @@ namespace ac_math
 
   template<bool use_pwl1 = false, bool use_pwl2 = false,
            int add2w = 0, int add2i = 0, ac_q_mode temp_Q = AC_RND, ac_o_mode temp_O = AC_SAT,
-           unsigned M,
+           unsigned M,          
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
   void ac_cholinv(

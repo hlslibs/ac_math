@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -91,6 +91,8 @@ int test_driver(
 
   double lower_limit, upper_limit, step;
 
+  const double PI_VALUE = 3.14159265358979323846;
+
   // set ranges and step size for the testbench
   lower_limit   = input_angle.template set_val<AC_VAL_MIN>().to_double();
   upper_limit   = input_angle.template set_val<AC_VAL_MAX>().to_double();
@@ -118,9 +120,9 @@ int test_driver(
     input_angle = i;
     test_ac_sincos_lut(input_angle, output);
 
-    double expected_sine_value   = ((T_out)sin(input_angle.to_double()*2*M_PI)).to_double();
+    double expected_sine_value   = ((T_out)sin(input_angle.to_double()*2*PI_VALUE)).to_double();
     double actual_sine_value       = output.i().to_double();
-    double expected_cosine_value = ((T_out)cos(input_angle.to_double()*2*M_PI)).to_double();
+    double expected_cosine_value = ((T_out)cos(input_angle.to_double()*2*PI_VALUE)).to_double();
     double actual_cosine_value     = output.r().to_double();
     double this_error_sine, this_error_cosine;
 

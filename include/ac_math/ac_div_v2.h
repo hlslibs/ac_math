@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright  Siemens                                                *
  *                                                                        *
@@ -121,8 +121,8 @@ void ac_div_v2(
   ac_int<RW,false> &remainder
 )
 {
-  const uint   int_nw=NW+PW;
-  const uint   int_qw=int_nw-DW;
+  const unsigned int int_nw=NW+PW;
+  const unsigned int int_qw=int_nw-DW;
 
   ac_int<DW,false> min_div_value=0;
   min_div_value[DW-PW]=1;

@@ -2,11 +2,41 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
+ *                                                                        *
+ *  Copyright  Siemens                                                *
+ *                                                                        *
+ **************************************************************************
+ *  Licensed under the Apache License, Version 2.0 (the "License");       *
+ *  you may not use this file except in compliance with the License.      * 
+ *  You may obtain a copy of the License at                               *
+ *                                                                        *
+ *      http://www.apache.org/licenses/LICENSE-2.0                        *
+ *                                                                        *
+ *  Unless required by applicable law or agreed to in writing, software   * 
+ *  distributed under the License is distributed on an "AS IS" BASIS,     * 
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or       *
+ *  implied.                                                              * 
+ *  See the License for the specific language governing permissions and   * 
+ *  limitations under the License.                                        *
+ **************************************************************************
+ *                                                                        *
+ *  The most recent version of this package is available at github.       *
+ *                                                                        *
+ *************************************************************************/
+/**************************************************************************
+ *                                                                        *
+ *  Algorithmic C (tm) Math Library                                       *
+ *                                                                        *
+ *  Software Version: 3.5                                                 *
+ *                                                                        *
+ *  Release Date    : Mon Apr 17 23:58:27 PDT 2023                        *
+ *  Release Type    : Production Release                                  *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -52,16 +82,16 @@
 
 template<int N_BITS>
 bool ac_leading_ones(ac_int<N_BITS,false> &din,
-                     ac_int<ac::log2ceil<N_BITS>::val,false> &dout)
+                    ac_int<ac::log2_ceil<N_BITS>::val,false> &dout)
 {
   enum {
     P2 = ac::nbits<(N_BITS+1)/2>::val
   };
   ac_int<N_BITS-P2,false> upper;
   ac_int<P2,false> lower;
-  ac_int<ac::log2ceil<N_BITS>::val,0> idx=0;
-  ac_int<ac::log2ceil<N_BITS-P2>::val,0> idxu=0;
-  ac_int<ac::log2ceil<P2>::val,0> idxl=0;
+  ac_int<ac::log2_ceil<N_BITS>::val,0> idx=0;
+  ac_int<ac::log2_ceil<N_BITS-P2>::val,0> idxu=0;
+  ac_int<ac::log2_ceil<P2>::val,0> idxl=0;
   static bool flag = false;
 
   upper.set_slc(0, din.template slc<N_BITS-P2>(P2));
@@ -80,7 +110,7 @@ bool ac_leading_ones(ac_int<N_BITS,false> &din,
 
 template<>
 bool ac_leading_ones<1>(ac_int<1,false> &din,
-                        ac_int<1,false> &dout)
+                        ac_int<ac::log2_ceil<1>::val,false> &dout)
 {
   dout = 0;
   return din[0];

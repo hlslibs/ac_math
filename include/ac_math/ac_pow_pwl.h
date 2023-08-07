@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -183,6 +183,7 @@ namespace ac_math
     ac_fixed<sc_input_frac_bits + int_bits, int_bits, false> x_in_sc = (input_frac_part - x_min_lut)*sc_constant_lut;
     ac_fixed<sc_input_frac_bits, 0, false> x_in_sc_frac;
     // Slice out the fractional part from the scaled input, store it in another variable.
+		#pragma hls_waive UMR
     x_in_sc_frac.set_slc(0, x_in_sc.template slc<sc_input_frac_bits>(0));
     // The integer part of the scaled input is the index of the LUT table
     ac_int<int_bits, false> index = x_in_sc.to_int();

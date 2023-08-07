@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.4                                                 *
+ *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Feb  6 09:12:03 PST 2023                        *
+ *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.4.6                                               *
+ *  Release Build   : 3.5.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -59,8 +59,13 @@ void test_ac_determinant(
   ac_complex<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> > &det4
 )
 {
-  det1 = ac_determinant<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> >(A1);
-  det2 = ac_determinant<ac_complex<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> > >(A2);
+  #ifdef _WIN32  
+    det1 = ac_determinant<M, ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> >(A1);
+    det2 = ac_determinant<M, ac_complex<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> > >(A2);
+  #else
+    det1 = ac_determinant<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> >(A1);
+    det2 = ac_determinant<ac_complex<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> > >(A2);
+  #endif
   det3 = ac_determinant<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> >(A3);
   det4 = ac_determinant<ac_complex<ac_fixed<(M*Wfi + ac::log2_floor<Factorial<M>::value >::val), (M*Ifi + ac::log2_floor<Factorial<M>::value >::val), true, AC_TRN, AC_WRAP> > >(A4);
 }
@@ -201,7 +206,7 @@ int test_driver(
     }
   }
 
-  test_ac_determinant(input_arr, output_arr, input_cmplx_arr, output_cmplx_arr, input, output, input_cmplx, output_cmplx);
+  test_ac_determinant<M>(input_arr, output_arr, input_cmplx_arr, output_cmplx_arr, input, output, input_cmplx, output_cmplx);
 
   //call the c datatype equivalent of determinant function
   output_double = determinant_compute <M, double> (input_double);
