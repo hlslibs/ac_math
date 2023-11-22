@@ -79,7 +79,10 @@ SOURCES_CPP = \
   rtest_ac_softplus_pwl.cpp \
   rtest_ac_softsign_pwl.cpp \
   rtest_ac_elu_pwl.cpp \
-  rtest_ac_selu_pwl.cpp
+  rtest_ac_selu_pwl.cpp \
+	rtest_ac_gelu_pwl.cpp \
+	rtest_ac_leakyrelu.cpp \
+	rtest_ac_relu.cpp
 
 OBJS = $(SOURCES_CPP:.cpp=.o)
 

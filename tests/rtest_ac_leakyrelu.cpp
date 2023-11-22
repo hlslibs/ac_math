@@ -30,31 +30,31 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_selu_pwl() function using a variety of bit-widths.
+// ac_leakyrelu() function using a variety of bit-widths.
 
 // To compile standalone and run:
-//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_selu_pwl.cpp -o design
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_leakyrelu.cpp -o design
 //   ./design
 
 // Include the AC Math function that is exercised with this testbench
-#include <ac_math/ac_selu_pwl.h>
+#include <ac_math/ac_leakyrelu.h>
 using namespace ac_math;
 
 // ==============================================================================
 // Test Designs
-//   These simple function allow executing the ac_selu_pwl() function.
+//   These simple function allow executing the ac_leakyrelu() function.
 //   Template parameters are used to configure the bit-widths of the
 //   inputs and outputs.
 
 // Test design for real fixed point values.
 
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-void test_ac_selu_pwl_fixed(
+void test_ac_leakyrelu_fixed(
   const ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>  &in,
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> &out
 )
 {
-  ac_selu_pwl(in, out);
+  ac_leakyrelu(in, out);
 }
 
 // ==============================================================================
@@ -70,7 +70,7 @@ using namespace std;
 // Description: A templatized function that can be configured for certain bit-
 //   widths of ac_fixed inputs. It uses the type information to iterate through a
 //   range of valid values on that type in order to compare the precision of the
-//   piece-wise linear selu model with the computed selu using a
+//   piece-wise linear leakyrelu model with the computed leakyrelu using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
 
@@ -91,15 +91,12 @@ int test_driver_fixed(
 
   double lower_limit, upper_limit, step;
 
-  const double lambda = 1.0507009873554804934193349852946;
-  const double alpha = 1.6732632423543772848170429916717;
-
   // set ranges and step size for fixed point testbench
   lower_limit = input_fixed.template set_val<AC_VAL_MIN>().to_double();
   upper_limit = input_fixed.template set_val<AC_VAL_MAX>().to_double();
   step        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  cout << "TEST: ac_selu_pwl() INPUT: ";
+  cout << "TEST: ac_leakyrelu() INPUT: ";
   cout.width(38);
   cout << left << input_fixed.type_name();
   cout << "OUTPUT: ";
@@ -122,9 +119,9 @@ int test_driver_fixed(
   for (double i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input_fixed = i;
-    test_ac_selu_pwl_fixed(input_fixed, output);
+    test_ac_leakyrelu_fixed(input_fixed, output);
 
-    double expected_value = (input_fixed >= 0) ? lambda * input_fixed.to_double() : ((T_out)(lambda * alpha * (exp(input_fixed.to_double()) - 1.0))).to_double();
+    double expected_value = (input_fixed>0)?input_fixed.to_double():(0.01*input_fixed.to_double());
     double actual_value   = output.to_double();
 
     double this_error;
@@ -192,7 +189,7 @@ int main(int argc, char *argv[])
   double threshold = 0.005;
 
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_selu_pwl() - Allowed error " << allowed_error << endl;
+  cout << "Testing function: ac_leakyrelu() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
 
@@ -204,22 +201,21 @@ int main(int argc, char *argv[])
   test_driver_fixed<  2,  3, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 18,  4, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 20,  0, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
-  test_driver_fixed< 18,  3,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
+  test_driver_fixed< 18,  4,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 19,  2,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 21, -4,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 20,  3,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
-
 
   // If error limits on any tested datatype have been crossed, the test has failed
   bool test_fail = (max_error_fixed > allowed_error);
 
   // Notify the user that the test was a failure.
   if (test_fail) {
-    cout << "  ac_selu_pwl - FAILED - Error tolerance(s) exceeded" << endl; 
+    cout << "  ac_leakyrelu - FAILED - Error tolerance(s) exceeded" << endl; 
     cout << "=============================================================================" << endl;
     return -1; 
   } else {
-    cout << "  ac_selu_pwl - PASSED" << endl;
+    cout << "  ac_leakyrelu - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }  
   return (0);

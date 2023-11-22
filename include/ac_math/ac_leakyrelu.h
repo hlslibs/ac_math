@@ -29,20 +29,20 @@
  *                                                                        *
  *************************************************************************/
 //******************************************************************************************
-// Function: ac_selu_pwl (for ac_fixed)
+// Function: ac_leakyrelu (for ac_fixed)
 //
 // Description:
-//    Provides piece-wise linear approximation of the selu function
+//    Provides piece-wise linear approximation of the leakyrelu function
 //    for the ac_fixed datatype
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
 //
-//    #include <ac_math/ac_selu_pwl.h>
+//    #include <ac_math/ac_leakyrelu.h>
 //    using namespace ac_math;
 //
 //    typedef ac_fixed<10, 4, false, AC_RND, AC_SAT> input_type;
-//    typedef ac_fixed<20, 2, false, AC_RND, AC_SAT> output_type;
+//    typedef ac_fixed<11, 4, false, AC_RND, AC_SAT> output_type;
 //
 //    #pragma hls_design top
 //    void project(
@@ -50,7 +50,7 @@
 //      output_type &output
 //    )
 //    {
-//      ac_selu_pwl(input,output);
+//      ac_leakyrelu(input,output);
 //    }
 //
 //    #ifndef __SYNTHESIS__
@@ -68,8 +68,8 @@
 // Notes:    
 //*************************************************************************************************
 
-#ifndef _INCLUDED_AC_SELU_PWL_H_
-#define _INCLUDED_AC_SELU_PWL_H_
+#ifndef _INCLUDED_AC_LEAKYRELU_PWL_H_
+#define _INCLUDED_AC_LEAKYRELU_PWL_H_
 
 // The below functions use default template parameters, which are only supported by C++11 or later
 // compiler standards. Hence, the user should be informed if they are not using those standards.
@@ -83,7 +83,6 @@
 #include <ac_int.h>
 // Include headers for data types supported by these implementations
 #include <ac_fixed.h>
-#include <ac_math/ac_elu_pwl.h>
 
 #if !defined(__SYNTHESIS__)
 #include <math.h>
@@ -94,7 +93,7 @@ using namespace std;
 #endif
 
 //=========================================================================
-// Function: ac_selu_pwl (for ac_fixed)
+// Function: ac_leakyrelu (for ac_fixed)
 //
 // Description:
 //    Selu function for real inputs, passed as ac_fixed
@@ -107,42 +106,27 @@ using namespace std;
 
 namespace ac_math
 {
-  template<ac_q_mode pwl_Q = AC_TRN,
-           int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
+  template<int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
-  void ac_selu_pwl(
+  void ac_leakyrelu(
     const ac_fixed<W, I, S, Q, O> &input,
     ac_fixed<outW, outI, outS, outQ, outO> &output
   )
   {
-    typedef ac_fixed<outW, outI, outS, outQ, outO> T_out;
-    T_out out_elu;
-    const int n_frac_bits = 20; // Number of fractional bits    
-    //lambda constant
-    ac_fixed<n_frac_bits + 2, 2, false> lambda = 1.0507009873554804934193349852946;
-
-    //alpha constant
-    ac_fixed<n_frac_bits + 2, 2, false> alpha = 1.6732632423543772848170429916717;
-
-    if (input>=0) {
-      output = lambda * input;
-    }
-    else {
-      out_elu = ac_elu_pwl<T_out>(input, alpha);
-      output = lambda * out_elu;
-    }
-
-
+    ac_fixed<30, 0, false> reluconst = 0.01; 
+    if (input>0)
+      output = input;
+    else 
+      output = reluconst*input;
   }
 
   // The following version enables a return-by-value.
   template<class T_out,
-           ac_q_mode pwl_Q = AC_TRN,
            class T_in>
-  T_out ac_selu_pwl(const T_in &input)
+  T_out ac_leakyrelu(const T_in &input)
   {
     T_out output;
-    ac_selu_pwl<pwl_Q>(input, output);
+    ac_leakyrelu(input, output);
     return output;
   }  
 }

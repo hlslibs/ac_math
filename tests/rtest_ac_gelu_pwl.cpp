@@ -30,31 +30,31 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_selu_pwl() function using a variety of bit-widths.
+// ac_gelu_pwl() function using a variety of bit-widths.
 
 // To compile standalone and run:
-//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_selu_pwl.cpp -o design
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_gelu_pwl.cpp -o design
 //   ./design
 
 // Include the AC Math function that is exercised with this testbench
-#include <ac_math/ac_selu_pwl.h>
+#include <ac_math/ac_gelu_pwl.h>
 using namespace ac_math;
 
 // ==============================================================================
 // Test Designs
-//   These simple function allow executing the ac_selu_pwl() function.
+//   These simple function allow executing the ac_gelu_pwl() function.
 //   Template parameters are used to configure the bit-widths of the
 //   inputs and outputs.
 
 // Test design for real fixed point values.
 
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi>
-void test_ac_selu_pwl_fixed(
+void test_ac_gelu_pwl_fixed(
   const ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>  &in,
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> &out
 )
 {
-  ac_selu_pwl(in, out);
+  ac_gelu_pwl(in, out);
 }
 
 // ==============================================================================
@@ -70,7 +70,7 @@ using namespace std;
 // Description: A templatized function that can be configured for certain bit-
 //   widths of ac_fixed inputs. It uses the type information to iterate through a
 //   range of valid values on that type in order to compare the precision of the
-//   piece-wise linear selu model with the computed selu using a
+//   piece-wise linear gelu model with the computed gelu using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
 
@@ -86,20 +86,18 @@ int test_driver_fixed(
   double max_error_fixed = 0.0; // reset for this run
 
   ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP> input_fixed;
+  double input;
   typedef ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> T_out;
   T_out output;
 
   double lower_limit, upper_limit, step;
-
-  const double lambda = 1.0507009873554804934193349852946;
-  const double alpha = 1.6732632423543772848170429916717;
 
   // set ranges and step size for fixed point testbench
   lower_limit = input_fixed.template set_val<AC_VAL_MIN>().to_double();
   upper_limit = input_fixed.template set_val<AC_VAL_MAX>().to_double();
   step        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  cout << "TEST: ac_selu_pwl() INPUT: ";
+  cout << "TEST: ac_gelu_pwl() INPUT: ";
   cout.width(38);
   cout << left << input_fixed.type_name();
   cout << "OUTPUT: ";
@@ -122,9 +120,11 @@ int test_driver_fixed(
   for (double i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input_fixed = i;
-    test_ac_selu_pwl_fixed(input_fixed, output);
+    input = input_fixed.to_double();
+    test_ac_gelu_pwl_fixed(input_fixed, output);
 
-    double expected_value = (input_fixed >= 0) ? lambda * input_fixed.to_double() : ((T_out)(lambda * alpha * (exp(input_fixed.to_double()) - 1.0))).to_double();
+    double expected_value = ((T_out)(0.5 * input * (1 + tanh(0.7978845608*(input + (0.044715*(pow(input, 3)))))))).to_double();
+
     double actual_value   = output.to_double();
 
     double this_error;
@@ -134,29 +134,6 @@ int test_driver_fixed(
       this_error = abs( (expected_value - actual_value) / expected_value ) * 100.0;
     } else {
       this_error = abs(expected_value - actual_value) * 100.0;
-    }
-
-    if (check_monotonic) {
-      // MONOTONIC: Make sure that function is monotonic. Compare old value (value of previous iteration) with current value. Since the softplus function we
-      // are testing is an increasing function, and our testbench value keeps incrementing, we expect the
-      // old value to be lesser than or equal to the current one.
-
-      // This comparison is only carried out once there is an old value to compare with, for the base 2 exponential.
-      if (compare) {
-        // if by any chance the function output has dropped in value, print out at what point the problem has occured and throw a runtime assertion.
-        if (old_output > actual_value) {
-          cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl; 
-          cout << "softplus output not monotonic at :" << endl; 
-          cout << "x = " << input_fixed << endl; 
-          cout << "y = " << output << endl; 
-          cout << "old_output = " << old_output << endl; 
-          assert(false); 
-        }
-      }
-      // Update the old value
-      old_output = actual_value;
-      // Once an old value has been stored, i.e. towards the end of the first iteration, this value is set to true.
-      compare = true;
     }
 
 #ifdef DEBUG
@@ -192,7 +169,7 @@ int main(int argc, char *argv[])
   double threshold = 0.005;
 
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_selu_pwl() - Allowed error " << allowed_error << endl;
+  cout << "Testing function: ac_gelu_pwl() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
 
@@ -200,26 +177,25 @@ int main(int argc, char *argv[])
   test_driver_fixed<  9,  4, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed<  4,  2, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed<  3,  4, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
-  test_driver_fixed<  1,  3, false, 61, 33, false>(max_error_fixed, allowed_error, threshold);
+  test_driver_fixed<  3,  8, false, 61, 33, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed<  2,  3, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 18,  4, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 20,  0, false, 64, 32, false>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 18,  3,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 19,  2,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
   test_driver_fixed< 21, -4,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
-  test_driver_fixed< 20,  3,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
-
+  test_driver_fixed< 20,  5,  true, 64, 32,  true>(max_error_fixed, allowed_error, threshold);
 
   // If error limits on any tested datatype have been crossed, the test has failed
   bool test_fail = (max_error_fixed > allowed_error);
 
   // Notify the user that the test was a failure.
   if (test_fail) {
-    cout << "  ac_selu_pwl - FAILED - Error tolerance(s) exceeded" << endl; 
+    cout << "  ac_gelu_pwl - FAILED - Error tolerance(s) exceeded" << endl; 
     cout << "=============================================================================" << endl;
     return -1; 
   } else {
-    cout << "  ac_selu_pwl - PASSED" << endl;
+    cout << "  ac_gelu_pwl - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }  
   return (0);

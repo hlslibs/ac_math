@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Sun Jul 23 16:34:46 PDT 2023                        *
+ *  Release Date    : Mon Nov 13 17:26:13 PST 2023                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.5.0                                               *
  *                                                                        *
@@ -136,7 +136,7 @@ int test_driver_fixed(
     }
 
     if (check_monotonic) {
-      // MONOTONIC: Make sure that function is monotonic. Compare old value (value of previous iteration) with current value. Since the softplus function we
+      // MONOTONIC: Make sure that function is monotonic. Compare old value (value of previous iteration) with current value. Since the elu function we
       // are testing is an increasing function, and our testbench value keeps incrementing, we expect the
       // old value to be lesser than or equal to the current one.
 
@@ -145,7 +145,7 @@ int test_driver_fixed(
         // if by any chance the function output has dropped in value, print out at what point the problem has occured and throw a runtime assertion.
         if (old_output > actual_value) {
           cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl; 
-          cout << "softplus output not monotonic at :" << endl; 
+          cout << "elu output not monotonic at :" << endl; 
           cout << "x = " << input_fixed << endl; 
           cout << "y = " << output << endl; 
           cout << "old_output = " << old_output << endl; 
