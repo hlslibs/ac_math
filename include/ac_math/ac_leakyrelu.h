@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Nov 13 17:26:13 PST 2023                        *
+ *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.5.0                                               *
  *                                                                        *
@@ -32,7 +32,7 @@
 // Function: ac_leakyrelu (for ac_fixed)
 //
 // Description:
-//    Provides piece-wise linear approximation of the leakyrelu function
+//    Provides an implementation for the leakyrelu function
 //    for the ac_fixed datatype
 //
 // Usage:
@@ -47,10 +47,11 @@
 //    #pragma hls_design top
 //    void project(
 //      const input_type &input,
-//      output_type &output
+//      output_type &output,
+//      alpha_type &alpha
 //    )
 //    {
-//      ac_leakyrelu(input,output);
+//      ac_leakyrelu(input,output,alpha);
 //    }
 //
 //    #ifndef __SYNTHESIS__
@@ -60,7 +61,7 @@
 //    {
 //      input_type input = 3.5;
 //      output_type output;
-//      CCS_DESIGN(project)(input, output);
+//      CCS_DESIGN(project)(input, output, alpha);
 //      CCS_RETURN (0);
 //    }
 //    #endif
@@ -68,8 +69,8 @@
 // Notes:    
 //*************************************************************************************************
 
-#ifndef _INCLUDED_AC_LEAKYRELU_PWL_H_
-#define _INCLUDED_AC_LEAKYRELU_PWL_H_
+#ifndef _INCLUDED_AC_LEAKYRELU_H_
+#define _INCLUDED_AC_LEAKYRELU_H_
 
 // The below functions use default template parameters, which are only supported by C++11 or later
 // compiler standards. Hence, the user should be informed if they are not using those standards.
@@ -107,26 +108,27 @@ using namespace std;
 namespace ac_math
 {
   template<int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
-           int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO>
-  void ac_leakyrelu(
-    const ac_fixed<W, I, S, Q, O> &input,
-    ac_fixed<outW, outI, outS, outQ, outO> &output
+           int outW, int outI, bool outS, ac_q_mode outQ, ac_o_mode outO,
+           int alphaW, int alphaI, bool alphaS, ac_q_mode alphaQ, ac_o_mode alphaO>
+  void ac_leakyrelu(const ac_fixed<W, I, S, Q, O> &input,
+    ac_fixed<outW, outI, outS, outQ, outO> &output,
+    const ac_fixed<alphaW, alphaI, alphaS, alphaQ, alphaO> &alpha
   )
-  {
-    ac_fixed<30, 0, false> reluconst = 0.01; 
+  { 
     if (input>0)
       output = input;
     else 
-      output = reluconst*input;
+      output = alpha*input;
   }
 
   // The following version enables a return-by-value.
   template<class T_out,
-           class T_in>
-  T_out ac_leakyrelu(const T_in &input)
+           class T_in,
+           class T_alpha>
+  T_out ac_leakyrelu(const T_in &input, const T_alpha &alpha)
   {
     T_out output;
-    ac_leakyrelu(input, output);
+    ac_leakyrelu(input, output, alpha);
     return output;
   }  
 }

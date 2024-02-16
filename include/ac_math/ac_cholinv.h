@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Nov 13 17:26:13 PST 2023                        *
+ *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.5.0                                               *
  *                                                                        *
@@ -35,7 +35,7 @@
 //    cholesky decomposition of ac_fixed and ac_complex<ac_fixed> matrices
 //    which are positive definite.
 //    The Cholesky-Crout algorithm is used for cholesky decomposition and
-//    forward decomposition is used to calculate the inverse of lower triangular
+//    forward substitution is used to calculate the inverse of lower triangular
 //    matrix returned by ac_chol_d.h library file which computes the Cholesky
 //    decomposition of a matrix.
 //    By default, the width, integer width and sign of temporary variables
@@ -169,7 +169,7 @@ namespace ac_math
       ac_math::ac_chol_d<use_pwl1>(A, L);
     #endif
 
-    // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
+    // Using Forward substitution to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
     for (unsigned i = 0; i < M; i++) {
       #pragma hls_waive CNS
@@ -298,7 +298,7 @@ namespace ac_math
       ac_math::ac_chol_d<use_pwl1>(A, L);
     #endif
 
-    // Using Forward decomposition to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
+    // Using Forward substitution to calculate the inverse of the lower triangular matrix returned by the ac_chol_d file
     L_Linv_COL:
     for (unsigned i = 0; i < M; i++) {
       #pragma hls_waive CNS

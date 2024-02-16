@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.5                                                 *
  *                                                                        *
- *  Release Date    : Mon Nov 13 17:26:13 PST 2023                        *
+ *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.5.0                                               *
  *                                                                        *
@@ -114,6 +114,12 @@
 
 #include <ac_math/ac_softmax_pwl.h>
 // ac_softmax_pwl()
+
+#include <ac_float_add_tree.h>
+// add_tree()
+// add_tree_ptr()
+// exp_equalizer()
+// block_add_tree_ptr()
 
 #endif
 

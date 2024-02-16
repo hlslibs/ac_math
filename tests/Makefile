@@ -34,7 +34,7 @@ SOURCES_CPP = \
   rtest_ac_atan_pwl.cpp \
   rtest_ac_atan_pwl_ha.cpp \
   rtest_ac_atan_pwl_vha.cpp \
-  rtest_ac_barrel_shift.cpp\
+  rtest_ac_barrel_shift.cpp \
   rtest_ac_tan_pwl.cpp \
   rtest_ac_sigmoid_pwl.cpp \
   rtest_ac_tanh_pwl.cpp \
@@ -57,8 +57,8 @@ SOURCES_CPP = \
   rtest_ac_log2_cordic.cpp \
   rtest_ac_log2_pwl.cpp \
   rtest_ac_log_pwl.cpp \
-  rtest_ac_array.cpp \
   rtest_ac_matrix.cpp \
+  rtest_ac_array.cpp \
   rtest_ac_matrixmul.cpp \
   rtest_ac_normalize.cpp \
   rtest_ac_pow2_pwl.cpp \
@@ -80,9 +80,11 @@ SOURCES_CPP = \
   rtest_ac_softsign_pwl.cpp \
   rtest_ac_elu_pwl.cpp \
   rtest_ac_selu_pwl.cpp \
-	rtest_ac_gelu_pwl.cpp \
-	rtest_ac_leakyrelu.cpp \
-	rtest_ac_relu.cpp
+  rtest_ac_gelu_pwl.cpp \
+  rtest_ac_leakyrelu.cpp \
+  rtest_ac_relu.cpp \
+	rtest_ac_prelu.cpp \
+  rtest_ac_float_add_tree.cpp
 
 OBJS = $(SOURCES_CPP:.cpp=.o)
 

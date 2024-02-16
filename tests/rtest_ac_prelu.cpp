@@ -30,32 +30,32 @@
  *************************************************************************/
 // =========================TESTBENCH=======================================
 // This testbench file contains a stand-alone testbench that exercises the
-// ac_leakyrelu() function using a variety of bit-widths.
+// ac_prelu() function using a variety of bit-widths.
 
 // To compile standalone and run:
-//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_leakyrelu.cpp -o design
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_prelu.cpp -o design
 //   ./design
 
 // Include the AC Math function that is exercised with this testbench
-#include <ac_math/ac_leakyrelu.h>
+#include <ac_math/ac_prelu.h>
 using namespace ac_math;
 
 // ==============================================================================
 // Test Designs
-//   These simple function allow executing the ac_leakyrelu() function.
+//   These simple function allow executing the ac_prelu() function.
 //   Template parameters are used to configure the bit-widths of the
 //   inputs and outputs.
 
 // Test design for real fixed point values.
 
 template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi, bool outSfi, int alphaW, int alphaI, bool alphaS>
-void test_ac_leakyrelu_fixed(
+void test_ac_prelu_fixed(
   const ac_fixed<Wfi, Ifi, Sfi, AC_TRN, AC_WRAP>  &in,
   ac_fixed<outWfi, outIfi, outSfi, AC_TRN, AC_WRAP> &out,
-  const ac_fixed<alphaW, alphaI, alphaS, AC_TRN, AC_WRAP> &alpha  
+  const ac_fixed<alphaW, alphaI, alphaS, AC_TRN, AC_WRAP> &alpha
 )
 {
-  ac_leakyrelu(in, out, alpha);
+  ac_prelu(in, out, alpha);
 }
 
 // ==============================================================================
@@ -71,7 +71,7 @@ using namespace std;
 // Description: A templatized function that can be configured for certain bit-
 //   widths of ac_fixed inputs. It uses the type information to iterate through a
 //   range of valid values on that type in order to compare the precision of the
-//   piece-wise linear leakyrelu model with the computed leakyrelu using a
+//   piece-wise linear prelu model with the computed prelu using a
 //   standard C double type. The maximum error for each type is accumulated
 //   in variables defined in the calling function.
 
@@ -98,7 +98,7 @@ int test_driver_fixed(
   upper_limit = input_fixed.template set_val<AC_VAL_MAX>().to_double();
   step        = input_fixed.template set_val<AC_VAL_QUANTUM>().to_double();
 
-  cout << "TEST: ac_leakyrelu() INPUT: ";
+  cout << "TEST: ac_prelu() INPUT: ";
   cout.width(38);
   cout << left << input_fixed.type_name();
   cout << "OUTPUT: ";
@@ -121,7 +121,7 @@ int test_driver_fixed(
   for (double i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
     input_fixed = i;
-    test_ac_leakyrelu_fixed(input_fixed, output, alpha);
+    test_ac_prelu_fixed(input_fixed, output, alpha);
 
     double expected_value = (input_fixed>0)?input_fixed.to_double():(alpha.to_double()*input_fixed.to_double());
     double actual_value   = output.to_double();
@@ -136,7 +136,7 @@ int test_driver_fixed(
     }
 
     if (check_monotonic) {
-      // MONOTONIC: Make sure that function is monotonic. Compare old value (value of previous iteration) with current value. Since the softplus function we
+      // MONOTONIC: Make sure that function is monotonic. Compare old value (value of previous iteration) with current value. Since the prelu function we
       // are testing is an increasing function, and our testbench value keeps incrementing, we expect the
       // old value to be lesser than or equal to the current one.
 
@@ -145,7 +145,7 @@ int test_driver_fixed(
         // if by any chance the function output has dropped in value, print out at what point the problem has occured and throw a runtime assertion.
         if (old_output > actual_value) {
           cout << "FILE : " << __FILE__ << ", LINE : " << __LINE__ << endl; 
-          cout << "softplus output not monotonic at :" << endl; 
+          cout << "prelu output not monotonic at :" << endl; 
           cout << "x = " << input_fixed << endl; 
           cout << "y = " << output << endl; 
           cout << "old_output = " << old_output << endl; 
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
   double threshold = 0.005;
 
   cout << "=============================================================================" << endl;
-  cout << "Testing function: ac_leakyrelu() - Allowed error " << allowed_error << endl;
+  cout << "Testing function: ac_prelu() - Allowed error " << allowed_error << endl;
 
   // template <int Wfi, int Ifi, bool Sfi, int outWfi, int outIfi>
 
@@ -213,11 +213,11 @@ int main(int argc, char *argv[])
 
   // Notify the user that the test was a failure.
   if (test_fail) {
-    cout << "  ac_leakyrelu - FAILED - Error tolerance(s) exceeded" << endl; 
+    cout << "  ac_prelu - FAILED - Error tolerance(s) exceeded" << endl; 
     cout << "=============================================================================" << endl;
     return -1; 
   } else {
-    cout << "  ac_leakyrelu - PASSED" << endl;
+    cout << "  ac_prelu - PASSED" << endl;
     cout << "=============================================================================" << endl;
   }  
   return (0);
