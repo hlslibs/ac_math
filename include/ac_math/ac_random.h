@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -36,6 +36,7 @@
 //  functions are used in the automatically generated testbench.
 //
 // Revision History:
+//    3.6.0  - Added ac_float support..
 //
 //***************************************************************************
 
@@ -227,7 +228,6 @@ inline void ac_random(ac_int<W,S> &v)
   ac_random_ac_s<ac_int<W,S>, W, W<=16>()(v);
 }
 
-
 #endif // AC_RANDOM_H_INC__AC_INT_H
 
 // ======================================================================
@@ -244,6 +244,29 @@ inline void ac_random(ac_fixed<W,I,S,Q,O> &v)
 }
 
 #endif // AC_RANDOM_H_INC__AC_FIXED_H
+
+// ======================================================================
+// AC Datatype "ac_float" Support
+//
+
+#if defined(__AC_FLOAT_H) && !defined(AC_RANDOM_H_INC__AC_FLOAT_H)
+#define AC_RANDOM_H_INC__AC_FLOAT_H
+
+template <int W, int I, int E, ac_q_mode Q>
+inline void ac_random(ac_float<W, I, E, Q> &v)
+{
+  ac_fixed<W, I, true> v_mant;
+  ac_int<E, true> v_exp;
+  // Use ac_fixed and ac_int ac_random versions for mantissa and
+  // exponent, respectively.
+  ac_random(v_mant);
+  ac_random(v_exp);
+  ac_float<W, I, E, Q> v_temp(v_mant, v_exp, true);
+  
+  v = v_temp;
+}
+
+#endif // AC_RANDOM_H_INC__AC_FLOAT_H
 
 // ======================================================================
 // AC Datatype "ac_channel" Support

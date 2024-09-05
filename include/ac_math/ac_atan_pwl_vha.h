@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -94,6 +94,7 @@
 // Include headers for data types supported by these implementations
 #include <ac_fixed.h>
 #include <ac_float.h>
+#include <ac_std_float.h>
 
 #if !defined(__SYNTHESIS__) && defined(AC_ATAN_PWL_VHA_H_DEBUG)
 #include <iostream>
@@ -286,10 +287,7 @@ namespace ac_math
     ac_float<outW, outI, outE, outQ> output_temp(atan_output_fi);
     output = output_temp;
   }
-
-// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the atan header,
-// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
-  #ifdef __AC_STD_FLOAT_H
+  
 //=========================================================================
 // Function: ac_atan_pwl_vha (for ac_std_float)
 //
@@ -299,15 +297,12 @@ namespace ac_math
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
-//
-//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
-//    // before including ac_atan_pwl_vha.h.
-//    #include <ac_std_float.h>
+//    
 //    #include <ac_math/ac_atan_pwl_vha.h>
 //    using namespace ac_math;
 //
-//    typedef ac_std_float<binary32> input_type;
-//    typedef ac_std_float<binary32> output_type;
+//    typedef ac_std_float<32, 8> input_type;
+//    typedef ac_std_float<32, 8> output_type;
 //
 //    #pragma hls_design top
 //    void project(
@@ -353,10 +348,7 @@ namespace ac_math
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
-//
-//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
-//    // before including ac_atan_pwl_vha.h.
-//    #include <ac_std_float.h>
+//    
 //    #include <ac_math/ac_atan_pwl_vha.h>
 //    using namespace ac_math;
 //
@@ -402,7 +394,6 @@ namespace ac_math
     ac_ieee_float<outFormat> output_temp(output_ac_fl); // Convert output ac_float to ac_ieee_float.
     output = output_temp;
   }
-  #endif
 
   // The following version enables a return-by-value.
   template<class T_out,

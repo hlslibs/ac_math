@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -248,7 +248,7 @@ template <typename T, typename Td, unsigned D>
 std::ostream &operator<<(std::ostream &os, const ac_array_b<T,Td,D> &a)
 {
   os << '{';
-  for (int i=0; i<D; i++) { os << a[i]; if (i<D-1) os << ' '; }
+  for (unsigned i=0; i<D; i++) { os << a[i]; if (i<D-1) os << ' '; }
   os << '}';
   return os;
 }

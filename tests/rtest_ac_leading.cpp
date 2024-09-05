@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -70,319 +70,422 @@ static void throw_dice(IN_TYPE &a)
 
 //********************************************************************INTEGER******************************************************************//
 //--------------------------------------------------------------------UNSIGNED-----------------------------------------------------------------//
-  /*##########################################
-  Reference design to find the position of the leading 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading1_ref(ac_int<W,false> input) {
-    for (int i=W-1; i>=0; i--) {
-      if (input[i]==1)
-      { return i; }
-    }
+/*##########################################
+Reference design
+###########################################*/
+template<int W>
+unsigned int leading1_uint_ref(ac_int<W,false> input)
+{
+  for (int i=W-1; i>=0; i--) {
+    if (input[i]==1) { return i; }
   }
-
-  /*##########################################
-  Reference design to find the position of the trailing 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing1_ref(ac_int<W,false> input) {
-    for (int i=0; i<=W-1; i++) {
-      if (input[i]==1)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the leading 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading0_ref(ac_int<W,false> input) {
-    for (int i=W-1; i>=0; i--) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the trailing 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing0_ref(ac_int<W,false> input) {
-    for (int i=0; i<=W-1; i++) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-
-//--------------------------------------------------------------------SIGNED-----------------------------------------------------------------//
-  /*##########################################
-  Reference design to find the position of the leading 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading1_ref(ac_int<W,true> input) {
-    for (int i=W-2; i>=0; i--) {
-      if (input[i]==1)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the trailing 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing1_ref(ac_int<W,true> input) {
-    for (int i=0; i<=W-2; i++) {
-      if (input[i]==1)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the leading 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading0_ref(ac_int<W,true> input) {
-    for (int i=W-2; i>=0; i--) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the trailing 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing0_ref(ac_int<W,true> input) {
-    for (int i=0; i<=W-2; i++) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-
-//********************************************************************FIXED******************************************************************//
-//--------------------------------------------------------------------UNSIGNED-----------------------------------------------------------------//
-  /*##########################################
-  Reference design to find the position of the leading 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading1_ref(ac_fixed<W, I, false> input) {
-    for (int i=W-1; i>=0; i--) {
-      if (input[i]==1)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the trailing 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing1_ref(ac_fixed<W, I, false> input) {
-    for (int i=0; i<=W-1; i++) {
-      if (input[i]==1)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the leading 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading0_ref(ac_fixed<W, I, false> input) {
-    for (int i=W-1; i>=0; i--) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the trailing 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing0_ref(ac_fixed<W, I, false> input) {
-    for (int i=0; i<=W-1; i++) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-
-//--------------------------------------------------------------------SIGNED-----------------------------------------------------------------//
-  /*##########################################
-  Reference design to find the position of the leading 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading1_ref(ac_fixed<W, I, true> input) {
-    for (int i=W-2; i>=0; i--) {
-      if (input[i]==1)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the trailing 1 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing1_ref(ac_fixed<W, I, true> input) {
-    for (int i=0; i<=W-2; i++) {
-      if (input[i]==1)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the leading 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int leading0_ref(ac_fixed<W, I, true> input) {
-    for (int i=W-2; i>=0; i--) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-
-  /*##########################################
-  Reference design to find the position of the trailing 0 bit from the LSB
-  ###########################################*/
-  template<int W, int I>
-  unsigned int trailing0_ref(ac_fixed<W, I, true> input) {
-    for (int i=0; i<=W-2; i++) {
-      if (input[i]==0)
-      { return i; }
-    }
-  }
-  
-
-template <class input_type, class output_type, unsigned width, unsigned i_width>
- int driver_function(input_type input) {
-	
-	bool test_fail=0;
-	bool flag;
-	/*##############################
-	LEADING_1
-	###############################*/
-    if (leading1_ref<width,i_width>(input)==ac_math::leading1<width>(input, flag)) { // leading one
-      cout << "leading one  Results Match" << endl;
-    } else {
-      cout << "leading one  Results DONOT Match" << endl;
-	  test_fail=1;
-    }
-    cout << "Design    Value: Leading 1 bit position from the LSB side " << ac_math::leading1<width>(input, flag) << endl;
-    cout << "Reference Value: Leading 1 bit position from the LSB side " << leading1_ref<width,i_width>(input) << endl;
-
-	/*##############################
-	TRAILING_1
-	###############################*/
-    if (trailing1_ref<width,i_width>(input)==ac_math::trailing1<width>(input, flag)) { // leading one
-      cout << "Trailing one  Results Match" << endl;
-    } else {
-      cout << "Trailing one  Results DONOT Match" << endl;
-  	  test_fail=1;
-    }
-    cout << "Design    Value: Trailing 1 bit position from the LSB side " << ac_math::trailing1<width>(input, flag) << endl;
-    cout << "Reference Value: Trailing 1 bit position from the LSB side " << trailing1_ref<width,i_width>(input) << endl;
-	
-	
-	/*##############################
-	LEADING_0
-	###############################*/
-    if (leading0_ref<width,i_width>(input)==ac_math::leading0<width>(input, flag)) { // leading one
-      cout << "leading one  Results Match" << endl;
-    } else {
-      cout << "leading one  Results DONOT Match" << endl;
-  	  test_fail=1;
-    }
-    cout << "Design    Value: Leading 0 bit position from the LSB side " << ac_math::leading0<width>(input, flag) << endl;
-    cout << "Reference Value: Leading 0 bit position from the LSB side " << leading0_ref<width,i_width>(input) << endl;
-	
-	
-	/*##############################
-	TRAILING_0
-	###############################*/
-    if (trailing0_ref<width,i_width>(input)==ac_math::trailing0<width>(input, flag)) { // leading one
-      cout << "Trailing 0  Results Match" << endl;
-    } else {
-      cout << "Trailing 0  Results DONOT Match" << endl;
-	  test_fail=1;
-	}
-    cout << "Design    Value: Trailing 0 bit position from the LSB side " << ac_math::trailing0<width>(input, flag) << endl;
-    cout << "Reference Value: Trailing 0 bit position from the LSB side " << trailing0_ref<width,i_width>(input) << endl;
-   
-  if (test_fail) {
-    cout << "  ac_leading - FAILED - Mismatch found" << endl; 
-    cout << "=============================================================================" << endl; 
-    return -1; 
-  } else {
-    cout << "  ac_leading - PASSED" << endl;
-    cout << "=============================================================================" << endl;
-  }
-  
   return 0;
+}
+
+template<int W>
+unsigned int leading0_uint_ref(ac_int<W,false> input)
+{
+  for (int i=W-1; i>=0; i--) {
+    if (input[i]==0) { return i; }
   }
-  
-  
-  
+  return 0;
+}
+
+template<int W>
+unsigned int trailing1_uint_ref(ac_int<W,false> input)
+{
+  for (int i=0; i<=W-1; i++) {
+    if (input[i]==1) { return i; }
+  }
+  return 0;
+}
+
+template<int W>
+unsigned int trailing0_uint_ref(ac_int<W,false> input)
+{
+  for (int i=0; i<=W-1; i++) {
+    if (input[i]==0) { return i; }
+  }
+  return 0;
+}
+
+/*######### SIGNED INT ##############*/
+template<int W>
+unsigned int leading1_sint_ref(ac_int<W,true> input)
+{
+  for (int i=W-2; i>=0; i--) {
+    if (input[i]==1) { return i; }
+  }
+  return 0;
+}
+
+template<int W>
+unsigned int leading0_sint_ref(ac_int<W,false> input)
+{
+    // Start the loop from W-2 to ignore the MSB which is at W-1
+    for (int i = W-2; i >= 0; i--) {
+        if (input[i] == 0) {
+            return i;  // Return the index of the leading zero from LSB, excluding the MSB
+        }
+    }
+}
+
+template<int W>
+unsigned int trailing1_sint_ref(ac_int<W,false> input)
+{
+  for (int i=0; i<=W-2; i++) {
+    if (input[i]==1) { return i; }
+  }
+  return 0;
+}
+
+template<int W>
+unsigned int trailing0_sint_ref(ac_int<W,false> input)
+{
+  for (int i=0; i<=W-2; i++) {
+    if (input[i]==0) { return i; }
+  }
+  return 0;
+}
+
+//########### FIXED UNSIGNED #############
+template<int W, int I>
+unsigned int leading1_ufix_ref(ac_fixed<W,I,false> input)
+{
+  for (int i=W-1; i>=0; i--) {
+    if (input[i]==1) { return i; }
+  }
+  return 0;
+}
+
+template<int W, int I>
+unsigned int leading0_ufix_ref(ac_fixed<W,I,false> input)
+{
+  for (int i=W-1; i>=0; i--) {
+    if (input[i]==0) { return i; }
+  }
+  return 0;
+}
+
+template<int W, int I>
+unsigned int trailing1_ufix_ref(ac_fixed<W,I,false> input)
+{
+  for (int i=0; i<=W-1; i++) {
+    if (input[i]==1) { return i; }
+  }
+  return 0;
+}
+
+template<int W, int I>
+unsigned int trailing0_ufix_ref(ac_fixed<W,I,false> input)
+{
+  for (int i=0; i<=W-1; i++) {
+    if (input[i]==0) { return i; }
+  }
+  return 0;
+}
+
+/*######### SIGNED Fixed ##############*/
+template<int W, int I>
+unsigned int leading1_sfix_ref(ac_fixed<W,I,true> input)
+{
+  for (int i=W-2; i>=0; i--) {
+    if (input[i]==1) { return i; }
+  }
+  return 0;
+}
+
+template<int W, int I>
+unsigned int leading0_sfix_ref(ac_fixed<W,I,true> input)
+{
+    // Start the loop from W-2 to ignore the MSB which is at W-1
+    for (int i = W-2; i >= 0; i--) {
+        if (input[i] == 0) {
+            return i;  // Return the index of the leading zero from LSB, excluding the MSB
+        }
+    }
+}
+
+template<int W, int I>
+unsigned int trailing1_sfix_ref(ac_fixed<W,I,true> input)
+{
+  for (int i=0; i<=W-2; i++) {
+    if (input[i]==1) { return i; }
+  }
+  return 0;
+}
+
+template<int W, int I>
+unsigned int trailing0_sfix_ref(ac_fixed<W,I,true> input)
+{
+  for (int i=0; i<=W-2; i++) {
+    if (input[i]==0) { return i; }
+  }
+  return 0;
+}
+
+
+template<int W>
+void test_uint()
+{
+  bool test_pass = true;
+  ac_int<W,false> input, MAX_VAL;
+  MAX_VAL.template set_val<AC_VAL_MAX>();
+  bool flag;
+  // std::cout << "MAX_VAL = " << MAX_VAL << std::endl;
+  for (unsigned int i = 0; i <= MAX_VAL; i++) {
+    input =i;
+    // std::cout << "Input = " << input << std::endl;
+    int result_leading_1 = ac_math::leading1<W>(input,flag);
+    int result_leading_0 = ac_math::leading0<W>(input,flag);
+    int result_trailing_1 = ac_math::trailing1<W>(input,flag);
+    int result_trailing_0 = ac_math::trailing0<W>(input,flag);
+
+    int expected_leading_1 = leading1_uint_ref<W>(input);
+    int expected_leading_0 = leading0_uint_ref<W>(input);
+    int expected_trailing_1 = trailing1_uint_ref<W>(input);
+    int expected_trailing_0 = trailing0_uint_ref<W>(input);
+	
+	// std::cout << " ---------------- " << std::endl;
+    // bin<ac_int<W,false>,W>(input);
+    // // Printing results and expected values
+    // std::cout << "Input: " << input << std::endl;
+    // std::cout << "Actual vs Expected Leading 1 index: " << result_leading_1 << " vs " << expected_leading_1 << std::endl;
+    // std::cout << "Actual vs Expected Leading 0 index: " << result_leading_0 << " vs " << expected_leading_0 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 1 index: " << result_trailing_1 << " vs " << expected_trailing_1 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 0 index: " << result_trailing_0 << " vs " << expected_trailing_0 << std::endl;
+	
+    if (result_leading_1 != expected_leading_1) {
+      test_pass = false;
+      std::cout << "Test failed for leading1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_1 << ", got " << result_leading_1 << std::endl;
+	  break;				
+    }
+    if (result_trailing_1 != expected_trailing_1) {
+      test_pass = false;
+      std::cout << "Test failed for trailing1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_1 << ", got " << result_trailing_1 << std::endl;
+	  break;				
+
+    }
+    if (result_leading_0 != expected_leading_0) {
+      test_pass = false;
+      std::cout << "Test failed for leading0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_0 << ", got " << result_leading_0 << std::endl;
+	  break;				
+
+    }
+    if (result_trailing_0 != expected_trailing_0) {
+      test_pass = false;
+      std::cout << "Test failed for trailing0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_0 << ", got " << result_trailing_0 << std::endl;
+	  break;				
+    }
+  }
+  if (test_pass) {
+    std::cout << "All tests for unsigned integer values passed for W = " << W << std::endl;
+  }
+}
+
+template<int W>
+void test_sigint()
+{
+  bool test_pass = true;
+  ac_int<W,true> input, MAX_VAL;
+  MAX_VAL.template set_val<AC_VAL_MAX>();
+  bool flag;
+  // std::cout << "MAX_VAL = " << MAX_VAL << std::endl;
+  for (int i = -MAX_VAL; i <= MAX_VAL; i++) {
+    input =i;
+    // std::cout << "Input = " << input << std::endl;
+    int result_leading_1 = ac_math::leading1<W>(input,flag);
+    int result_leading_0 = ac_math::leading0<W>(input,flag);
+    int result_trailing_1 = ac_math::trailing1<W>(input,flag);
+    int result_trailing_0 = ac_math::trailing0<W>(input,flag);
+
+    int expected_leading_1 = leading1_sint_ref<W>(input);
+    int expected_leading_0 = leading0_sint_ref<W>(input);
+    int expected_trailing_1 = trailing1_sint_ref<W>(input);
+    int expected_trailing_0 = trailing0_sint_ref<W>(input);
+	
+	// std::cout << " ---------------- " << std::endl;
+    // bin<ac_int<W,true>,W>(input);
+    // std::cout << "Input: " << input << std::endl;
+    // std::cout << "Actual vs Expected Leading 1 index: " << result_leading_1 << " vs " << expected_leading_1 << std::endl;
+    // std::cout << "Actual vs Expected Leading 0 index: " << result_leading_0 << " vs " << expected_leading_0 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 1 index: " << result_trailing_1 << " vs " << expected_trailing_1 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 0 index: " << result_trailing_0 << " vs " << expected_trailing_0 << std::endl;
+
+    if (result_leading_1 != expected_leading_1) {
+      test_pass = false;
+      std::cout << "Test failed for leading1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_1 << ", got " << result_leading_1 << std::endl;
+	  break;				
+    }
+    if (result_trailing_1 != expected_trailing_1) {
+      test_pass = false;
+      std::cout << "Test failed for trailing1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_1 << ", got " << result_trailing_1 << std::endl;
+	  break;				
+
+    }
+    if (result_leading_0 != expected_leading_0) {
+      test_pass = false;
+      std::cout << "Test failed for leading0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_0 << ", got " << result_leading_0 << std::endl;
+	  break;				
+
+    }
+    if (result_trailing_0 != expected_trailing_0) {
+      test_pass = false;
+      std::cout << "Test failed for trailing0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_0 << ", got " << result_trailing_0 << std::endl;
+	  break;				
+    }
+  }
+  if (test_pass) {
+    std::cout << "All tests for signed integer values passed for W = " << W << std::endl;
+  }
+}
+
+template<int W, int I>
+void test_sigfix()
+{
+  bool test_pass = true;
+  ac_fixed<W,I,true> input, MAX_VAL;
+  MAX_VAL.template set_val<AC_VAL_MAX>();
+  bool flag;
+  // std::cout << "MAX_VAL = " << MAX_VAL << std::endl;
+  for (ac_fixed<32,16,true> i = -MAX_VAL; i <= MAX_VAL; i++) {
+    input =i;
+    // std::cout << "Input = " << input << std::endl;
+    int result_leading_1 = ac_math::leading1<W,I>(input,flag);
+    int result_leading_0 = ac_math::leading0<W,I>(input,flag);
+    int result_trailing_1 = ac_math::trailing1<W,I>(input,flag);
+    int result_trailing_0 = ac_math::trailing0<W,I>(input,flag);
+
+    int expected_leading_1 = leading1_sfix_ref<W,I>(input);
+    int expected_leading_0 = leading0_sfix_ref<W,I>(input);
+    int expected_trailing_1 = trailing1_sfix_ref<W,I>(input);
+    int expected_trailing_0 = trailing0_sfix_ref<W,I>(input);
+	
+	// std::cout << " ---------------- " << std::endl;
+    // bin<ac_fixed<W,I,true>,W>(input);
+    // std::cout << "Input: " << input << std::endl;
+    // std::cout << "Actual vs Expected Leading 1 index: " << result_leading_1 << " vs " << expected_leading_1 << std::endl;
+    // std::cout << "Actual vs Expected Leading 0 index: " << result_leading_0 << " vs " << expected_leading_0 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 1 index: " << result_trailing_1 << " vs " << expected_trailing_1 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 0 index: " << result_trailing_0 << " vs " << expected_trailing_0 << std::endl;
+    if (result_leading_1 != expected_leading_1) {
+      test_pass = false;
+      std::cout << "Test failed for leading1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_1 << ", got " << result_leading_1 << std::endl;
+	  break;				
+    }
+    if (result_trailing_1 != expected_trailing_1) {
+      test_pass = false;
+      std::cout << "Test failed for trailing1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_1 << ", got " << result_trailing_1 << std::endl;
+	  break;				
+
+    }
+    if (result_leading_0 != expected_leading_0) {
+      test_pass = false;
+      std::cout << "Test failed for leading0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_0 << ", got " << result_leading_0 << std::endl;
+	  break;				
+
+    }
+    if (result_trailing_0 != expected_trailing_0) {
+      test_pass = false;
+      std::cout << "Test failed for trailing0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_0 << ", got " << result_trailing_0 << std::endl;
+	  break;				
+    }
+  }
+  if (test_pass) {
+    std::cout << "All tests for signed fixed values passed for W = " << W << std::endl;
+  }
+}
+
+template<int W, int I>
+void test_ufix()
+{
+  bool test_pass = true;
+  ac_fixed<W,I,false> input, MAX_VAL;
+  MAX_VAL.template set_val<AC_VAL_MAX>();
+  bool flag;
+  // std::cout << "MAX_VAL = " << MAX_VAL << std::endl;
+  for (ac_fixed<32,16,true> i = 0; i <= MAX_VAL; i++) {
+    input =i;
+    // std::cout << "Input = " << input << std::endl;
+    int result_leading_1 = ac_math::leading1<W,I>(input,flag);
+    int result_leading_0 = ac_math::leading0<W,I>(input,flag);
+    int result_trailing_1 = ac_math::trailing1<W,I>(input,flag);
+    int result_trailing_0 = ac_math::trailing0<W,I>(input,flag);
+
+    int expected_leading_1 = leading1_ufix_ref<W,I>(input);
+    int expected_leading_0 = leading0_ufix_ref<W,I>(input);
+    int expected_trailing_1 = trailing1_ufix_ref<W,I>(input);
+    int expected_trailing_0 = trailing0_ufix_ref<W,I>(input);
+	
+	// std::cout << " ---------------- " << std::endl;
+    // bin<ac_fixed<W,I,true>,W>(input);
+    // std::cout << "Input: " << input << std::endl;
+    // std::cout << "Actual vs Expected Leading 1 index: " << result_leading_1 << " vs " << expected_leading_1 << std::endl;
+    // std::cout << "Actual vs Expected Leading 0 index: " << result_leading_0 << " vs " << expected_leading_0 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 1 index: " << result_trailing_1 << " vs " << expected_trailing_1 << std::endl;
+    // std::cout << "Actual vs Expected Trailing 0 index: " << result_trailing_0 << " vs " << expected_trailing_0 << std::endl;
+
+    if (result_leading_1 != expected_leading_1) {
+      test_pass = false;
+      std::cout << "Test failed for leading1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_1 << ", got " << result_leading_1 << std::endl;
+	  break;				
+    }
+    if (result_trailing_1 != expected_trailing_1) {
+      test_pass = false;
+      std::cout << "Test failed for trailing1 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_1 << ", got " << result_trailing_1 << std::endl;
+	  break;				
+
+    }
+    if (result_leading_0 != expected_leading_0) {
+      test_pass = false;
+      std::cout << "Test failed for leading0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_leading_0 << ", got " << result_leading_0 << std::endl;
+	  break;				
+
+    }
+    if (result_trailing_0 != expected_trailing_0) {
+      test_pass = false;
+      std::cout << "Test failed for trailing0 with W = " << W << ",Signed input = " << input
+                << ". Expected " << expected_trailing_0 << ", got " << result_trailing_0 << std::endl;
+	  break;				
+    }
+  }
+  if (test_pass) {
+    std::cout << "All tests for unsigned fix values passed for W = " << W << std::endl;
+  }
+}
+
+
+
 /*%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 Main block
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%*/
 
 int main(int argc, char *argv[])
 {
-  enum {
-    DATA_WIDTH = 32,
-    INTEGER_WIDTH = 8,
-	TEST_NUMBERS = 10,
-  };
+  test_uint<8>();
+  test_uint<9>();
+  test_sigint<8>();
+  test_sigint<9>();
+  test_sigfix<8,3>();
+  test_sigfix<9,4>();
+  test_ufix<8,3>();
+  test_ufix<9,4>();
   
-  typedef ac_int<ac::nbits<DATA_WIDTH-1>::val,false> OUT_TYP;
-  OUT_TYP out;
-  bool status;
-  
-  typedef ac_int<DATA_WIDTH,false> IN_TYP1;
-  IN_TYP1 in1;
-  cout << "===================INT_ UNSIGNED================================" << endl;
-  for (int i=0; i<=TEST_NUMBERS; i++)
-  {
-  throw_dice<IN_TYP1>(in1);
-  bin<IN_TYP1,DATA_WIDTH>(in1);
-  driver_function<IN_TYP1, OUT_TYP, DATA_WIDTH, INTEGER_WIDTH>(in1);
-  cout << "---------------------------" << endl;
-
-  }
-
-  cout << "===================INT_ NSIGNED================================" << endl;
-  typedef ac_int<DATA_WIDTH,true> IN_TYP2;
-  IN_TYP2 in2;
-  for (int i=0; i<=TEST_NUMBERS; i++)
-  {
-  throw_dice<IN_TYP2>(in2);
-  bin<IN_TYP2,DATA_WIDTH>(in2);
-  driver_function<IN_TYP2, OUT_TYP, DATA_WIDTH, INTEGER_WIDTH>(in1);
-  cout << "---------------------------" << endl;
-  }
-
-  cout << "===================FIX_UNSIGNED================================" << endl;
-
-  typedef ac_fixed<DATA_WIDTH,INTEGER_WIDTH,false> IN_TYP3;
-  IN_TYP3 in3;
-  for (int i=0; i<=TEST_NUMBERS; i++)
-  {
-  throw_dice<IN_TYP3>(in3);
-  bin<IN_TYP3,DATA_WIDTH>(in3);
-  driver_function<IN_TYP3, OUT_TYP, DATA_WIDTH, INTEGER_WIDTH>(in1);
-  cout << "---------------------------" << endl;
-  }
-
-  cout << "===================FIX_SIGNED================================" << endl;
-
-  typedef ac_fixed<DATA_WIDTH,INTEGER_WIDTH,true> IN_TYP4;
-  IN_TYP4 in4;
-  for (int i=0; i<=TEST_NUMBERS; i++)
-  {
-  throw_dice<IN_TYP4>(in4);
-  bin<IN_TYP4,DATA_WIDTH>(in4);
-  driver_function<IN_TYP4, OUT_TYP, DATA_WIDTH, INTEGER_WIDTH>(in1);
-  cout << "---------------------------" << endl;
-  }
-
   return 0;
 }
 

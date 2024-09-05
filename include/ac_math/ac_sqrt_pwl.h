@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -108,6 +108,7 @@
 // Include headers for data types supported by these implementations
 #include <ac_fixed.h>
 #include <ac_float.h>
+#include <ac_std_float.h>
 #include <ac_complex.h>
 
 // Include headers for required functions
@@ -340,10 +341,7 @@ namespace ac_math
     std::cout << "final output = " << output << std::endl;
     #endif
   }
-
-// For this section of the code to work, the user must include ac_std_float.h in their testbench before including the square root header,
-// so as to have the code import the ac_std_float and ac_ieee_float datatypes and define the __AC_STD_FLOAT_H macro.
-  #ifdef __AC_STD_FLOAT_H
+  
 //=========================================================================
 // Function: ac_sqrt_pwl (for ac_std_float)
 //
@@ -353,10 +351,7 @@ namespace ac_math
 //
 // Usage:
 //    A sample testbench and its implementation looks like this:
-//
-//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
-//    // before including ac_sqrt_pwl.h.
-//    #include <ac_std_float.h>
+//    
 //    #include <ac_math/ac_sqrt_pwl.h>
 //    using namespace ac_math;
 //
@@ -399,7 +394,7 @@ namespace ac_math
   }
 
 //=================================================================================
-// Function: ac_sqrt_pwl (for ac_ieee_float, returns sqrt(input) )
+// Function: ac_sqrt_pwl (for ac_ieee_float)
 //
 // Description:
 //    Calculation of square root of real inputs, passed as ac_ieee_float
@@ -408,10 +403,7 @@ namespace ac_math
 // Usage:
 //    A sample testbench and its implementation look like
 //    this:
-//
-//    // IMPORTANT: ac_std_float.h header file must be included in testbench,
-//    // before including ac_sqrt_pwl.h.
-//    #include <ac_std_float.h>
+//    
 //    #include <ac_math/ac_sqrt_pwl.h>
 //    using namespace ac_math;
 //
@@ -461,7 +453,6 @@ namespace ac_math
     std::cout << "output_ac_fl.type_name() : " << output_ac_fl.type_name() << std::endl;
     #endif
   }
-  #endif
 
 //=====================================================================================
 // Function: ac_sqrt_pwl (for ac_complex <ac_fixed>)

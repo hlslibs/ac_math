@@ -2,13 +2,13 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
- *  Copyright  Siemens                                                *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
@@ -28,6 +28,66 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+//*****************************************************************************************
+// File: ac_float_add_tree.h
+//
+// Description: Adder tree implementations for ac_float datatypes. All functions
+//    accept an array of ac_float inputs, and can produce ac_float or ac_fixed outputs.
+//
+// Usage:
+//    A sample testbench and its implementation look like
+//    this:
+//
+//    #include <ac_float_add_tree.h>
+//    using namespace ac_math;
+//    
+//    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+//    typedef ac_fixed<64, 32, true, AC_TRN, AC_SAT> output_type;
+//    constexpr int N_ELEMS = 4;
+//    
+//    #pragma hls_design top
+//    void project(
+//      const input_type (&input)[N_ELEMS],
+//      output_type &output
+//    )
+//    {
+//      add_tree(input, output);
+//    }
+//    
+//    #ifndef __SYNTHESIS__
+//    #include <mc_scverify.h>
+//
+//    CCS_MAIN(int, char **)
+//    {
+//      input_type input[N_ELEMS];
+//      input[0] =  1.5;
+//      input[1] =  2.5;
+//      input[2] =  0.5;
+//      input[3] = -1.0;
+//      output_type output;
+//      
+//      CCS_DESIGN(project)(input, output);
+//      
+//      CCS_RETURN (0);
+//    }
+//    #endif
+//
+// Notes:
+//    This file uses C++ function overloading to target implementations
+//    specific to each type of data. Attempting to call the function
+//    with a type that is not implemented will result in a compile error.
+//
+//    The pass-by-pointer functions are differentiated from their
+//    pass-by-reference counterparts with the "_ptr" suffix in their name.
+//    Overloading is not used here in order to minimize ambiguity.
+//
+// Revision History:
+//    3.6.0  - Added usage examples.
+//           - [CAT-36472] Added input array size to parameter list for *_ptr functions.
+//    3.5.0  - [CAT-26464] Added library to ac_math subproject.
+//
+//*****************************************************************************************
+
 #ifndef _INCLUDED_AC_FLOAT_ADD_TREE_H_
 #define _INCLUDED_AC_FLOAT_ADD_TREE_H_
 
@@ -164,6 +224,30 @@ namespace ac_math {
     add_r<N_ELEMS>::sum(&x[0], acc_mant, acc_exp); 
   }
   
+
+  //=========================================================================
+  // Function: add_tree (ac_float inputs, ac_fixed output)
+  //
+  // Description:
+  //    Adder tree implementation which uses recursive templates to model
+  //    all the adder tree stages. The mantissa alignment and addition is
+  //    done pairwise, and zero handling is built-in. The input array is
+  //    passed as a pointer. The adder tree output is converted to an
+  //    ac_fixed output. The user can adjust the saturation/overflow
+  //    handling for this conversion by changing the saturation/overflow
+  //    mode of the output type.
+  //
+  // Usage:
+  //    See above example code for usage.
+  //
+  // Notes:
+  //    The output conversion to ac_fixed may or may not use the
+  //    ac_shift_left() function from ac_shift.h, and this choice
+  //    may decrease or increase area based on the input exponent width.
+  //    Refer to the AC Math reference manual for more details.
+  //
+  //-------------------------------------------------------------------------
+  
   template<
     int AccExtraLSBs = 0,
     bool use_ac_sl = true,
@@ -185,6 +269,58 @@ namespace ac_math {
     add_r<N_ELEMS>::sum(&x[0], mant, exp);
     acc_fxpt_conv<use_ac_sl>(mant, exp, acc);
   }
+
+  //=========================================================================
+  // Function: add_tree (ac_float inputs, ac_float output)
+  //
+  // Description:
+  //    Adder tree implementation which uses recursive templates to model
+  //    all the adder tree stages. The mantissa alignment and addition is
+  //    done pairwise, and zero handling is built-in. The input array is
+  //    passed as a reference.
+  //
+  // Usage:
+  //    A sample testbench and its implementation look like
+  //    this:
+  //
+  //    #include <ac_float_add_tree.h>
+  //    using namespace ac_math;
+  //    
+  //    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+  //    typedef ac_float<25, 2, 9, AC_TRN> output_type;
+  //    constexpr int N_ELEMS = 4;
+  //    
+  //    #pragma hls_design top
+  //    void project(
+  //      const input_type (&input)[N_ELEMS],
+  //      output_type &output
+  //    )
+  //    {
+  //      add_tree(input, output);
+  //    }
+  //    
+  //    #ifndef __SYNTHESIS__
+  //    #include <mc_scverify.h>
+  //
+  //    CCS_MAIN(int, char **)
+  //    {
+  //      input_type input[N_ELEMS];
+  //      input[0] =  1.5;
+  //      input[1] =  2.5;
+  //      input[2] =  0.5;
+  //      input[3] = -1.0;
+  //      output_type output;
+  //      
+  //      CCS_DESIGN(project)(input, output);
+  //      
+  //      CCS_RETURN (0);
+  //    }
+  //    #endif
+  //
+  // Notes:
+  //    The output conversion to ac_float has normalization turned on.
+  //
+  //-------------------------------------------------------------------------
   
   template<
     int AccExtraLSBs = 0,
@@ -207,6 +343,60 @@ namespace ac_math {
     acc = ac_float<WA,IA,EA,QA>(mant,exp,true); 
   }
   
+  //=========================================================================
+  // Function: add_tree_ptr (ac_float inputs, ac_fixed output)
+  //
+  // Description:
+  //    A variant of the equivalent add_tree function defined above, with
+  //    the only major difference being that the input array is passed as
+  //    a pointer rather than a reference. Since size information for the
+  //    pass-by-pointer version is lost, the user must explicitly specify
+  //    N_ELEMS in the function call.
+  //
+  // Usage:
+  //    A sample testbench and its implementation look like
+  //    this:
+  //
+  //    #include <ac_float_add_tree.h>
+  //    using namespace ac_math;
+  //    
+  //    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+  //    typedef ac_fixed<64, 32, true, AC_TRN, AC_SAT> output_type;
+  //    constexpr int N_ELEMS = 4;
+  //    
+  //    #pragma hls_design top
+  //    void project(
+  //      const input_type input[N_ELEMS],
+  //      output_type &output
+  //    )
+  //    {
+  //      add_tree_ptr<N_ELEMS>(input, output);
+  //    }
+  //    
+  //    #ifndef __SYNTHESIS__
+  //    #include <mc_scverify.h>
+  //
+  //    CCS_MAIN(int, char **)
+  //    {
+  //      input_type input[N_ELEMS];
+  //      input[0] =  1.5;
+  //      input[1] =  2.5;
+  //      input[2] =  0.5;
+  //      input[3] = -1.0;
+  //      output_type output;
+  //      
+  //      CCS_DESIGN(project)(input, output);
+  //      
+  //      CCS_RETURN (0);
+  //    }
+  //    #endif
+  //
+  // Notes:
+  //    The inputs are copied to a temporary array in an unrolled loop, and
+  //    this array is then passed to the pass-by-reference function.
+  //
+  //-------------------------------------------------------------------------
+  
   template<
     int N_ELEMS,
     int AccExtraLSBs = 0,
@@ -215,7 +405,7 @@ namespace ac_math {
     int WE, int IE, int EE, ac_q_mode QE
   >
   void add_tree_ptr(
-    const ac_float<WE,IE,EE,QE> *x,
+    const ac_float<WE,IE,EE,QE> x[N_ELEMS],
     ac_fixed<WA,IA,SA,QA,OA> &acc
   ) {
     ac_float<WE,IE,EE,QE> x2[N_ELEMS];
@@ -228,6 +418,60 @@ namespace ac_math {
     add_tree<AccExtraLSBs, use_ac_sl>(x2, acc);
   }
   
+  //=========================================================================
+  // Function: add_tree_ptr (ac_float inputs, ac_float output)
+  //
+  // Description:
+  //    A variant of the equivalent add_tree function defined above, with
+  //    the only major difference being that the input array is passed as
+  //    a pointer rather than a reference. Since size information for the
+  //    pass-by-pointer version is lost, the user must explicitly specify
+  //    N_ELEMS in the function call.
+  //
+  // Usage:
+  //    A sample testbench and its implementation look like
+  //    this:
+  //
+  //    #include <ac_float_add_tree.h>
+  //    using namespace ac_math;
+  //    
+  //    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+  //    typedef ac_float<25, 2, 9, AC_TRN> output_type;
+  //    constexpr int N_ELEMS = 4;
+  //    
+  //    #pragma hls_design top
+  //    void project(
+  //      const input_type input[N_ELEMS],
+  //      output_type &output
+  //    )
+  //    {
+  //      add_tree_ptr<N_ELEMS>(input, output);
+  //    }
+  //    
+  //    #ifndef __SYNTHESIS__
+  //    #include <mc_scverify.h>
+  //
+  //    CCS_MAIN(int, char **)
+  //    {
+  //      input_type input[N_ELEMS];
+  //      input[0] =  1.5;
+  //      input[1] =  2.5;
+  //      input[2] =  0.5;
+  //      input[3] = -1.0;
+  //      output_type output;
+  //      
+  //      CCS_DESIGN(project)(input, output);
+  //      
+  //      CCS_RETURN (0);
+  //    }
+  //    #endif
+  //
+  // Notes:
+  //    The inputs are copied to a temporary array in an unrolled loop, and
+  //    this array is then passed to the pass-by-reference function.
+  //
+  //-------------------------------------------------------------------------
+  
   template<
     int N_ELEMS,
     int AccExtraLSBs = 0,
@@ -235,7 +479,7 @@ namespace ac_math {
     int WE, int IE, int EE, ac_q_mode QE
   >
   void add_tree_ptr(
-    const ac_float<WE,IE,EE,QE> *x,
+    const ac_float<WE,IE,EE,QE> x[N_ELEMS],
     ac_float<WA,IA,EA,QA> &acc
   ) {
     ac_float<WE,IE,EE,QE> x2[N_ELEMS];
@@ -334,6 +578,66 @@ namespace ac_math {
     acc_fx = acc_fx_temp;
   }
   
+  //=========================================================================
+  // Function: block_add_tree (ac_float inputs, ac_fixed output)
+  //
+  // Description:
+  //    "Block" implementation of adder tree, where the input mantissas are 
+  //    aligned all at once with respect to the maximum exponent value and
+  //    then added via an unrolled loop. The actual adder tree only operates
+  //    with fixed point values, thereby saving on MUXes in its datapath
+  //    and reducing the critical path. The adder tree output is combined
+  //    with the maximum exponent value and converted to an ac_fixed output.
+  //    The user can adjust the saturation/overflow handling for this
+  //    conversion by changing the saturation/overflow mode of the output
+  //    type.
+  //
+  // Usage:
+  //    A sample testbench and its implementation look like
+  //    this:
+  //
+  //    #include <ac_float_add_tree.h>
+  //    using namespace ac_math;
+  //    
+  //    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+  //    typedef ac_fixed<64, 32, true, AC_TRN, AC_SAT> output_type;
+  //    constexpr int N_ELEMS = 4;
+  //    
+  //    #pragma hls_design top
+  //    void project(
+  //      const input_type (&input)[N_ELEMS],
+  //      output_type &output
+  //    )
+  //    {
+  //      block_add_tree(input, output);
+  //    }
+  //    
+  //    #ifndef __SYNTHESIS__
+  //    #include <mc_scverify.h>
+  //
+  //    CCS_MAIN(int, char **)
+  //    {
+  //      input_type input[N_ELEMS];
+  //      input[0] =  1.5;
+  //      input[1] =  2.5;
+  //      input[2] =  0.5;
+  //      input[3] = -1.0;
+  //      output_type output;
+  //      
+  //      CCS_DESIGN(project)(input, output);
+  //      
+  //      CCS_RETURN (0);
+  //    }
+  //    #endif
+  //
+  // Notes:
+  //    The output conversion to ac_fixed may or may not use the
+  //    ac_shift_left() function from ac_shift.h, and this choice
+  //    may decrease or increase area based on the input exponent width.
+  //    Refer to the AC Math reference manual for more details.
+  //
+  //-------------------------------------------------------------------------
+  
   template<
     int AccExtraLSBs = 0,
     bool ZeroHandling = true,
@@ -358,6 +662,61 @@ namespace ac_math {
     
     acc_fxpt_conv<use_ac_sl>(acc_fx, max_exp, acc);
   }
+  
+  //=========================================================================
+  // Function: block_add_tree (ac_float inputs, ac_float output)
+  //
+  // Description:
+  //    "Block" implementation of adder tree, where the input mantissas are 
+  //    aligned all at once with respect to the maximum exponent value and
+  //    then added via an unrolled loop. The actual adder tree only operates
+  //    with fixed point values, thereby saving on MUXes in its datapath
+  //    and reducing the critical path. The adder tree output is combined
+  //    with the maximum exponent value and converted to an ac_float output.
+  //
+  // Usage:
+  //    A sample testbench and its implementation look like
+  //    this:
+  //
+  //    #include <ac_float_add_tree.h>
+  //    using namespace ac_math;
+  //    
+  //    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+  //    typedef ac_float<25, 2, 9, AC_TRN> output_type;
+  //    constexpr int N_ELEMS = 4;
+  //    
+  //    #pragma hls_design top
+  //    void project(
+  //      const input_type (&input)[N_ELEMS],
+  //      output_type &output
+  //    )
+  //    {
+  //      block_add_tree(input, output);
+  //    }
+  //    
+  //    #ifndef __SYNTHESIS__
+  //    #include <mc_scverify.h>
+  //
+  //    CCS_MAIN(int, char **)
+  //    {
+  //      input_type input[N_ELEMS];
+  //      input[0] =  1.5;
+  //      input[1] =  2.5;
+  //      input[2] =  0.5;
+  //      input[3] = -1.0;
+  //      output_type output;
+  //      
+  //      CCS_DESIGN(project)(input, output);
+  //      
+  //      CCS_RETURN (0);
+  //    }
+  //    #endif
+  //
+  // Notes:
+  //    The output conversion to ac_float has normalization turned on if the
+  //    norm template parameter is set to true.
+  //
+  //-------------------------------------------------------------------------
   
   template<
     int AccExtraLSBs = 0,
@@ -385,6 +744,61 @@ namespace ac_math {
     acc = ac_float<WA,IA,EA,QA>(acc_fx,max_exp,norm);
   }
   
+  //=========================================================================
+  // Function: block_add_tree_ptr (ac_float inputs, ac_fixed output)
+  //
+  // Description:
+  //    A variant of the equivalent block_add_tree function defined above,
+  //    with the only major difference being that the input array is passed
+  //    as a pointer rather than a reference. Since size information for the
+  //    pass-by-pointer version is lost, the user must explicitly specify
+  //    N_ELEMS in the function call.
+  //
+  // Usage:
+  //    A sample testbench and its implementation look like
+  //    this:
+  //
+  //    #include <ac_float_add_tree.h>
+  //    using namespace ac_math;
+  //    
+  //    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+  //    typedef ac_fixed<64, 32, true, AC_TRN, AC_SAT> output_type;
+  //    constexpr int N_ELEMS = 4;
+  //    
+  //    #pragma hls_design top
+  //    void project(
+  //      const input_type input[N_ELEMS],
+  //      output_type &output
+  //    )
+  //    {
+  //      block_add_tree_ptr<N_ELEMS>(input, output);
+  //    }
+  //    
+  //    #ifndef __SYNTHESIS__
+  //    #include <mc_scverify.h>
+  //
+  //    CCS_MAIN(int, char **)
+  //    {
+  //      input_type input[N_ELEMS];
+  //      input[0] =  1.5;
+  //      input[1] =  2.5;
+  //      input[2] =  0.5;
+  //      input[3] = -1.0;
+  //      output_type output;
+  //      
+  //      CCS_DESIGN(project)(input, output);
+  //      
+  //      CCS_RETURN (0);
+  //    }
+  //    #endif
+  //
+  // Notes:
+  //    The inputs are copied to a temporary array in an unrolled loop, and
+  //    this array is then passed to the pass-by-reference function.
+  //
+  //-------------------------------------------------------------------------
+  
+  
   template<
     int N_ELEMS,
     int AccExtraLSBs = 0,
@@ -394,7 +808,7 @@ namespace ac_math {
     int WE, int IE, int EE, ac_q_mode QE
   >
   void block_add_tree_ptr(
-    const ac_float<WE,IE,EE,QE> *x,
+    const ac_float<WE,IE,EE,QE> x[N_ELEMS],
     ac_fixed<WA,IA,SA,QA,OA> &acc
   ) {
     ac_float<WE,IE,EE,QE> x2[N_ELEMS];
@@ -407,6 +821,60 @@ namespace ac_math {
     block_add_tree<AccExtraLSBs, ZeroHandling, use_ac_sl>(x2, acc);
   }
   
+  //=========================================================================
+  // Function: block_add_tree_ptr (ac_float inputs, ac_float output)
+  //
+  // Description:
+  //    A variant of the equivalent block_add_tree function defined above,
+  //    with the only major difference being that the input array is passed
+  //    as a pointer rather than a reference. Since size information for the
+  //    pass-by-pointer version is lost, the user must explicitly specify
+  //    N_ELEMS in the function call.
+  //
+  // Usage:
+  //    A sample testbench and its implementation look like
+  //    this:
+  //
+  //    #include <ac_float_add_tree.h>
+  //    using namespace ac_math;
+  //    
+  //    typedef ac_float<25, 2, 8, AC_TRN> input_type;
+  //    typedef ac_float<25, 2, 9, AC_TRN> output_type;
+  //    constexpr int N_ELEMS = 4;
+  //    
+  //    #pragma hls_design top
+  //    void project(
+  //      const input_type input[N_ELEMS],
+  //      output_type &output
+  //    )
+  //    {
+  //      block_add_tree_ptr<N_ELEMS>(input, output);
+  //    }
+  //    
+  //    #ifndef __SYNTHESIS__
+  //    #include <mc_scverify.h>
+  //
+  //    CCS_MAIN(int, char **)
+  //    {
+  //      input_type input[N_ELEMS];
+  //      input[0] =  1.5;
+  //      input[1] =  2.5;
+  //      input[2] =  0.5;
+  //      input[3] = -1.0;
+  //      output_type output;
+  //      
+  //      CCS_DESIGN(project)(input, output);
+  //      
+  //      CCS_RETURN (0);
+  //    }
+  //    #endif
+  //
+  // Notes:
+  //    The inputs are copied to a temporary array in an unrolled loop, and
+  //    this array is then passed to the pass-by-reference function.
+  //
+  //-------------------------------------------------------------------------
+  
   template<
     int N_ELEMS,
     int AccExtraLSBs = 0,
@@ -416,7 +884,7 @@ namespace ac_math {
     int WE, int IE, int EE, ac_q_mode QE
   >
   void block_add_tree_ptr(
-    const ac_float<WE,IE,EE,QE> *x,
+    const ac_float<WE,IE,EE,QE> x[N_ELEMS],
     ac_float<WA,IA,EA,QA> &acc
   ) {
     ac_float<WE,IE,EE,QE> x2[N_ELEMS];

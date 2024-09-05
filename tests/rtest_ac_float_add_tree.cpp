@@ -2,13 +2,13 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
- *  Copyright  Siemens                                                *
+ *  Copyright 2018 Siemens                                                *
  *                                                                        *
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
@@ -28,6 +28,14 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+// =========================TESTBENCH============================================
+// This testbench file contains a stand-alone testbench that exercises the
+// add_tree() and block_add_tree functions using a variety of bitwidths.
+
+// To compile standalone and run:
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_float_add_tree.cpp -o design
+//   ./design
+
 #include <ac_float_add_tree.h>
 #include <random>
 #include <ac_math/ac_random.h>

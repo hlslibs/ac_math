@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.5                                                 *
+ *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Thu Feb  8 17:36:42 PST 2024                        *
+ *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.5.0                                               *
+ *  Release Build   : 3.6.0                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -174,8 +174,10 @@ namespace ac_math
     }
     if (R < 0) { R += divisor; }
 
+    #ifndef AC_DIV_DISABLE_SATURATION_IF_INPUT_IS_ZERO
     // In case the AC_ASSERT isn't activated and the divisor is still zero, saturate the quotient output.
     if (divisor == 0) { Q.template set_val<AC_VAL_MAX>(); }
+    #endif
 
     quotient = Q;
     remainder = R;
@@ -240,8 +242,9 @@ namespace ac_math
     ac_div(uN, uD, uQ, uR);
     ac_int<QW,true> quotient_temp = neg_dividend == neg_divisor ? (ac_int<QW,true>) uQ : (ac_int<QW,true>) -uQ;
 
-    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val. based
-    // on whether the dividend is negative or positive.
+    #ifndef AC_DIV_DISABLE_SATURATION_IF_INPUT_IS_ZERO
+    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val.
+    // based on whether the dividend is negative or positive.
     if (divisor == 0) {
       if (neg_dividend) {
         quotient_temp.template set_val<AC_VAL_MIN>();
@@ -249,6 +252,7 @@ namespace ac_math
         quotient_temp.template set_val<AC_VAL_MAX>();
       }
     }
+    #endif
 
     quotient = quotient_temp;
 
@@ -354,8 +358,10 @@ namespace ac_math
 
     ac_math::ac_shift_right(Q_fx, (NW-NI) - (DW-DI) + (ZW-NW), quotient_temp);
 
+    #ifndef AC_DIV_DISABLE_SATURATION_IF_INPUT_IS_ZERO
     // In case the AC_ASSERT isn't activated and the divisor is still zero, saturate the quotient output.
     if (divisor == 0) { quotient_temp.template set_val<AC_VAL_MAX>(); }
+    #endif
 
     quotient = quotient_temp;
 
@@ -433,8 +439,9 @@ namespace ac_math
       has_rem |= RBIT && uQ[0];
     }
 
-    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val. based
-    // on whether the dividend is negative or positive.
+    #ifndef AC_DIV_DISABLE_SATURATION_IF_INPUT_IS_ZERO
+    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val.
+    // based on whether the dividend is negative or positive.
     if (divisor == 0) {
       if (neg_N) {
         quotient.template set_val<AC_VAL_MIN>();
@@ -442,6 +449,7 @@ namespace ac_math
         quotient.template set_val<AC_VAL_MAX>();
       }
     }
+    #endif
 
     return has_rem;
   }
@@ -481,8 +489,9 @@ namespace ac_math
     ac_float<STW,STI,STE> qt(tm, te, true);
     quotient = qt;
 
-    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val. based
-    // on whether the dividend is negative or positive.
+    #ifndef AC_DIV_DISABLE_SATURATION_IF_INPUT_IS_ZERO
+    // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate to the min or max val.
+    // based on whether the dividend is negative or positive.
     if (divisor.m == 0) {
       if (dividend.m < 0) {
         quotient.template set_val<AC_VAL_MIN>();
@@ -490,6 +499,7 @@ namespace ac_math
         quotient.template set_val<AC_VAL_MAX>();
       }
     }
+    #endif
 
     return has_rem;
   }
@@ -537,6 +547,7 @@ namespace ac_math
     #pragma hls_waive DBZ
     has_rem |= ac_div(prod.i(), s, Q._i);
 
+    #ifndef AC_DIV_DISABLE_SATURATION_IF_INPUT_IS_ZERO
     // If the AC_ASSERT wasn't activated and the divisor is still zero, saturate the real
     // and imaginary parts of the output to the min or max val. based on
     // whether the real/imaginary parts of "prod" are negative or positive.
@@ -552,6 +563,7 @@ namespace ac_math
         Q.i().template set_val<AC_VAL_MAX>();
       }
     }
+    #endif
 
     quotient = Q;
 

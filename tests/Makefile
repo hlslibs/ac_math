@@ -83,8 +83,9 @@ SOURCES_CPP = \
   rtest_ac_gelu_pwl.cpp \
   rtest_ac_leakyrelu.cpp \
   rtest_ac_relu.cpp \
-	rtest_ac_prelu.cpp \
-  rtest_ac_float_add_tree.cpp
+  rtest_ac_prelu.cpp \
+  rtest_ac_float_add_tree.cpp \
+  rtest_ac_flfx_mul.cpp
 
 OBJS = $(SOURCES_CPP:.cpp=.o)
 
