@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
+ *  Release Date    : Tue Nov 12 23:14:00 PST 2024                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.6.0                                               *
  *                                                                        *
@@ -33,7 +33,7 @@
 // ac_matrix class.
 
 // To compile standalone and run:
-//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_matarix.cpp -o design
+//   $MGC_HOME/bin/c++ -std=c++11 -I$MGC_HOME/shared/include rtest_ac_matrix.cpp -o design
 //   ./design
 
 // Revision History:
@@ -493,6 +493,28 @@ int main(int argc, char *argv[])
   if (detflag1 == false) { cout << "FAILED" << endl; fail_count++; }
   else                   { cout << "PASSED" << endl; }
   
+  // Define a 2x2 matrix
+  ac_matrix<int, 2, 2> matrix = {1, 2, 3, 4};
+  cout << "Testing: initialization(" << std::left << setw(fw) << matrix.type_name() << ") RESULT: ";
+  bool matrix_init_flag = true;
+
+  // Define a regular array with the same values
+  int expected_data[2][2] = {{1, 2}, {3, 4}};
+
+  // Check if the matrix is initialized correctly by comparing with the regular array
+  for (size_t i = 0; i < 2; ++i) {
+    for (size_t j = 0; j < 2; ++j) {
+      if (matrix(i,j) != expected_data[i][j]) {
+        matrix_init_flag = false;
+        cout << "Error: Matrix initialization failed" << endl;
+        break;
+      }
+    }      
+  }
+
+  if (matrix_init_flag == false) { cout << "FAILED" << endl; fail_count++; }
+  else                   { cout << "PASSED" << endl; }
+
   if (fail_count) {
     cout << "    Error: One or more unit tests failed" << endl;
   } else {

@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
+ *  Release Date    : Tue Nov 12 23:14:00 PST 2024                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.6.0                                               *
  *                                                                        *
@@ -83,6 +83,10 @@
 #include <ac_fixed.h>
 #include <ac_complex.h>
 
+#if (__cplusplus >= 201103L)
+#include <initializer_list>
+#endif
+
 //#include <ac_assert.h>
 
 //=========================================================================
@@ -113,6 +117,29 @@ public:
   // Copy constructor
   ac_matrix(const ac_matrix<T,M,N> &other ) {
     copy_contents(other);
+  }
+
+  // Constructor: Accepts brace-enclosed initializer list.
+  // Only available from C++11 onwards.
+#ifdef _WIN32
+  #if (_MSVC_LANG >= 201103L)
+  #endif
+#else
+  #if (__cplusplus >= 201103L)
+  #endif
+#endif
+  ac_matrix(const std::initializer_list<T> &init_list) {
+
+    #pragma hls_waive CCC
+    AC_ASSERT(init_list.size() <= M*N, "Too many initializer list values.");
+    const T* it = reinterpret_cast<const T*>(init_list.begin());
+    T* ptr = &m_data[0][0];
+    //For now, using the waive pragma to suppress the CCC warning. The CCC warning should not show up and its a bug as this has not been tested in CDesignChecker.
+    #pragma hls_waive CCC
+    while (it != init_list.end()) {
+        *ptr++ = *it++;
+    }
+
   }
 
   // Destructor
@@ -277,10 +304,11 @@ public: // Matrix math functions
   template <typename T2, unsigned Q>
   ac_matrix<typename ac::rt_2T<T,T2>::mult::rt_unary::template set<N-1>::sum, M, Q> operator*(const ac_matrix<T2,N,Q> &op2 ) const {
     typedef typename T::template rt_T<T2>::mult Tprod; // allow bit growth for T*T2 product
+    typedef typename Tprod::rt_unary::template set<N-1>::sum Tsum; // allow bit growth from N-1 additions of T*T2 types
     ac_matrix<typename ac::rt_2T<T,T2>::mult::rt_unary::template set<N-1>::sum, M, Q> result;
     for ( unsigned i = 0; i < M; i++ ) {
       for ( unsigned j = 0; j < Q; j++ ) {
-        typename Tprod::rt_unary::template set<N-1>::sum tsum = 0; // allow for bit growth from N-1 additions of T*T2 types
+        Tsum tsum = (Tsum)0; // allow for bit growth from N-1 additions of T*T2 types
         for ( unsigned k = 0; k < N; k++ ) {
           tsum += (*this)(i,k) * op2(k,j);
         }

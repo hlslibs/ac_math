@@ -4,7 +4,7 @@
  *                                                                        *
  *  Software Version: 3.6                                                 *
  *                                                                        *
- *  Release Date    : Sun Aug 25 18:24:45 PDT 2024                        *
+ *  Release Date    : Tue Nov 12 23:14:00 PST 2024                        *
  *  Release Type    : Production Release                                  *
  *  Release Build   : 3.6.0                                               *
  *                                                                        *
