@@ -108,7 +108,7 @@ int test_driver_fixed(
   }
 
   bool incorrect = false;
-  int nocalls, expret_fixed, expret_complex;
+  int expret_fixed, expret_complex;
 
   // test fixed-point real and complex.
 
@@ -119,12 +119,13 @@ int test_driver_fixed(
       cmplx_input_fixed.r() = i;
       cmplx_input_fixed.i() = j;
       test_ac_normalize(input_fixed, output_fixed, cmplx_input_fixed, cmplx_output_fixed, expret_fixed, expret_complex);
-      nocalls++;
 
       // This flag is set to false if the real output is incorrect
       bool incorrect_fixed = (output_fixed.to_double() * pow(2, (double)expret_fixed) != input_fixed);
       // Make sure that the range of the normalized output is as expected.
-      incorrect_fixed = incorrect_fixed || ((output_fixed > -0.5) && (output_fixed < 0.5)) || ((output_fixed >= 1) && (output_fixed < -1));
+      // Expected range is: [-1.0, -0.5] U [0.5, 1.0]
+      bool in_range = ((output_fixed >= -1) && (output_fixed <= -0.5)) || ((output_fixed >= 0.5) && (output_fixed <= 1));
+      incorrect_fixed = incorrect_fixed || !in_range;
       // Inputs and outputs being zero is a special case, and the range-checking above will produce a false negative in such a case. This is taken care of below.
       if (output_fixed == 0 && input_fixed == 0) {incorrect_fixed = false;}
 
@@ -132,7 +133,9 @@ int test_driver_fixed(
       bool incorrect_complex = ((cmplx_output_fixed.r().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.r().to_double()) || (cmplx_output_fixed.i().to_double()*pow(2, (double)expret_complex) != cmplx_input_fixed.i().to_double()));
       // Make sure that the range of the normalized output is as expected.
       incorrect_complex = incorrect_complex || ((cmplx_output_fixed.r() > -0.5) && (cmplx_output_fixed.r() < 0.5) && (cmplx_output_fixed.i() > -0.5) && (cmplx_output_fixed.i() < 0.5));
-      incorrect_complex = incorrect_complex || (cmplx_output_fixed.r() >= 1) || (cmplx_output_fixed.r() < -1) || (cmplx_output_fixed.i() >= 1) && (cmplx_output_fixed.i() < -1);
+      // Expected range is: [-1.0, +1.0]
+      in_range = ((cmplx_output_fixed.r() >= -1) && (cmplx_output_fixed.r() <= 1)) || ((cmplx_output_fixed.i() >= -1) && (cmplx_output_fixed.i() <= 1));
+      incorrect_complex = incorrect_complex || !in_range;
       // Inputs and outputs being zero is a special case, and the range-checking above will produce a false negative in such a case. This is taken care of below.
       if (cmplx_output_fixed.r() == 0 && cmplx_output_fixed.i() == 0 && cmplx_input_fixed.r() == 0 && cmplx_input_fixed.i() == 0) {incorrect_complex = false;}
 
