@@ -71,6 +71,7 @@ SOURCES_CPP = \
   rtest_ac_sincos_cordic.cpp \
   rtest_ac_sincos_lut.cpp \
   rtest_ac_softmax_pwl.cpp \
+  rtest_ac_softmax_pwl_new.cpp \
   rtest_ac_sqrt.cpp \
   rtest_ac_sqrt_pwl.cpp \
   rtest_ac_leading.cpp\

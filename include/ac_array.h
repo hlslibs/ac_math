@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.6                                                 *
+ *  Software Version: 3.8                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov 12 23:14:00 PST 2024                        *
+ *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.6.0                                               *
+ *  Release Build   : 3.8.1                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -171,7 +171,7 @@ public:
   // same sized arrays
   bool operator==(const ac_array_b<T,Td,D> &other) const {
     bool equal = true;
-    for (int i=0; i<D; i++) {
+    for (unsigned i=0; i<D; i++) {
       if (this->d[i] != other[i]) {
         equal = false;
         break;

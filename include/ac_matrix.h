@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.6                                                 *
+ *  Software Version: 3.8                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov 12 23:14:00 PST 2024                        *
+ *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.6.0                                               *
+ *  Release Build   : 3.8.1                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -132,12 +132,18 @@ public:
 
     #pragma hls_waive CCC
     AC_ASSERT(init_list.size() <= M*N, "Too many initializer list values.");
-    const T* it = reinterpret_cast<const T*>(init_list.begin());
-    T* ptr = &m_data[0][0];
-    //For now, using the waive pragma to suppress the CCC warning. The CCC warning should not show up and its a bug as this has not been tested in CDesignChecker.
-    #pragma hls_waive CCC
-    while (it != init_list.end()) {
-        *ptr++ = *it++;
+    //The below code does not work as pointer logic is involved. So a bug has been filed and it can be tracked in CAT-38531, SLEC-32968
+    //const T* it = reinterpret_cast<const T*>(init_list.begin());
+    //T* ptr = &m_data[0][0];
+    //#pragma hls_waive CCC
+    //while (it != init_list.end()) {
+    //    *ptr++ = *it++;
+    //}
+    // Copy elements from initializer list to array without using pointers or iterators
+    size_t index = 0;
+    for (const T& value : init_list) {
+        m_data[index / M][index % N] = value;
+        index++;
     }
 
   }
@@ -472,4 +478,3 @@ std::ostream &operator<<(std::ostream &os, const ac_matrix<T,M,N> &m )
 #endif // NOT __SYNTHESIS__
 
 #endif // _INCLUDED_AC_MATRIX_H_
-

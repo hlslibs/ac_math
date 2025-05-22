@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.6                                                 *
+ *  Software Version: 3.8                                                 *
  *                                                                        *
- *  Release Date    : Tue Nov 12 23:14:00 PST 2024                        *
+ *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.6.0                                               *
+ *  Release Build   : 3.8.1                                               *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -225,7 +225,13 @@ struct ac_random_ac_s<T,SIZE,true> {
 template <int W, bool S>
 inline void ac_random(ac_int<W,S> &v)
 {
-  ac_random_ac_s<ac_int<W,S>, W, W<=16>()(v);
+  // This variable is static so that if we're using VRA, it's only constructed
+  // once, thereby reducing the stacktracing overhead that's incurred every time
+  // an ac_int variable is constructed while using VRA. This is particularly
+  // beneficial if, say, ac_random is called inside a loop with many iterations.
+  static ac_int<W, S> v_temp;
+  ac_random_ac_s<ac_int<W,S>, W, W<=16>()(v_temp);
+  v = v_temp;
 }
 
 #endif // AC_RANDOM_H_INC__AC_INT_H
@@ -240,7 +246,13 @@ inline void ac_random(ac_int<W,S> &v)
 template <int W, int I, bool S, ac_q_mode Q, ac_o_mode O>
 inline void ac_random(ac_fixed<W,I,S,Q,O> &v)
 {
-  ac_random_ac_s<ac_fixed<W,I,S,Q,O>, W, W<=16>()(v);
+  // This variable is static so that if we're using VRA, it's only constructed
+  // once, thereby reducing the stacktracing overhead that's incurred every time
+  // an ac_int variable is constructed while using VRA. This is particularly
+  // beneficial if, say, ac_random is called inside a loop with many iterations.
+  static ac_fixed<W, I, S, Q, O> v_temp;
+  ac_random_ac_s<ac_fixed<W,I,S,Q,O>, W, W<=16>()(v_temp);
+  v = v_temp;
 }
 
 #endif // AC_RANDOM_H_INC__AC_FIXED_H

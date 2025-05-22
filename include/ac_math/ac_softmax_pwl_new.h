@@ -29,17 +29,20 @@
  *                                                                        *
  *************************************************************************/
 //*****************************************************************************************
-// File: ac_softmax_pwl.h (for ac_fixed)
+// File: ac_softmax_pwl_new.h (for ac_fixed)
 //
-// Description: Synthesizable softmax function for AC fixed point datatypes.
+// Description:
+//    Synthesizable softmax function for AC fixed point datatypes.
+//    New design normalizes the numerator and denominator terms in the softmax equation
+//    to minimize bit growth and improve QofR.
+//
 // Usage:
 //    Calculation of softmax of an array of real inputs, passed as ac_fixed variables.
 //
 // Notes:
 //    A sample testbench and its implementation looks like this:
 //
-//    #include <ac_math/ac_softmax_pwl.h>
-//    using namespace ac_math;
+//    #include <ac_math/ac_softmax_pwl_new.h>
 //
 //    const int num_logits_tb = 20;
 //
@@ -52,7 +55,7 @@
 //      output_type (&output)[num_logits_tb]
 //    )
 //    {
-//      ac_softmax_pwl(input,output);
+//      ac_math::ac_softmax_pwl_new(input,output);
 //    }
 //
 //    #ifndef __SYNTHESIS__
@@ -82,8 +85,8 @@
 //
 //*****************************************************************************************
 
-#ifndef _INCLUDED_AC_SOFTMAX_PWL_H_
-#define _INCLUDED_AC_SOFTMAX_PWL_H_
+#ifndef _INCLUDED_AC_SOFTMAX_PWL_NEW_H_
+#define _INCLUDED_AC_SOFTMAX_PWL_NEW_H_
 
 // The function uses default template parameters, which are only supported by C++11 or later
 // compiler standards. Hence, the user should be informed if they are not using those standards.
@@ -104,83 +107,82 @@
 // Encapsulate within ac_math namespace.
 namespace ac_math
 {
-  // or_e: Override the default type assigned to the exponent variable. Use user-supplied type information instead.
-  // or_r: Same as above, but for the reciprocal variable.
-  // K: number of input elements.
-  template<ac_q_mode pwl_Q = AC_TRN,
-           bool or_e = false, int iW_e = 0, int iI_e = 0, ac_q_mode iQ_e = AC_TRN, ac_o_mode iO_e = AC_WRAP,
-           bool or_r = false, int iW_r = 0, int iI_r = 0, ac_q_mode iQ_r = AC_TRN, ac_o_mode iO_r = AC_WRAP,
+  template<unsigned K, // Must always be specified as inputs are passed as pointers and size info is unavailable by default.
+           int exp2f_fw_ = 0, // Fractional width for exp2_frac variables. If this is non-positive, the default value will be used.
+           int l2e_fw_ = 0, // Fractional width for log2e constant. If this is non-positive, the default value will be used.
+           ac_q_mode pwl_Q = AC_TRN,
+           int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
+           int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
+  void ac_softmax_pwl_new_ptr(
+    const ac_fixed<W, I, S, Q, O> input[K],
+    ac_fixed<outW, outI, false, outQ, outO> output[K]
+  )
+  {
+    typedef ac_fixed<W, I, S, Q, O> in_type;
+
+    const ac_fixed<33, 1, false> full_prec_log2e = 1.4426950407214462757110595703125;
+    static_assert(l2e_fw_ <= full_prec_log2e.width - full_prec_log2e.i_width, "l2e_fw_ must not exceed the number of fractional bits in full_prec_log2e.");
+    constexpr int l2e_fw = l2e_fw_ > 0 ? l2e_fw_ : 16;
+    typedef ac_fixed<l2e_fw + 1, 1, false> log2e_type;
+    const log2e_type log2e = full_prec_log2e;
+    typedef typename ac::rt_2T<log2e_type, in_type>::mult b2_pow_type;
+    typedef ac_int<b2_pow_type::i_width, b2_pow_type::sign> b2p_I_type;
+    b2p_I_type b2p_I[K];
+    b2p_I_type b2p_Im;
+    constexpr int exp2f_fw = exp2f_fw_ > 0 ? exp2f_fw_ : AC_MAX(1, AC_MIN(10, W - I - 2)) + 10;
+    ac_fixed<exp2f_fw + 1, 1, false> exp2_frac[K];
+
+    SEPARATE_INTO_INT_AND_FRAC: for (unsigned i = 0; i < K; i++) {
+      b2_pow_type b2_pow = input[i]*log2e;
+      b2p_I[i] = b2_pow.to_ac_int();
+      if (b2_pow_type::width > b2_pow_type::i_width) {
+        // fwidth must always be positive to prevent compiler errors.
+        constexpr int fwidth = AC_MAX(b2_pow_type::width - b2_pow_type::i_width, 1);
+        ac_fixed<fwidth, 0, false> frac_part;
+        frac_part.set_slc(0, b2_pow.template slc<fwidth>(0));
+        ac_math::ac_pow2_pwl<pwl_Q>(frac_part, exp2_frac[i]);
+      } else {
+        exp2_frac[i] = 1.0; // No fractional part => exp2(frac_part) = exp2(0) = 1
+      }
+      if (i == 0) { b2p_Im = b2p_I[i]; }
+      else { b2p_Im = AC_MAX(b2p_I[i], b2p_Im); }
+    }
+
+    ac_fixed<exp2f_fw + 1, 1, false> prod[K];
+    constexpr int sprod_Iw = ac::nbits<2*K - 1>::val;
+    ac_fixed<exp2f_fw + sprod_Iw, sprod_Iw, false> prod_sum = 0.0;
+
+    CALCULATE_NORM_NUM_AND_DEN: for (unsigned i = 0; i < K; i++) {
+      ac_int<b2_pow_type::i_width, false> del_b2p_I = b2p_Im - b2p_I[i];
+      prod[i] = exp2_frac[i] >> del_b2p_I;
+      prod_sum += prod[i];
+    }
+
+    constexpr int recip_W = prod_sum.width + 20;
+    constexpr int recip_iW = prod_sum.width - prod_sum.i_width + 1;
+
+    ac_fixed<recip_W, recip_iW, false> recip_sum;
+    ac_reciprocal_pwl<pwl_Q>(prod_sum, recip_sum);
+
+    CALCULATE_SOFTMAX_OUT: for (unsigned i = 0; i < K; i++) { output[i] = prod[i]*recip_sum; }
+  }
+
+  template<int exp2f_fw_ = 0, // Fractional width for exp2_frac variables. If this is non-positive, the default value will be used.
+           int l2e_fw_ = 0, // Fractional width for log2e constant. If this is non-positive, the default value will be used.
+           ac_q_mode pwl_Q = AC_TRN,
            unsigned K,
            int W, int I, bool S, ac_q_mode Q, ac_o_mode O,
            int outW, int outI, ac_q_mode outQ, ac_o_mode outO>
   // By declaring the function parameters as references to arrays (i.e. "(&input)[K]" and "(&output)[K]"), we ensure
   // that template parameter deduction infers the value of K.
-  void ac_softmax_pwl(
+  void ac_softmax_pwl_new(
     const ac_fixed<W, I, S, Q, O> (&input)[K],
     ac_fixed<outW, outI, false, outQ, outO> (&output)[K]
   )
   {
-    // The default number of fractional bits assigned to the exponent variables assumes that the PWL implementation
-    // has four segments and uses 10 fractional bits to store the slope and intercept values. For any other implementation
-    // the default number may have to be changed to ensure no loss of precision.
-    const int exp_frac_bits = or_e ? iW_e - iI_e : AC_MAX(1, AC_MIN(10, W - I - 2)) + 10;
-    const int exp_int_bits  = or_e ? iI_e : int(1.443*double(1 << (I - S))) + 1;
-    // The default rounding and saturation modes are AC_TRN and AC_WRAP, respectively.
-    const ac_q_mode exp_Q = or_e ? ac_q_mode(iQ_e) : ac_q_mode(AC_TRN);
-    const ac_o_mode exp_O = or_e ? ac_o_mode(iO_e) : ac_o_mode(AC_WRAP);
-    // The below static_assert limits the size the integer width of the exponent variable can reach.
-    static_assert(exp_int_bits <= 64, "Intermediate bitwidth calculation gives a very large value for integer bits. Consider reducing the number of input integer bits.");
-    typedef ac_fixed<exp_frac_bits + exp_int_bits, exp_int_bits, false, exp_Q, exp_O> T_exp;
-    typedef ac_fixed<T_exp::width + ac::log2_ceil<K>::val, T_exp::i_width + ac::log2_ceil<K>::val, false> T_sum;
-
-    #pragma hls_waive APT
-    T_exp exp_arr[K];
-    // The reciprocal variable is also assigned a default bitwidth based on the default PWL bitwidths and segments (10 fractional bits and 8 segments).
-    // For any PWL implementation other than the default, these bitwidths may change.
-    const int recip_W = or_r ? iW_r : T_sum::width + 20;
-    const int recip_I = or_r ? iI_r : T_sum::width - T_sum::i_width + 1;
-    const ac_q_mode recip_Q = or_r ? ac_q_mode(iQ_r) : ac_q_mode(AC_TRN);
-    const ac_o_mode recip_O = or_r ? ac_o_mode(iO_r) : ac_o_mode(AC_WRAP);
-    typedef ac_fixed<recip_W, recip_I, false, recip_Q, recip_O> T_recip;
-    T_recip sum_exp_recip;
-
-    // All the loops used in this function can be pipelined/unrolled to give the desired area/throughput score.
-    // 1. Pipelining all the loops and the main function call with an II of 1 gives (2K) number of throughput cycles.
-    // 2. Unrolling all the loops and pipelining the main function call with an II of 1 ensures a throughput of 1.
-    // The second option can also result in a very large area score.
-
-    // Calculate exponential of all inputs.
-    CALC_EXP_LOOP: for (unsigned i = 0; i < K; i++) { ac_exp_pwl<pwl_Q>(input[i], exp_arr[i]); }
-
-    // Perform a MAC operation to add all the exponential values.
-    T_sum sum_exp = 0.0;
-    SUM_EXP_LOOP: for (unsigned i = 0; i < K; i++) { sum_exp += exp_arr[i]; }
-
-    // Find the reciprocal of the sum of exponentials.
-    ac_reciprocal_pwl<pwl_Q>(sum_exp, sum_exp_recip);
-
-    // The types for the exponent and reciprocal variable are configurable primarily to ensure that the size of the multiplier used for the multiplication below
-    // does not become too large. A large multiplier can become an issue if the loop below is being unrolled and the number of iterations (K) is large,
-    // hence resulting in many large multipliers and a very large area.
-    CALC_SOFTMAX_LOOP: for (unsigned i = 0; i < K; i++) { output[i] = sum_exp_recip*exp_arr[i]; }
+    ac_softmax_pwl_new_ptr<K, exp2f_fw_, l2e_fw_, pwl_Q>(input, output);
   }
-
 };
 
 
-#endif // #ifndef _INCLUDED_AC_SOFTMAX_PWL_H_
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#endif // #ifndef _INCLUDED_AC_SOFTMAX_PWL_NEW_H_
