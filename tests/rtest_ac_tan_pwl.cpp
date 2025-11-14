@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.8                                                 *
+ *  Software Version: 2025.4                                              *
  *                                                                        *
- *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
+ *  Release Date    : Tue Nov 11 17:44:22 PST 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.8.1                                               *
+ *  Release Build   : 2025.4.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -143,7 +143,7 @@ int test_driver_fixed(
 
   bool check_monotonic = true;
   bool compare_tan = false;
-  double old_output_tan;
+  double old_output_tan = 0.0;
 
   for (i = lower_limit; i <= upper_limit; i += step) {
     // Set values for input.
@@ -180,7 +180,7 @@ int test_driver_fixed(
           cout << "  tan output not monotonic at :" << endl; // LCOV_EXCL_LINE
           cout << "  x = " << input << endl; // LCOV_EXCL_LINE
           cout << "  y = " << tan_out << endl; // LCOV_EXCL_LINE
-          cout << "  old_output_tan = " << old_output_tan << endl; // LCOV_EXCL_LINE
+          cout << "  old_output_tan = " << ac_fixed<128, 64, false>(old_output_tan) << endl; // LCOV_EXCL_LINE
           assert(false); // LCOV_EXCL_LINE
         }
       }
@@ -198,6 +198,7 @@ int test_driver_fixed(
       cout << "  input          = " << input << endl;
       cout << "  input_degrees  = " << input_degrees << endl;
       cout << "  expected_tan   = " << expected_tan << endl;
+      cout << "  tan_out        = " << tan_out << endl;
       cout << "  actual_tan     = " << actual_tan << endl;
       cout << "  this_error_tan = " << this_error_tan << endl;
       cout << "  threshold      = " << threshold << endl;
@@ -349,7 +350,7 @@ int test_driver_float(
 int main(int argc, char *argv[])
 {
   double max_error_fixed = 0.0, max_error_float = 0.0;
-  double allowed_error = 4.0;
+  double allowed_error = 4.0; // Declared on a separate line to aid in internal testing.
   double threshold = 0.1;
 
   cout << "=============================================================================" << endl;

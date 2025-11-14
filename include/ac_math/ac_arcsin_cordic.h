@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.8                                                 *
+ *  Software Version: 2025.4                                              *
  *                                                                        *
- *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
+ *  Release Date    : Tue Nov 11 17:44:22 PST 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.8.1                                               *
+ *  Release Build   : 2025.4.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *

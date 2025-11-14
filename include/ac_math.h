@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.8                                                 *
+ *  Software Version: 2025.4                                              *
  *                                                                        *
- *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
+ *  Release Date    : Tue Nov 11 17:44:22 PST 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.8.1                                               *
+ *  Release Build   : 2025.4.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -87,6 +87,7 @@
 #include <ac_math/ac_reciprocal_pwl_ha.h>
 // ac_reciprocal_pwl_ha()
 
+
 #include <ac_math/ac_shift.h>
 // ac_shift_left()
 // ac_shift_right()
@@ -116,10 +117,6 @@
 // ac_softmax_pwl()
 
 #include <ac_float_add_tree.h>
-// add_tree()
-// add_tree_ptr()
-// block_add_tree()
-// block_add_tree_ptr()
+
 
 #endif
-

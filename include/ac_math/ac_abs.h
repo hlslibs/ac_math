@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.8                                                 *
+ *  Software Version: 2025.4                                              *
  *                                                                        *
- *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
+ *  Release Date    : Tue Nov 11 17:44:22 PST 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.8.1                                               *
+ *  Release Build   : 2025.4.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -125,7 +125,11 @@ namespace ac_math
   )
   {
     ac_int<1,true> xltz = (x < 0);
-    ac_int<XW,false> xabs = (xltz^x).template slc<XW>(0) + (ac_int<1, false>)xltz;
+    // XORing the MSB with itself always gives a 0, hence we XOR all bits except for the MSB.
+    ac_int<XW - 1,true> xor_res = x.template slc<XW - 1>(0);
+    xor_res ^= xltz;
+    ac_int<XW - 1,false> xor_res_us = xor_res;
+    ac_int<XW,false> xabs = xor_res_us + (ac_int<1, false>)xltz;
     y = xabs;
   }
 

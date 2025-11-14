@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.8                                                 *
+ *  Software Version: 2025.4                                              *
  *                                                                        *
- *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
+ *  Release Date    : Tue Nov 11 17:44:22 PST 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.8.1                                               *
+ *  Release Build   : 2025.4.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -46,18 +46,8 @@
 #error Please use Microsoft VS 2019 or a later standard for compilation.
 #endif
 
-#include <stdio.h>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <cstring>
-#include <iostream>
-#include <iomanip>
-
 #include <ac_int.h>
 #include <ac_fixed.h>
-#include <mc_scverify.h>
-using namespace std;
 
 namespace ac_math
 {
@@ -73,7 +63,6 @@ namespace ac_math
   {
     bool lead_sign_flag;
     ac_int<ac::nbits<W>::val,false> lead_sign=din.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -91,7 +80,7 @@ namespace ac_math
       rev[i] = din[W-1-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
+    
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -105,7 +94,7 @@ namespace ac_math
     bool lead_sign_flag;
     ac_int<W,false> cmp = ~din;
     ac_int<ac::nbits<W>::val,false> lead_sign=cmp.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
+    
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -123,7 +112,7 @@ namespace ac_math
       rev[i] = !din[W-1-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
+    
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -144,7 +133,6 @@ namespace ac_math
     ac_int<W-1,false> truncated;
     truncated.set_slc(0,(din.template slc<W-1>(0)));
     ac_int<ac::nbits<W>::val,false> lead_sign=truncated.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W-1==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -164,7 +152,6 @@ namespace ac_math
       rev[i] = truncated[W-2-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W-1==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -202,7 +189,6 @@ namespace ac_math
       rev[i] = cmp[W-2-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W-1==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -221,7 +207,6 @@ namespace ac_math
   {
     bool lead_sign_flag;
     ac_int<ac::nbits<W>::val,false> lead_sign=din.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -239,7 +224,6 @@ namespace ac_math
       rev[i] = din[W-1-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -253,7 +237,6 @@ namespace ac_math
     bool lead_sign_flag;
     ac_fixed<W,I,false> cmp=~din;
     ac_int<ac::nbits<W>::val,false> lead_sign=cmp.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -271,7 +254,6 @@ namespace ac_math
       rev[i] = !din[W-1-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -292,7 +274,6 @@ namespace ac_math
     ac_int<W-1,false> truncated;
     truncated.set_slc(0,(din.template slc<W-1>(0)));
     ac_int<ac::nbits<W>::val,false> lead_sign=truncated.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W-1==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -312,7 +293,6 @@ namespace ac_math
       rev[i] = truncated[W-2-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W-1==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }
@@ -350,7 +330,6 @@ namespace ac_math
       rev[i] = cmp[W-2-i];
     }
     ac_int<ac::nbits<W>::val,false> lead_sign=rev.leading_sign(lead_sign_flag);
-    // std::cout << "lead_sign: "<< lead_sign << std::endl;
     flag=1;
     if (W-1==lead_sign) {flag=0;}
     if (lead_sign_flag) { return 0; }

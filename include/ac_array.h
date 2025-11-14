@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 3.8                                                 *
+ *  Software Version: 2025.4                                              *
  *                                                                        *
- *  Release Date    : Tue May 13 15:34:32 PDT 2025                        *
+ *  Release Date    : Tue Nov 11 17:44:22 PST 2025                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 3.8.1                                               *
+ *  Release Build   : 2025.4.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -95,13 +95,23 @@
 #ifndef _INCLUDED_AC_ARRAY_H_
 #define _INCLUDED_AC_ARRAY_H_
 
+// Define how assertion checks are handled.
+//   Compile -DAC_ARRAY_ASSERT to map to AC_ASSERT() macro defined in ac_int.h for synthesizable assert
+//   Compile -DAC_ARRAY_ASSERT_SW to have software-only assert
+
 #include <sstream>
-#ifdef AC_ARRAY_ASSERT
-#include <ac_assert.h>
-#define AC_A_ASSERT(cond) ac::ac_assert(__FILE__, __LINE__, #cond, cond)
+
+#if defined(AC_ARRAY_ASSERT)
+  // Include ac_int.h so you can use AC_ASSERT
+  #include <ac_int.h>
+  #define AC_A_ASSERT(cond, msg) AC_ASSERT(cond, msg)
 #else // !AC_ARRAY_ASSERT
-#define AC_A_ASSERT(cond)
-#endif // AC_ARRAY_ASSERT
+  #if defined(AC_ARRAY_ASSERT_SW) && !defined(__SYNTHESIS__)
+    #define AC_A_ASSERT(cond, msg) assert(cond)
+  #else
+    #define AC_A_ASSERT(cond, msg)
+  #endif
+#endif
 
 #ifndef __SYNTHESIS__
 #include <iostream>
@@ -129,36 +139,36 @@ public:
   virtual ~ac_array_b() {}
 
   T &operator[] (unsigned i) {
-    AC_A_ASSERT(i < D);
+    AC_A_ASSERT(i < D, "Out of bounds array access.");
     return d[i];
   }
 
   const T &operator[] (unsigned i) const {
-    AC_A_ASSERT(i < D);
+    AC_A_ASSERT(i < D, "Out of bounds array access.");
     return d[i];
   }
 
   unsigned size() const { return D; }
 
   void set(const Td &ival) {
-    for ( unsigned i = 0; i < D; ++i ) {
+    SET_AC_ARR_LOOP: for ( unsigned i = 0; i < D; ++i ) {
       set(i, ival);
     }
   }
 
   void set(unsigned i, const Td &ival) {
-    AC_A_ASSERT(i < D);
+    AC_A_ASSERT(i < D, "Out of bounds array access.");
     d[i] = ival;
   }
 
   void clearAll(bool dc=false) {
-    for ( unsigned i = 0; i < D; ++i ) {
+    CLEAR_AC_ARR_LOOP: for ( unsigned i = 0; i < D; ++i ) {
       clear(i, dc);
     }
   }
 
   void clear(unsigned i, bool dc=false) {
-    AC_A_ASSERT(i < D);
+    AC_A_ASSERT(i < D, "Out of bounds array access.");
     if ( !dc ) {
       d[i] = 0;
     } else {
@@ -167,11 +177,18 @@ public:
     }
   }
 
-  // Relational operators - can only compare against
-  // same sized arrays
-  bool operator==(const ac_array_b<T,Td,D> &other) const {
+  template <class T2, class Td2>
+  void cpy_from_ac_arr(const ac_array_b<T2,Td2,D> &other) {
+    CPY_FROM_AC_ARR_LOOP: for (unsigned i=0; i<D; i++) {
+      T conv_val = other[i];
+      this->d[i] = conv_val;
+    }
+  }
+
+  template <class T2, class Td2>
+  bool cmp_ac_arr(const ac_array_b<T2,Td2,D> &other) const {
     bool equal = true;
-    for (unsigned i=0; i<D; i++) {
+    COMPARE_AC_ARR_LOOP: for (unsigned i=0; i<D; i++) {
       if (this->d[i] != other[i]) {
         equal = false;
         break;
@@ -180,9 +197,35 @@ public:
     return equal;
   }
 
-  bool operator!=(const ac_array_b<T,Td,D> &other) const {
-    return !operator==(other);
+  // Relational operators only work if arrays being compared have the same size.
+
+  // == operator, internal types (T, Td) are the same.
+  bool operator==(const ac_array_b<T,Td,D> &other) const {
+    return cmp_ac_arr(other);
   }
+
+  // != operator, internal types (T, Td) are the same.
+  bool operator!=(const ac_array_b<T,Td,D> &other) const {
+    return !cmp_ac_arr(other);
+  }
+
+  // == operator, one or more internal types (T, Td) are different.
+  template <class T2, class Td2>
+  bool operator==(const ac_array_b<T2,Td2,D> &other) {
+    return cmp_ac_arr(other);
+  }
+
+  // != operator, one or more internal types (T, Td) are different.
+  template <class T2, class Td2>
+  bool operator!=(const ac_array_b<T2,Td2,D> &other) {
+    return !cmp_ac_arr(other);
+  }
+
+  template <class T2, class Td2>
+  ac_array_b(const ac_array_b<T2, Td2, D> &other) { cpy_from_ac_arr(other); }
+  
+  template <class T2, class Td2>
+  ac_array_b& operator=(const ac_array_b<T2, Td2, D> &other) { cpy_from_ac_arr(other); return *this; }
 
 public: // data
   T d[D];
@@ -198,12 +241,40 @@ class ac_array : public ac_array_b< ac_array<T,D2,D3>, T, D1>
 {
   typedef ac_array_b< ac_array<T,D2,D3>, T, D1> Base;
 public:
+  typedef T ElemType;
+  static const unsigned dim1 = D1;
+  static const unsigned dim2 = D2;
+  static const unsigned dim3 = D3;
 
   ac_array() {}
   ac_array(const T &ival) { Base::set(ival); }
+
+  template <class T2>
+  ac_array(const ac_array<T2, D1, D2, D3> &other) {
+    Base::cpy_from_ac_arr(other);
+  }
+
   virtual ~ac_array() {}
 
   ac_array &operator= (const T &v) { Base::set(v); return *this; }
+
+  template <class T2>
+  ac_array& operator= (const ac_array<T2, D1, D2, D3> &other) {
+    Base::cpy_from_ac_arr(other);
+    return *this;
+  }
+
+  // T must support the type_name() method too, if you wish to use this function.
+  static std::string type_name() {
+    std::stringstream outs;
+    outs << "ac_array<";
+    outs << T::type_name();
+    outs << "," << D1;
+    if (D2 != 0) { outs << "," << D2; }
+    if (D3 != 0) { outs << "," << D3; }
+    outs << ">";
+    return outs.str();
+  }
 };
 
 //=========================================================================
@@ -216,11 +287,38 @@ class ac_array<T,D1,0,0> : public ac_array_b<T,T,D1>
 {
   typedef ac_array_b<T,T,D1> Base;
 public:
+  typedef T ElemType;
+  static const unsigned dim1 = D1;
+  static const unsigned dim2 = 0;
+  static const unsigned dim3 = 0;
+
   ac_array() {}
   ac_array(const T &ival) { Base::set(ival); }
+
+  template <class T2>
+  ac_array(const ac_array<T2, D1, 0, 0> &other) {
+    Base::cpy_from_ac_arr(other);
+  }
+
   virtual ~ac_array() {}
 
   ac_array &operator= (const T &v) { Base::set(v); return *this; }
+
+  template <class T2>
+  ac_array& operator= (const ac_array<T2, D1, 0, 0> &other) {
+    Base::cpy_from_ac_arr(other);
+    return *this;
+  }
+
+  // T must support the type_name() method too, if you wish to use this function.
+  static std::string type_name() {
+    std::stringstream outs;
+    outs << "ac_array<";
+    outs << T::type_name();
+    outs << "," << D1;
+    outs << ">";
+    return outs.str();
+  }
 };
 
 template <typename T>
@@ -228,11 +326,37 @@ class ac_array<T,0,0,0> : public ac_array_b<T,T,1>
 {
   typedef ac_array_b<T,T,1> Base;
 public:
+  typedef T ElemType;
+  static const unsigned dim1 = 0;
+  static const unsigned dim2 = 0;
+  static const unsigned dim3 = 0;
+
   ac_array() {}
   ac_array(const T &ival) { Base::set(ival); }
+
+  template <class T2>
+  ac_array(const ac_array<T2, 0, 0, 0> &other) {
+    Base::cpy_from_ac_arr(other);
+  }
+
   virtual ~ac_array() {}
 
   ac_array &operator= (const T &v) { Base::set(v); return *this; }
+
+  template <class T2>
+  ac_array& operator= (const ac_array<T2, 0, 0, 0> &other) {
+    Base::cpy_from_ac_arr(other);
+    return *this;
+  }
+
+  // T must support the type_name() method too, if you wish to use this function.
+  static std::string type_name() {
+    std::stringstream outs;
+    outs << "ac_array<";
+    outs << T::type_name();
+    outs << ",0>";
+    return outs.str();
+  }
 };
 
 //=========================================================================
@@ -248,7 +372,7 @@ template <typename T, typename Td, unsigned D>
 std::ostream &operator<<(std::ostream &os, const ac_array_b<T,Td,D> &a)
 {
   os << '{';
-  for (unsigned i=0; i<D; i++) { os << a[i]; if (i<D-1) os << ' '; }
+  for (int i=0; i<int(D); i++) { os << a[i]; if (i<int(D)-1) os << ' '; }
   os << '}';
   return os;
 }
