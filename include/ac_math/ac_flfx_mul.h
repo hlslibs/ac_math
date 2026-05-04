@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2025.4                                              *
+ *  Software Version: 2026.1                                              *
  *                                                                        *
- *  Release Date    : Thu Dec 11 10:23:15 PST 2025                        *
+ *  Release Date    : Wed Feb 11 11:04:12 PST 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2025.4.1                                            *
+ *  Release Build   : 2026.1.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -449,8 +449,6 @@ namespace ac_math
   { 
     AC_ASSERT(in1.is_norm() || in1.is_subn() || in1.mantissa() == 0, "Floating point inputs must either be (a) normalized (b) subnormal or (c) zero. Make sure you at least attempted to normalize in1.");
 
-    typedef ac_float<W1, I1, E1, Q1> in1_type;
-    typedef ac_fixed<W2, I2, S2, Q2, O2> in2_type;
     typedef ac_fixed<outW, outI, outS, outQ, outO> out_type;
 
     typedef typename ac::rt_2T<ac_fixed<W1, I1, true>, ac_fixed<W2, I2, S2>>::mult mprod_type;
@@ -587,8 +585,6 @@ namespace ac_math
     AC_ASSERT(in1.is_norm() || in1.is_subn() || in1.mantissa() == 0, "Floating point inputs must either be (a) normalized (b) subnormal or (c) zero. Make sure you at least attempted to normalize in1.");
     AC_ASSERT(in2.is_norm() || in2.is_subn() || in2.mantissa() == 0, "Floating point inputs must either be (a) normalized (b) subnormal or (c) zero. Make sure you at least attempted to normalize in2.");
     
-    typedef ac_float<W1, I1, E1, Q1> in1_type;
-    typedef ac_float<W2, I2, E2, Q2> in2_type;
     typedef ac_fixed<outW, outI, outS, outQ, outO> out_type;
 
     typedef typename ac::rt_2T<ac_fixed<W1, I1, true>, ac_fixed<W2, I2, true>>::mult mprod_type;

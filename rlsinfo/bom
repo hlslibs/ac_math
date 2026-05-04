@@ -37,6 +37,12 @@
 ./include/ac_math/ac_bitonic_sort.h
 ./include/ac_math/ac_search_base.h
 ./include/ac_math/ac_search_parallel.h
+./include/ac_math/ac_matmult_systolic_def.h
+./include/ac_math/ac_line_buffer.h
+./include/ac_math/ac_process_element.h
+./include/ac_math/ac_systolic_array.h
+./include/ac_math/ac_matmult_systolic_top.h
+./include/ac_math/ac_matmult_systolic_covergroup.h
 ./include/ac_math/ac_sincos_lut.h
 ./include/ac_math/ac_hcordic.h
 ./include/ac_math/ac_sincos_cordic.h
@@ -52,6 +58,9 @@
 ./include/ac_math/ac_linalg.h
 ./include/ac_math/ac_cholesky_inv_1d_systolic_rl.h
 ./include/ac_math/ac_cholesky_matrix_inverse.h
+./include/ac_math/ac_cholesky_matrix_inverse_v2.h
+./include/ac_math/ac_cholesky_decomposition_v2.h
+./include/ac_math/ac_cholesky_decomposition_v2_algo_config.h
 ./include/ac_float_add_tree.h
 ./include/ac_std_float_add_tree.h
 ./include/ac_math.h

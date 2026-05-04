@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2025.4                                              *
+ *  Software Version: 2026.1                                              *
  *                                                                        *
- *  Release Date    : Thu Dec 11 10:23:15 PST 2025                        *
+ *  Release Date    : Wed Feb 11 11:04:12 PST 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2025.4.1                                            *
+ *  Release Build   : 2026.1.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -43,12 +43,6 @@
 
 #ifndef _INCLUDED_AC_RANDOM_H_
 #define _INCLUDED_AC_RANDOM_H_
-
-#ifdef __SYNTHESIS__
-
-// Skip contents if compiled for synthesis
-
-#else
 
 #include <stdlib.h>
 #include <limits.h>
@@ -149,7 +143,6 @@ inline void ac_random(char &v) { ac_random_c_builtin(v); }
 inline void ac_random(signed char &v) { ac_random_c_builtin(v); }
 inline void ac_random(unsigned char &v) { ac_random_c_builtin(v); }
 inline void ac_random(bool &v) { v = rand() & 1; }
-#endif // AC_RANDOM_H_INC
 
 #if (defined(SYSTEMC_INCLUDED) || defined(SYSTEMC_H)) && !defined(MC_SYSTEMC)
 #define AC_SYSTEMC

@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2025.4                                              *
+ *  Software Version: 2026.1                                              *
  *                                                                        *
- *  Release Date    : Thu Dec 11 10:23:15 PST 2025                        *
+ *  Release Date    : Wed Feb 11 11:04:12 PST 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2025.4.1                                            *
+ *  Release Build   : 2026.1.0                                            *
  *                                                                        *
  *  Copyright 2025 Siemens                                                *
  *                                                                        *
@@ -31,6 +31,7 @@
 #ifndef _INCLUDED_AC_SEARCH_BASE_H_
 #define _INCLUDED_AC_SEARCH_BASE_H_
 
+#include <cstdint>
 #include <ac_int.h>
 #include <ac_array.h>
 #include <mc_scverify.h>
