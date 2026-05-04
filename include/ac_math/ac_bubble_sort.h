@@ -4,9 +4,9 @@
  *                                                                        *
  *  Software Version: 2026.1                                              *
  *                                                                        *
- *  Release Date    : Wed Feb 11 11:04:12 PST 2026                        *
+ *  Release Date    : Wed Mar 11 20:39:39 PDT 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2026.1.0                                            *
+ *  Release Build   : 2026.1.1                                            *
  *                                                                        *
  *  Copyright 2025 Siemens                                                *
  *                                                                        *
