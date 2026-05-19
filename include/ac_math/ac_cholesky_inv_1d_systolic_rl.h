@@ -2,13 +2,13 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2026.1                                              *
+ *  Software Version: 2026.2                                              *
  *                                                                        *
- *  Release Date    : Wed Mar 11 20:39:39 PDT 2026                        *
+ *  Release Date    : Tue May 12 21:06:11 PDT 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2026.1.1                                            *
+ *  Release Build   : 2026.2.0                                            *
  *                                                                        *
- *  Copyright  Siemens                                                *
+ *  Copyright 2026 Siemens                                                *
  *                                                                        *
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
@@ -28,6 +28,7 @@
  *  The most recent version of this package is available at github.       *
  *                                                                        *
  *************************************************************************/
+
 #ifndef _INCLUDED_AC_CHOLESKY_INV_1D_SYSTOLIC_RL_H_
 #define _INCLUDED_AC_CHOLESKY_INV_1D_SYSTOLIC_RL_H_
 

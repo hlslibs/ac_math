@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2026.1                                              *
+ *  Software Version: 2026.2                                              *
  *                                                                        *
- *  Release Date    : Wed Mar 11 20:39:39 PDT 2026                        *
+ *  Release Date    : Tue May 12 21:06:11 PDT 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2026.1.1                                            *
+ *  Release Build   : 2026.2.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *

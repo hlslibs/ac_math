@@ -2,13 +2,13 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2026.1                                              *
+ *  Software Version: 2026.2                                              *
  *                                                                        *
- *  Release Date    : Wed Mar 11 20:39:39 PDT 2026                        *
+ *  Release Date    : Tue May 12 21:06:11 PDT 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2026.1.1                                            *
+ *  Release Build   : 2026.2.0                                            *
  *                                                                        *
- *  Copyright  Siemens                                                *
+ *  Copyright 2026 Siemens                                                *
  *                                                                        *
  **************************************************************************
  *  Licensed under the Apache License, Version 2.0 (the "License");       *
@@ -33,6 +33,17 @@
 ******************************************************************************************/
 
 /******************************************************************************************
+
+ HDIP : ac_div_v2
+ Function : ac_div_v2
+ Function Description : This function implements unsigned integer division.
+
+ Note: The MIN_DIVISOR_ASSERT template parameter controls the minimum divisor validation behavior.
+       When set to false, the assertion is disabled and replaced with a runtime warning during 
+       simulation. This is useful for applications such as weighted averaging where the dividend
+       values are small enough that smaller divisors (below 2^(DW-PW)) will not cause overflow
+       in the internal calculations, allowing any PW value to work correctly regardless of the
+       minimum divisor constraint.
 
  Port Description:
       + inputs: dividend, divisor
@@ -113,7 +124,7 @@
 // Include header file for ac_shift functions
 #include <ac_math/ac_shift.h>
 
-template< int NW, int DW, int QW, int RW, int PW>
+template< int NW, int DW, int QW, int RW, int PW, bool MIN_DIVISOR_ASSERT = true >
 void ac_div_v2(
   ac_int<NW,false> dividend,
   ac_int<DW,false> divisor,
@@ -134,7 +145,18 @@ void ac_div_v2(
   const_mask.template set_val<AC_VAL_MAX>();
 
   AC_ASSERT(!!divisor, "Division by zero.");
-  AC_ASSERT(!!(divisor>= min_div_value), "Divisor is Below the range supported by the synthesized design, check for Padding width");
+  if (MIN_DIVISOR_ASSERT) {
+    AC_ASSERT(!!(divisor>= min_div_value), "Divisor below minimum value 2^(DW-PW). Increase PW parameter to support smaller divisors.");
+  }
+  else {
+    #ifndef __SYNTHESIS__
+      if (divisor < min_div_value) {
+        std::cerr << "WARNING [MIN_DIVISOR]: divisor=" << divisor 
+                  << " < min_value=" << min_div_value 
+                  << ". Increase PW to support smaller divisors." << std::endl;
+      }
+    #endif
+  }
 
   temp_numer = (ac_int<int_nw+1,false>) dividend;
   quot = 0;
@@ -150,6 +172,17 @@ void ac_div_v2(
 }
 
 /******************************************************************************************
+
+ HDIP : ac_div_v2
+ Function : ac_div_v2
+ Function Description : This function implements signed integer division.
+
+ Note: The MIN_DIVISOR_ASSERT template parameter controls the minimum divisor validation behavior.
+       When set to false, the assertion is disabled and replaced with a runtime warning during 
+       simulation. This is useful for applications such as weighted averaging where the dividend
+       values are small enough that smaller divisors (below 2^(DW-PW)) will not cause overflow
+       in the internal calculations, allowing any PW value to work correctly regardless of the
+       minimum divisor constraint.
 
  Port Description:
       + inputs: dividend, divisor
@@ -217,7 +250,7 @@ void ac_div_v2(
 
 ********************************************************************************************/
 
-template< int NW, int DW, int QW, int RW, int PW >
+template< int NW, int DW, int QW, int RW, int PW, bool MIN_DIVISOR_ASSERT = true >
 void ac_div_v2(
   ac_int<NW,true> dividend,
   ac_int<DW,true> divisor,
@@ -232,7 +265,7 @@ void ac_div_v2(
   ac_int<DW,false> uD = neg_divisor ? (ac_int<DW,false>) -divisor : (ac_int<DW,false>) divisor;
   ac_int<QW,false> uQ;
   ac_int<RW,false> uR;
-  ac_div_v2<NW,DW,QW,RW,PW>(uN, uD, uQ, uR);
+  ac_div_v2<NW,DW,QW,RW,PW,MIN_DIVISOR_ASSERT>(uN, uD, uQ, uR);
   // std::cout << "Resulting Quotient is: " <<uQ << " [ " << std::bitset<QW>(uQ) << " ] "<< std::endl;
 
   ac_int<QW,true> quotient_temp = neg_dividend == neg_divisor ? (ac_int<QW,true>) uQ : (ac_int<QW,true>) -uQ;

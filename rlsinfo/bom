@@ -43,6 +43,11 @@
 ./include/ac_math/ac_systolic_array.h
 ./include/ac_math/ac_matmult_systolic_top.h
 ./include/ac_math/ac_matmult_systolic_covergroup.h
+./include/ac_math/ac_common_types_v2.h
+./include/ac_math/ac_line_buffer_v2.h
+./include/ac_math/ac_systolic_array_v2.h
+./include/ac_math/ac_systolic_matmul_v2.h
+./include/ac_math/ac_systolic_pe_v2.h
 ./include/ac_math/ac_sincos_lut.h
 ./include/ac_math/ac_hcordic.h
 ./include/ac_math/ac_sincos_cordic.h
