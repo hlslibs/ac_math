@@ -2,11 +2,11 @@
  *                                                                        *
  *  Algorithmic C (tm) Math Library                                       *
  *                                                                        *
- *  Software Version: 2026.2                                              *
+ *  Software Version: 2026.3                                              *
  *                                                                        *
- *  Release Date    : Tue Jun 30 15:00:22 PDT 2026                        *
+ *  Release Date    : Wed Sep  2 19:51:33 PDT 2026                        *
  *  Release Type    : Production Release                                  *
- *  Release Build   : 2026.2.1                                            *
+ *  Release Build   : 2026.3.0                                            *
  *                                                                        *
  *  Copyright 2018 Siemens                                                *
  *                                                                        *
@@ -227,6 +227,18 @@ public:
   template <class T2, class Td2>
   ac_array_b& operator=(const ac_array_b<T2, Td2, D> &other) { cpy_from_ac_arr(other); return *this; }
 
+  #ifdef FAST_VRA
+  inline void vraReg(
+    const std::string &var_name,
+    const std::string &file_name, const int line_num,
+    int num_elems
+  ) {
+    for (unsigned i=0; i<D; i++) {
+      this->d[i].vraReg(var_name, file_name, line_num, num_elems);
+    }
+  }
+  #endif
+
 public: // data
   T d[D];
 };
@@ -240,11 +252,14 @@ template <typename T, unsigned D1, unsigned D2=0, unsigned D3=0>
 class ac_array : public ac_array_b< ac_array<T,D2,D3>, T, D1>
 {
   typedef ac_array_b< ac_array<T,D2,D3>, T, D1> Base;
+  static const unsigned dim2_private = (D2 > 1) ? D2 : 1;
+  static const unsigned dim3_private = (D3 > 1) ? D3 : 1;
 public:
   typedef T ElemType;
   static const unsigned dim1 = D1;
   static const unsigned dim2 = D2;
   static const unsigned dim3 = D3;
+  static const unsigned totalNumElems = D1*dim2_private*dim3_private;
 
   ac_array() {}
   ac_array(const T &ival) { Base::set(ival); }
@@ -275,6 +290,16 @@ public:
     outs << ">";
     return outs.str();
   }
+
+  #ifdef FAST_VRA
+  inline void vraReg(
+    const std::string &var_name,
+    const std::string &file_name, const int line_num,
+    int num_elems
+  ) {
+    Base::vraReg(var_name, file_name, line_num, num_elems);
+  }
+  #endif
 };
 
 //=========================================================================
@@ -291,6 +316,7 @@ public:
   static const unsigned dim1 = D1;
   static const unsigned dim2 = 0;
   static const unsigned dim3 = 0;
+  static const unsigned totalNumElems = D1;
 
   ac_array() {}
   ac_array(const T &ival) { Base::set(ival); }
@@ -319,6 +345,16 @@ public:
     outs << ">";
     return outs.str();
   }
+
+  #ifdef FAST_VRA
+  inline void vraReg(
+    const std::string &var_name,
+    const std::string &file_name, const int line_num,
+    int num_elems
+  ) {
+    Base::vraReg(var_name, file_name, line_num, num_elems);
+  }
+  #endif
 };
 
 template <typename T>
@@ -330,6 +366,7 @@ public:
   static const unsigned dim1 = 0;
   static const unsigned dim2 = 0;
   static const unsigned dim3 = 0;
+  static const unsigned totalNumElems = 0;
 
   ac_array() {}
   ac_array(const T &ival) { Base::set(ival); }
@@ -357,6 +394,16 @@ public:
     outs << ",0>";
     return outs.str();
   }
+
+  #ifdef FAST_VRA
+  inline void vraReg(
+    const std::string &var_name,
+    const std::string &file_name, const int line_num,
+    int num_elems
+  ) {
+    Base::vraReg(var_name, file_name, line_num, num_elems);
+  }
+  #endif
 };
 
 //=========================================================================
